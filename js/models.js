@@ -345,7 +345,13 @@ class ProjectConfig {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
         link.href = url;
-        link.download = `${this.projectName.replace(/\s+/g, '_')}_power_budget.json`;
+
+        // Create human-readable filename with timestamp
+        const now = new Date();
+        const timestamp = now.toISOString().slice(0, 16).replace('T', '_').replace(/:/g, '-');
+        const safeName = this.projectName.replace(/[^a-zA-Z0-9]/g, '_');
+        link.download = `${safeName}_${timestamp}.json`;
+
         link.click();
         URL.revokeObjectURL(url);
     }

@@ -40,13 +40,19 @@ class SolarManager {
                                onchange="solarManager.updateLocation('longitude', this.value)"
                                min="-180" max="180" step="0.0001">
                     </div>
-                    <div class="input-group">
-                        <button class="btn btn-secondary" onclick="solarManager.fetchSolarData()">
-                            <span class="icon">☀</span> Fetch Solar Data
-                        </button>
-                    </div>
+                </div>
+                <div class="wind-data-controls">
+                    <button class="btn btn-secondary" onclick="solarManager.fetchSolarData()">
+                        <span class="icon">☀</span> Fetch Solar Data
+                    </button>
+                    <button class="btn btn-secondary" onclick="solarManager.showManualInput()">
+                        <span class="icon">✏️</span> Manual Solar Data
+                    </button>
                 </div>
                 ${this.renderSolarDataStatus()}
+                <div id="manual-solar-input-section" style="display: none;">
+                    ${this.renderManualSolarInputForm()}
+                </div>
             </div>
 
             <div id="panels-list" class="items-list">
@@ -58,8 +64,7 @@ class SolarManager {
                 <div class="summary-grid">
                     <div class="summary-item">
                         <span class="summary-label">Total Panel Power:</span>
-                        <
-span class="summary-value">${this.getTotalPanelPower()} W</span>
+                        <span class="summary-value">${this.getTotalPanelPower()} W</span>
                     </div>
                     <div class="summary-item">
                         <span class="summary-label">Number of Panels:</span>
@@ -194,10 +199,78 @@ span class="summary-value">${this.getTotalPanelPower()} W</span>
             }
             alert('Solar radiation data fetched successfully!');
         } catch (error) {
-            alert('Error fetching solar data: ' + error.message);
+            console.error('Solar API error:', error);
+            alert('Error fetching solar data: ' + error.message + '. Please try manual entry instead.');
             btn.innerHTML = originalText;
             btn.disabled = false;
         }
+    }
+
+    renderManualSolarInputForm() {
+        const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const defaultGHI = this.config.solarData ?
+            this.config.solarData.monthlyData.map(m => m.ghi) :
+            Array(12).fill(4.0);
+
+        return `
+            <div class="manual-input-form">
+                <h4>Monthly Average Solar GHI (kWh/m²/day)</h4>
+                <p style="color: var(--text-secondary); font-size: 0.875rem; margin-bottom: 1rem;">
+                    Enter the Global Horizontal Irradiance for each month. Typical values: 2-7 kWh/m²/day depending on location.
+                </p>
+                <div class="monthly-grid">
+                    ${months.map((month, i) => `
+                        <div class="input-group">
+                            <label>${month}</label>
+                            <input type="number" 
+                                   id="solar-month-${i}" 
+                                   value="${defaultGHI[i].toFixed(2)}" 
+                                   min="0" max="12" step="0.1">
+                        </div>
+                    `).join('')}
+                </div>
+                <button class="btn btn-primary" onclick="solarManager.saveManualSolarData()">
+                    Save Solar Data
+                </button>
+            </div>
+        `;
+    }
+
+    showManualInput() {
+        const section = document.getElementById('manual-solar-input-section');
+        if (section) {
+            section.style.display = section.style.display === 'none' ? 'block' : 'none';
+        }
+    }
+
+    saveManualSolarData() {
+        const ghiValues = [];
+        for (let i = 0; i < 12; i++) {
+            const input = document.getElementById(`solar-month-${i}`);
+            ghiValues.push(parseFloat(input.value) || 0);
+        }
+
+        // Create manual solar data
+        this.config.solarData = {
+            location: {
+                latitude: this.config.location.latitude,
+                longitude: this.config.location.longitude
+            },
+            monthlyData: ghiValues.map((ghi, i) => ({
+                month: i + 1,
+                ghi: ghi,
+                clearSkyGHI: ghi * 1.2,
+                diffuse: ghi * 0.3
+            })),
+            fetchedAt: new Date().toISOString(),
+            source: 'Manual input'
+        };
+
+        this.render();
+        if (window.resultsManager) {
+            window.resultsManager.calculate();
+        }
+        alert('Manual solar data saved successfully!');
     }
 
     getTotalPanelPower() {

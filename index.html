@@ -1,34 +1,34 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Buoy Power Budget Calculator</title>
     <meta name="description" content="Power budgeting application for oceanographic buoys and platforms">
-    
+
     <!-- Styles -->
     <link rel="stylesheet" href="styles.css">
-    
+
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 </head>
+
 <body>
     <!-- Header -->
     <header class="app-header">
         <div class="header-content">
             <div class="app-title">
-                <span class="icon">⚓</span>
                 <div>
                     <h1>Buoy Power Budget Calculator</h1>
-                    <input type="text" 
-                           id="project-name" 
-                           class="project-name-input" 
-                           value="Buoy Power Budget" 
-                           onchange="updateProjectName()"
-                           placeholder="Project Name">
+                    <input type="text" id="project-name" class="project-name-input" value="Buoy Power Budget"
+                        onchange="updateProjectName()" placeholder="Project Name">
                 </div>
             </div>
             <div class="header-actions">
+                <button class="btn btn-secondary" onclick="window.open('README.md', '_blank')" title="Open User Guide">
+                    <span class="icon">📖</span> Help
+                </button>
                 <button class="btn btn-secondary" onclick="newProject()">
                     <span class="icon">📄</span> New
                 </button>
@@ -67,7 +67,7 @@
         </div>
 
         <!-- Tab Contents -->
-        
+
         <!-- Loads Tab -->
         <div id="loads" class="tab-content active">
             <div id="loads-container"></div>
@@ -110,23 +110,24 @@
     <!-- Core Models and Calculations -->
     <script src="js/models.js"></script>
     <script src="js/calculations.js"></script>
-    
+
     <!-- Utilities -->
     <script src="js/utils/solar-geometry.js"></script>
     <script src="js/utils/wind-calculations.js"></script>
-    
+
     <!-- API Integrations -->
     <script src="js/api/nasa-power.js"></script>
     <script src="js/api/noaa-weather.js"></script>
-    
+
     <!-- UI Managers -->
     <script src="js/ui/load-manager.js"></script>
     <script src="js/ui/battery-manager.js"></script>
     <script src="js/ui/solar-manager.js"></script>
     <script src="js/ui/wind-manager.js"></script>
     <script src="js/ui/results-dashboard.js"></script>
-    
+
     <!-- Main App Controller -->
     <script src="js/app.js"></script>
 </body>
+
 </html>
