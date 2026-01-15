@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Buoy Power Budget Calculator</title>
+    <meta name="description" content="Power budgeting application for oceanographic buoys and platforms">
+    
+    <!-- Styles -->
+    <link rel="stylesheet" href="styles.css">
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+</head>
+<body>
+    <!-- Header -->
+    <header class="app-header">
+        <div class="header-content">
+            <div class="app-title">
+                <span class="icon">⚓</span>
+                <div>
+                    <h1>Buoy Power Budget Calculator</h1>
+                    <input type="text" 
+                           id="project-name" 
+                           class="project-name-input" 
+                           value="Buoy Power Budget" 
+                           onchange="updateProjectName()"
+                           placeholder="Project Name">
+                </div>
+            </div>
+            <div class="header-actions">
+                <button class="btn btn-secondary" onclick="newProject()">
+                    <span class="icon">📄</span> New
+                </button>
+                <button class="btn btn-secondary" onclick="importProject()">
+                    <span class="icon">📂</span> Import
+                </button>
+                <button class="btn btn-secondary" onclick="exportProject()">
+                    <span class="icon">💾</span> Export
+                </button>
+                <button class="btn btn-success" onclick="calculateBudget()">
+                    <span class="icon">⚡</span> Calculate Budget
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="container">
+        <!-- Tabs -->
+        <div class="tabs">
+            <button class="tab active" data-tab="loads">
+                <span class="icon">⚙️</span> Equipment Loads
+            </button>
+            <button class="tab" data-tab="batteries">
+                <span class="icon">🔋</span> Batteries
+            </button>
+            <button class="tab" data-tab="solar">
+                <span class="icon">☀️</span> Solar Panels
+            </button>
+            <button class="tab" data-tab="wind">
+                <span class="icon">💨</span> Wind Generators
+            </button>
+            <button class="tab" data-tab="results">
+                <span class="icon">📊</span> Results
+            </button>
+        </div>
+
+        <!-- Tab Contents -->
+        
+        <!-- Loads Tab -->
+        <div id="loads" class="tab-content active">
+            <div id="loads-container"></div>
+        </div>
+
+        <!-- Batteries Tab -->
+        <div id="batteries" class="tab-content">
+            <div id="batteries-container"></div>
+        </div>
+
+        <!-- Solar Tab -->
+        <div id="solar" class="tab-content">
+            <div id="solar-container"></div>
+        </div>
+
+        <!-- Wind Tab -->
+        <div id="wind" class="tab-content">
+            <div id="wind-container"></div>
+        </div>
+
+        <!-- Results Tab -->
+        <div id="results" class="tab-content">
+            <div id="results-container">
+                <div class="info-message">
+                    <h3>👋 Welcome to Buoy Power Budget Calculator</h3>
+                    <p>Get started by:</p>
+                    <ol style="text-align: left; display: inline-block; margin-top: 1rem;">
+                        <li>Adding equipment loads in the "Equipment Loads" tab</li>
+                        <li>Configuring your battery system in the "Batteries" tab</li>
+                        <li>Adding solar panels and fetching solar data (if applicable)</li>
+                        <li>Adding wind generators and entering wind data (if applicable)</li>
+                        <li>Clicking "Calculate Budget" to see your power analysis</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load all JavaScript modules -->
+    <!-- Core Models and Calculations -->
+    <script src="js/models.js"></script>
+    <script src="js/calculations.js"></script>
+    
+    <!-- Utilities -->
+    <script src="js/utils/solar-geometry.js"></script>
+    <script src="js/utils/wind-calculations.js"></script>
+    
+    <!-- API Integrations -->
+    <script src="js/api/nasa-power.js"></script>
+    <script src="js/api/noaa-weather.js"></script>
+    
+    <!-- UI Managers -->
+    <script src="js/ui/load-manager.js"></script>
+    <script src="js/ui/battery-manager.js"></script>
+    <script src="js/ui/solar-manager.js"></script>
+    <script src="js/ui/wind-manager.js"></script>
+    <script src="js/ui/results-dashboard.js"></script>
+    
+    <!-- Main App Controller -->
+    <script src="js/app.js"></script>
+</body>
+</html>
