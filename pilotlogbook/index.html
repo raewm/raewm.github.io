@@ -1,0 +1,622 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description"
+    content="Professional pilot logbook for tracking flight hours and maintaining currency requirements">
+  <title>Pilot Logbook - Flight Tracking & Currency Dashboard</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+  <header>
+    <div class="header-content">
+      <h1>
+        <span>✈️</span>
+        Pilot Logbook
+        <span id="userNameDisplay" class="user-name-display"></span>
+      </h1>
+      <div class="header-actions">
+        <nav>
+          <button class="nav-btn active" data-view="dashboard">Dashboard</button>
+          <button class="nav-btn" data-view="logbook">Logbook</button>
+        </nav>
+        <button class="btn btn-secondary btn-small" id="settingsBtn">
+          ⚙️ Settings
+        </button>
+        <button class="btn btn-secondary btn-small" id="downloadTemplateBtn">
+          📋 CSV Template
+        </button>
+        <div class="file-upload">
+          <input type="file" id="importCSV" accept=".csv" />
+          <button class="btn btn-secondary btn-small" onclick="document.getElementById('importCSV').click()">
+            📊 Import CSV
+          </button>
+        </div>
+        <div class="file-upload">
+          <input type="file" id="loadFile" accept=".json" />
+          <button class="btn btn-secondary btn-small" onclick="document.getElementById('loadFile').click()">
+            📂 Load
+          </button>
+        </div>
+        <button class="btn btn-primary btn-small" id="saveBtn">
+          💾 Save
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <!-- Dashboard View -->
+    <div id="dashboard" class="view active">
+      <div class="dashboard-grid">
+        <!-- Statistics Cards -->
+        <div class="stats-grid">
+          <div class="stat-card">
+            <div class="stat-label">Total Hours</div>
+            <div class="stat-value" id="totalHours">0.0</div>
+            <div class="stat-subtitle">All flight time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">PIC Hours</div>
+            <div class="stat-value" id="picHours">0.0</div>
+            <div class="stat-subtitle">Pilot in command</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Night Hours</div>
+            <div class="stat-value" id="nightHours">0.0</div>
+            <div class="stat-subtitle">Night flight time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Actual Instrument</div>
+            <div class="stat-value" id="actualInstrumentHours">0.0</div>
+            <div class="stat-subtitle">Actual IMC</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Simulated Instrument</div>
+            <div class="stat-value" id="simulatedInstrumentHours">0.0</div>
+            <div class="stat-subtitle">Hood/foggles</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Simulator Hours</div>
+            <div class="stat-value" id="simulatorHours">0.0</div>
+            <div class="stat-subtitle">FTD/Sim time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Cross Country</div>
+            <div class="stat-value" id="crossCountryHours">0.0</div>
+            <div class="stat-subtitle">XC flight time</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">High Performance</div>
+            <div class="stat-value" id="highPerformanceHours">0.0</div>
+            <div class="stat-subtitle">HP aircraft</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Complex</div>
+            <div class="stat-value" id="complexHours">0.0</div>
+            <div class="stat-subtitle">Complex aircraft</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Past 12 Months</div>
+            <div class="stat-value" id="past12MonthsHours">0.0</div>
+            <div class="stat-subtitle">Recent hours</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Total Flights</div>
+            <div class="stat-value" id="totalFlights">0</div>
+            <div class="stat-subtitle">Logged entries</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Aircraft Flown</div>
+            <div class="stat-value" id="uniqueAircraft">0</div>
+            <div class="stat-subtitle">Unique registrations</div>
+          </div>
+        </div>
+
+        <!-- Currency Cards -->
+        <h2 style="font-size: 1.5rem; margin-bottom: var(--spacing-lg); color: var(--text-primary);">Currency Status
+        </h2>
+        <div class="currency-grid">
+          <!-- Passenger Currency Card -->
+          <div class="currency-card" id="passengerCurrencyCard">
+            <div class="currency-header">
+              <div>
+                <div class="currency-title">Passenger Currency</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">FAR 61.57(a)</div>
+              </div>
+              <span class="currency-status" id="passengerCurrencyStatus">Unknown</span>
+            </div>
+            <div class="currency-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" id="passengerCurrencyProgress" style="width: 0%"></div>
+              </div>
+              <div class="progress-text" id="passengerCurrencyProgressText">0 of 3 required</div>
+            </div>
+            <div class="currency-details">
+              <div class="currency-detail">
+                <span class="currency-detail-label">Day T/O & Landings (90 days):</span>
+                <span class="currency-detail-value" id="passengerTakeoffsLandings">0</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Days Remaining:</span>
+                <span class="currency-detail-value" id="passengerDaysRemaining">-</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Expires:</span>
+                <span class="currency-detail-value" id="passengerExpiryDate">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Night Currency Card -->
+          <div class="currency-card" id="nightCurrencyCard">
+            <div class="currency-header">
+              <div>
+                <div class="currency-title">Night Currency</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">FAR 61.57(b)</div>
+              </div>
+              <span class="currency-status" id="nightCurrencyStatus">Unknown</span>
+            </div>
+            <div class="currency-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" id="nightCurrencyProgress" style="width: 0%"></div>
+              </div>
+              <div class="progress-text" id="nightCurrencyProgressText">0 of 3 required</div>
+            </div>
+            <div class="currency-details">
+              <div class="currency-detail">
+                <span class="currency-detail-label">Night T/O & Landings (90 days):</span>
+                <span class="currency-detail-value" id="nightTakeoffsLandings">0</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Days Remaining:</span>
+                <span class="currency-detail-value" id="nightDaysRemaining">-</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Expires:</span>
+                <span class="currency-detail-value" id="nightExpiryDate">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Instrument Currency Card -->
+          <div class="currency-card" id="instrumentCurrencyCard">
+            <div class="currency-header">
+              <div>
+                <div class="currency-title">Instrument Currency</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">FAR 61.57(c)</div>
+              </div>
+              <span class="currency-status" id="instrumentCurrencyStatus">Unknown</span>
+            </div>
+            <div class="currency-progress">
+              <div class="progress-bar">
+                <div class="progress-fill" id="instrumentCurrencyProgress" style="width: 0%"></div>
+              </div>
+              <div class="progress-text" id="instrumentCurrencyProgressText">0 of 6 required</div>
+            </div>
+            <div class="currency-details">
+              <div class="currency-detail">
+                <span class="currency-detail-label">Approaches (6 months):</span>
+                <span class="currency-detail-value" id="instrumentApproaches">0</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Days Remaining:</span>
+                <span class="currency-detail-value" id="instrumentDaysRemaining">-</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Expires:</span>
+                <span class="currency-detail-value" id="instrumentExpiryDate">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Medical Certificate Card -->
+          <div class="currency-card" id="medicalCard">
+            <div class="currency-header">
+              <div>
+                <div class="currency-title">Medical Certificate</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">FAR 61.23</div>
+              </div>
+              <span class="currency-status" id="medicalStatus">Unknown</span>
+            </div>
+            <div class="currency-details">
+              <div class="currency-detail">
+                <span class="currency-detail-label">Expiration Date:</span>
+                <span class="currency-detail-value" id="medicalExpiry">Not Set</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Days Remaining:</span>
+                <span class="currency-detail-value" id="medicalDaysRemaining">-</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- BFR Card -->
+          <div class="currency-card" id="bfrCard">
+            <div class="currency-header">
+              <div>
+                <div class="currency-title">Flight Review (BFR)</div>
+                <div style="font-size: 0.85rem; color: var(--text-muted);">FAR 61.56</div>
+              </div>
+              <span class="currency-status" id="bfrStatus">Unknown</span>
+            </div>
+            <div class="currency-details">
+              <div class="currency-detail">
+                <span class="currency-detail-label">Last BFR:</span>
+                <span class="currency-detail-value" id="lastBFR">Not Set</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Expires:</span>
+                <span class="currency-detail-value" id="bfrExpiry">-</span>
+              </div>
+              <div class="currency-detail">
+                <span class="currency-detail-label">Days Remaining:</span>
+                <span class="currency-detail-value" id="bfrDaysRemaining">-</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Make & Model Breakdown -->
+        <h2
+          style="font-size: 1.5rem; margin-top: var(--spacing-2xl); margin-bottom: var(--spacing-lg); color: var(--text-primary);">
+          Make & Model Hours</h2>
+        <div class="table-container">
+          <div class="table-wrapper">
+            <table id="makeModelTable">
+              <thead>
+                <tr>
+                  <th>Aircraft Type</th>
+                  <th>Hours</th>
+                </tr>
+              </thead>
+              <tbody id="makeModelTableBody">
+                <tr>
+                  <td colspan="2" class="empty-state" style="padding: var(--spacing-lg);">
+                    <div style="color: var(--text-muted); font-size: 0.9rem;">No flights logged yet</div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Logbook View -->
+    <div id="logbook" class="view">
+      <!-- Flight Entry Form -->
+      <div class="flight-form">
+        <h2 style="font-size: 1.5rem; margin-bottom: var(--spacing-xl);">Add Flight Entry</h2>
+        <form id="flightForm">
+          <div class="form-section">
+            <div class="form-section-title">Flight Information</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="date">Date *</label>
+                <input type="date" id="date" required>
+              </div>
+              <div class="form-group">
+                <label for="aircraft">Aircraft *</label>
+                <input type="text" id="aircraft" placeholder="e.g., N12345" required list="aircraftList">
+                <datalist id="aircraftList"></datalist>
+              </div>
+              <div class="form-group">
+                <label for="aircraftType">Aircraft Type</label>
+                <input type="text" id="aircraftType" placeholder="e.g., C172">
+              </div>
+              <div class="form-group">
+                <label for="from">From *</label>
+                <input type="text" id="from" placeholder="e.g., KJFK" required>
+              </div>
+              <div class="form-group">
+                <label for="via">Via</label>
+                <input type="text" id="via" placeholder="e.g., KBOS (optional)">
+              </div>
+              <div class="form-group">
+                <label for="to">To *</label>
+                <input type="text" id="to" placeholder="e.g., KBOS" required>
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Flight Times (hours)</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="totalTime">Total Time *</label>
+                <input type="number" id="totalTime" step="0.1" min="0" placeholder="0.0" required>
+              </div>
+              <div class="form-group">
+                <label for="picTime">PIC Time</label>
+                <input type="number" id="picTime" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="dualTime">Dual Received</label>
+                <input type="number" id="dualTime" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="crossCountryTime">Cross Country</label>
+                <input type="number" id="crossCountryTime" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="nightTime">Night Time</label>
+                <input type="number" id="nightTime" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="actualInstrument">Actual Instrument</label>
+                <input type="number" id="actualInstrument" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="simulatedInstrument">Simulated Instrument</label>
+                <input type="number" id="simulatedInstrument" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="simulatorTime">Simulator Time</label>
+                <input type="number" id="simulatorTime" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="highPerformance">High Performance</label>
+                <input type="number" id="highPerformance" step="0.1" min="0" placeholder="0.0">
+              </div>
+              <div class="form-group">
+                <label for="complex">Complex</label>
+                <input type="number" id="complex" step="0.1" min="0" placeholder="0.0">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Takeoffs & Landings</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="dayTakeoffs">Day Takeoffs</label>
+                <input type="number" id="dayTakeoffs" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="dayLandings">Day Landings</label>
+                <input type="number" id="dayLandings" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="nightTakeoffs">Night Takeoffs</label>
+                <input type="number" id="nightTakeoffs" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="nightLandings">Night Landings (Full Stop)</label>
+                <input type="number" id="nightLandings" min="0" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Instrument Experience</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="approaches">Approaches</label>
+                <input type="number" id="approaches" min="0" placeholder="0">
+              </div>
+              <div class="form-group">
+                <label for="holds">Holds</label>
+                <input type="number" id="holds" min="0" placeholder="0">
+              </div>
+            </div>
+          </div>
+
+          <div class="form-section">
+            <div class="form-section-title">Remarks</div>
+            <div class="form-group">
+              <label for="remarks">Notes</label>
+              <textarea id="remarks" placeholder="Additional notes about this flight..."></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" id="cancelBtn">Cancel</button>
+            <button type="submit" class="btn btn-primary">Add Flight</button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Flight Log Table -->
+      <div class="table-container">
+        <div class="table-header">
+          <h2 class="table-title">Flight Log</h2>
+        </div>
+        <div class="table-wrapper">
+          <table id="flightTable">
+            <thead>
+              <tr>
+                <th data-sort="date">Date</th>
+                <th data-sort="aircraft">Aircraft</th>
+                <th data-sort="from">From</th>
+                <th data-sort="to">To</th>
+                <th data-sort="totalTime">Total</th>
+                <th data-sort="picTime">PIC</th>
+                <th data-sort="nightTime">Night</th>
+                <th data-sort="actualInstrument">Actual</th>
+                <th data-sort="approaches">Appr</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="flightTableBody">
+              <tr>
+                <td colspan="10" class="empty-state">
+                  <div class="empty-state-icon">📋</div>
+                  <div class="empty-state-text">No flights logged yet</div>
+                  <div style="color: var(--text-muted); font-size: 0.9rem;">Add your first flight above to get started
+                  </div>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Settings Modal -->
+  <div id="settingsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Pilot Profile & Settings</h3>
+        <button class="modal-close" onclick="closeSettingsModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="settingsForm">
+          <div class="form-section">
+            <div class="form-section-title">Pilot Information</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="pilotName">Pilot Name</label>
+                <input type="text" id="pilotName" placeholder="e.g., John Doe">
+              </div>
+              <div class="form-group">
+                <label for="certificateNumber">Certificate Number</label>
+                <input type="text" id="certificateNumber" placeholder="e.g., 1234567">
+              </div>
+            </div>
+          </div>
+          <div class="form-section">
+            <div class="form-section-title">Medical & Currency Dates</div>
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="medicalExpiration">Medical Expiration</label>
+                <input type="date" id="medicalExpiration">
+              </div>
+              <div class="form-group">
+                <label for="lastBFRDate">Last Flight Review (BFR)</label>
+                <input type="date" id="lastBFRDate">
+              </div>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeSettingsModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Settings</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title">Edit Flight</h3>
+        <button class="modal-close" onclick="closeEditModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <form id="editFlightForm">
+          <input type="hidden" id="editFlightId">
+          <div class="form-section">
+            <div class="form-grid">
+              <div class="form-group">
+                <label for="editDate">Date *</label>
+                <input type="date" id="editDate" required>
+              </div>
+              <div class="form-group">
+                <label for="editAircraft">Aircraft *</label>
+                <input type="text" id="editAircraft" required list="aircraftList">
+              </div>
+              <div class="form-group">
+                <label for="editAircraftType">Aircraft Type</label>
+                <input type="text" id="editAircraftType">
+              </div>
+              <div class="form-group">
+                <label for="editFrom">From *</label>
+                <input type="text" id="editFrom" required>
+              </div>
+              <div class="form-group">
+                <label for="editVia">Via</label>
+                <input type="text" id="editVia">
+              </div>
+              <div class="form-group">
+                <label for="editTo">To *</label>
+                <input type="text" id="editTo" required>
+              </div>
+              <div class="form-group">
+                <label for="editTotalTime">Total Time *</label>
+                <input type="number" id="editTotalTime" step="0.1" min="0" required>
+              </div>
+              <div class="form-group">
+                <label for="editPicTime">PIC Time</label>
+                <input type="number" id="editPicTime" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editDualTime">Dual Received</label>
+                <input type="number" id="editDualTime" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editCrossCountryTime">Cross Country</label>
+                <input type="number" id="editCrossCountryTime" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editNightTime">Night Time</label>
+                <input type="number" id="editNightTime" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editActualInstrument">Actual Instrument</label>
+                <input type="number" id="editActualInstrument" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editSimulatedInstrument">Simulated Instrument</label>
+                <input type="number" id="editSimulatedInstrument" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editSimulatorTime">Simulator Time</label>
+                <input type="number" id="editSimulatorTime" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editHighPerformance">High Performance</label>
+                <input type="number" id="editHighPerformance" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editComplex">Complex</label>
+                <input type="number" id="editComplex" step="0.1" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editDayTakeoffs">Day Takeoffs</label>
+                <input type="number" id="editDayTakeoffs" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editDayLandings">Day Landings</label>
+                <input type="number" id="editDayLandings" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editNightTakeoffs">Night Takeoffs</label>
+                <input type="number" id="editNightTakeoffs" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editNightLandings">Night Landings</label>
+                <input type="number" id="editNightLandings" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editApproaches">Approaches</label>
+                <input type="number" id="editApproaches" min="0">
+              </div>
+              <div class="form-group">
+                <label for="editHolds">Holds</label>
+                <input type="number" id="editHolds" min="0">
+              </div>
+            </div>
+            <div class="form-group mt-lg">
+              <label for="editRemarks">Remarks</label>
+              <textarea id="editRemarks"></textarea>
+            </div>
+          </div>
+          <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="closeEditModal()">Cancel</button>
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+
+</html>

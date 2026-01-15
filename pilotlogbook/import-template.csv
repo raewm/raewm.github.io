@@ -1,0 +1,3 @@
+date,aircraft,aircraftType,from,to,totalTime,picTime,dualTime,crossCountryTime,nightTime,instrumentTime,actualInstrument,simulatedInstrument,dayTakeoffs,dayLandings,nightTakeoffs,nightLandings,approaches,holds,simulatorTime,highPerformance,complex,remarks
+2026-01-15,N12345,C172,KJFK,KBOS,2.5,2.5,0,2.5,0,0,0,0,1,1,0,0,0,0,0,0,0,Practice flight
+2026-01-14,N67890,PA-28-180,KBOS,KLGA,1.5,1.5,0,0,0.5,0.3,0.3,0,0,0,1,1,2,1,0,0,0,Night currency flight
