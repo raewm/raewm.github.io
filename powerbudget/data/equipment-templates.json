@@ -1,0 +1,163 @@
+{
+  "categories": {
+    "sensors": [
+      {
+        "name": "CTD Sensor",
+        "powerOn": 2.5,
+        "powerIdle": 0.5,
+        "dutyCycle": 100,
+        "description": "Conductivity, Temperature, Depth sensor - continuous operation"
+      },
+      {
+        "name": "ADCP (Acoustic Doppler)",
+        "powerOn": 8.0,
+        "powerIdle": 1.0,
+        "dutyCycle": 25,
+        "description": "Current profiler - typical 15 min per hour"
+      },
+      {
+        "name": "Dissolved Oxygen Sensor",
+        "powerOn": 1.5,
+        "powerIdle": 0.3,
+        "dutyCycle": 50,
+        "description": "DO sensor with periodic measurement"
+      },
+      {
+        "name": "Fluorometer",
+        "powerOn": 2.0,
+        "powerIdle": 0.5,
+        "dutyCycle": 50,
+        "description": "Chlorophyll fluorescence sensor"
+      },
+      {
+        "name": "pH Sensor",
+        "powerOn": 1.2,
+        "powerIdle": 0.3,
+        "dutyCycle": 50,
+        "description": "pH measurement sensor"
+      },
+      {
+        "name": "Turbidity Sensor",
+        "powerOn": 1.0,
+        "powerIdle": 0.2,
+        "dutyCycle": 50,
+        "description": "Water clarity sensor"
+      },
+      {
+        "name": "Weather Station",
+        "powerOn": 3.0,
+        "powerIdle": 0.5,
+        "dutyCycle": 100,
+        "description": "Meteorological sensors (wind, temp, pressure, humidity)"
+      },
+      {
+        "name": "Wave Sensor",
+        "powerOn": 2.5,
+        "powerIdle": 0.5,
+        "dutyCycle": 100,
+        "description": "Wave height and period measurement"
+      }
+    ],
+    "cameras": [
+      {
+        "name": "Underwater Camera (Low Power)",
+        "powerOn": 5.0,
+        "powerIdle": 1.0,
+        "dutyCycle": 10,
+        "description": "Low power camera, periodic capture"
+      },
+      {
+        "name": "Underwater Camera (High Power)",
+        "powerOn": 15.0,
+        "powerIdle": 2.0,
+        "dutyCycle": 5,
+        "description": "High resolution camera with LED illumination"
+      },
+      {
+        "name": "Surface Camera",
+        "powerOn": 8.0,
+        "powerIdle": 1.5,
+        "dutyCycle": 10,
+        "description": "Surface monitoring camera"
+      }
+    ],
+    "communications": [
+      {
+        "name": "Iridium Satellite Modem",
+        "powerOn": 5.0,
+        "powerIdle": 0.5,
+        "dutyCycle": 5,
+        "description": "Satellite data transmission - hourly or daily"
+      },
+      {
+        "name": "Cellular Modem",
+        "powerOn": 3.0,
+        "powerIdle": 0.3,
+        "dutyCycle": 10,
+        "description": "Cellular data transmission when in range"
+      },
+      {
+        "name": "RF Radio",
+        "powerOn": 2.0,
+        "powerIdle": 0.5,
+        "dutyCycle": 100,
+        "description": "Local radio communication - continuous listen"
+      },
+      {
+        "name": "Acoustic Modem",
+        "powerOn": 10.0,
+        "powerIdle": 1.0,
+        "dutyCycle": 5,
+        "description": "Underwater acoustic communication"
+      }
+    ],
+    "lighting": [
+      {
+        "name": "Navigation Light",
+        "powerOn": 3.0,
+        "powerIdle": 0,
+        "dutyCycle": 50,
+        "description": "Safety navigation light - night operation"
+      },
+      {
+        "name": "LED Beacon",
+        "powerOn": 5.0,
+        "powerIdle": 0,
+        "dutyCycle": 50,
+        "description": "High-intensity beacon - night operation"
+      }
+    ],
+    "dataLoggers": [
+      {
+        "name": "Data Logger (Low Power)",
+        "powerOn": 0.5,
+        "powerIdle": 0.1,
+        "dutyCycle": 100,
+        "description": "Continuous data logging with low power MCU"
+      },
+      {
+        "name": "Data Logger (Standard)",
+        "powerOn": 1.5,
+        "powerIdle": 0.3,
+        "dutyCycle": 100,
+        "description": "Standard data acquisition system"
+      },
+      {
+        "name": "Single Board Computer (Raspberry Pi)",
+        "powerOn": 5.0,
+        "powerIdle": 2.5,
+        "dutyCycle": 100,
+        "description": "Full computer for data processing and control"
+      }
+    ],
+    "other": [
+      {
+        "name": "Custom Equipment",
+        "powerOn": 0,
+        "powerIdle": 0,
+        "dutyCycle": 100,
+        "description": "Define your own equipment"
+      }
+    ]
+  }
+}
