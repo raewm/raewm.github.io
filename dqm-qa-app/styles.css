@@ -1,0 +1,484 @@
+/* ===== CSS Variables ===== */
+:root {
+    --primary: #1e3a8a;
+    --primary-light: #3b82f6;
+    --primary-dark: #1e40af;
+    --secondary: #0891b2;
+    --success: #10b981;
+    --warning: #f59e0b;
+    --danger: #ef4444;
+    --bg-primary: #0f172a;
+    --bg-secondary: #1e293b;
+    --bg-card: #334155;
+    --text-primary: #f1f5f9;
+    --text-secondary: #cbd5e1;
+    --border: #475569;
+    --shadow: rgba(0, 0, 0, 0.3);
+    --glass-bg: rgba(51, 65, 85, 0.7);
+    --glass-border: rgba(148, 163, 184, 0.2);
+}
+
+/* ===== Reset & Base ===== */
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    color: var(--text-primary);
+    line-height: 1.6;
+    min-height: 100vh;
+    padding: 1rem;
+}
+
+/* ===== Container ===== */
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* ===== Header ===== */
+header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding: 2rem 1rem;
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem;
+    box-shadow: 0 8px 32px var(--shadow);
+}
+
+header h1 {
+    font-size: 2rem;
+    margin-bottom: 0.5rem;
+    background: linear-gradient(135deg, var(--primary-light), var(--secondary));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+}
+
+.subtitle {
+    color: var(--text-secondary);
+    font-size: 0.95rem;
+}
+
+/* ===== Cards ===== */
+.card {
+    background: var(--glass-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--glass-border);
+    border-radius: 1rem;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    box-shadow: 0 4px 16px var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px var(--shadow);
+}
+
+.card h2 {
+    font-size: 1.5rem;
+    margin-bottom: 1rem;
+    color: var(--primary-light);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: 0.5rem;
+}
+
+.card h3 {
+    font-size: 1.2rem;
+    margin: 1.5rem 0 1rem;
+    color: var(--secondary);
+}
+
+/* ===== Form Elements ===== */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    font-size: 0.95rem;
+}
+
+input[type="text"],
+input[type="number"],
+input[type="date"],
+select,
+textarea {
+    width: 100%;
+    padding: 0.75rem;
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: 0.5rem;
+    color: var(--text-primary);
+    font-size: 1rem;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    min-height: 44px;
+    /* Touch-friendly */
+}
+
+input:focus,
+select:focus,
+textarea:focus {
+    outline: none;
+    border-color: var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+textarea {
+    resize: vertical;
+    font-family: inherit;
+}
+
+/* ===== Buttons ===== */
+button {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 0.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    min-height: 44px;
+    /* Touch-friendly */
+    min-width: 44px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, var(--primary-light), var(--primary-dark));
+    color: white;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+}
+
+.btn-primary:active {
+    transform: translateY(0);
+}
+
+.btn-secondary {
+    background: var(--bg-secondary);
+    color: var(--text-primary);
+    border: 2px solid var(--border);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-card);
+    border-color: var(--primary-light);
+}
+
+.btn-danger {
+    background: var(--danger);
+    color: white;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+}
+
+.btn-success {
+    background: var(--success);
+    color: white;
+}
+
+/* ===== Plant Entry ===== */
+.plant-entry {
+    background: var(--bg-secondary);
+    border: 2px solid var(--border);
+    border-radius: 0.75rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    position: relative;
+}
+
+.plant-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.plant-number {
+    font-weight: 600;
+    color: var(--primary-light);
+}
+
+.remove-plant-btn {
+    background: var(--danger);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.plant-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .plant-grid {
+        grid-template-columns: 2fr 1fr 1fr;
+    }
+}
+
+/* ===== GPS Button ===== */
+.gps-button {
+    background: var(--secondary);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    margin-top: 0.5rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.gps-button:hover {
+    background: #0e7490;
+}
+
+.gps-button:disabled {
+    background: var(--border);
+    cursor: not-allowed;
+}
+
+/* ===== Input Row ===== */
+.input-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .input-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+.input-row-3 {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 1rem;
+}
+
+@media (min-width: 640px) {
+    .input-row-3 {
+        grid-template-columns: 1fr 1fr 1fr;
+    }
+}
+
+/* ===== Actions ===== */
+.actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+    margin: 2rem 0;
+}
+
+.actions button {
+    flex: 1;
+    min-width: 150px;
+}
+
+/* ===== Footer ===== */
+footer {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+/* ===== Timeline Table ===== */
+.timeline-controls {
+    margin-bottom: 1rem;
+}
+
+.timeline-table-container {
+    overflow-x: auto;
+    margin-top: 1rem;
+    background: var(--bg-secondary);
+    border-radius: 0.5rem;
+    border: 2px solid var(--border);
+}
+
+.timeline-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.timeline-table thead {
+    background: var(--bg-card);
+}
+
+.timeline-table th {
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    color: var(--primary-light);
+    border-bottom: 2px solid var(--border);
+}
+
+.timeline-table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: top;
+}
+
+.timeline-table tbody tr:last-child td {
+    border-bottom: none;
+}
+
+.timeline-table tbody tr:hover {
+    background: rgba(59, 130, 246, 0.05);
+}
+
+.timeline-delete-btn {
+    background: var(--danger);
+    color: white;
+    padding: 0.35rem 0.75rem;
+    font-size: 0.8rem;
+    min-height: 32px;
+}
+
+.timeline-time {
+    white-space: nowrap;
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+}
+
+.timeline-activity {
+    font-weight: 600;
+    color: var(--primary-light);
+}
+
+.timeline-notes {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+@media (max-width: 640px) {
+    .timeline-table {
+        font-size: 0.8rem;
+    }
+
+    .timeline-table th,
+    .timeline-table td {
+        padding: 0.5rem;
+    }
+}
+
+/* ===== Log to Timeline Button ===== */
+.log-timeline-btn {
+    background: var(--secondary);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+    margin-top: 1rem;
+    display: inline-block;
+}
+
+.log-timeline-btn:hover {
+    background: #0e7490;
+}
+
+/* ===== Check Completion Indicator ===== */
+.check-logged {
+    background: rgba(16, 185, 129, 0.1);
+    border-left: 4px solid var(--success);
+}
+
+/* ===== Utilities ===== */
+.hidden {
+    display: none !important;
+}
+
+.text-success {
+    color: var(--success);
+}
+
+.text-warning {
+    color: var(--warning);
+}
+
+.text-danger {
+    color: var(--danger);
+}
+
+.text-muted {
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.mt-1 {
+    margin-top: 0.5rem;
+}
+
+.mb-1 {
+    margin-bottom: 0.5rem;
+}
+
+/* ===== Responsive ===== */
+@media (max-width: 640px) {
+    header h1 {
+        font-size: 1.5rem;
+    }
+
+    .card {
+        padding: 1rem;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .actions button {
+        width: 100%;
+    }
+}
+
+/* ===== Animations ===== */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.card {
+    animation: fadeIn 0.3s ease;
+}
+
+/* ===== Loading State ===== */
+.loading {
+    opacity: 0.6;
+    pointer-events: none;
+}
+
+.loading::after {
+    content: "⏳";
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    font-size: 3rem;
+}

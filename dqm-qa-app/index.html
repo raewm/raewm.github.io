@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="USACE Dredging Quality Management QA Check Application">
+    <title>DQM QA Check</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <header>
+            <h1>🚢 DQM QA Check</h1>
+            <p class="subtitle">National Dredging Quality Management Program</p>
+        </header>
+
+        <main id="app">
+            <!-- Trip Metadata Section -->
+            <section class="card" id="metadata-section">
+                <h2>Trip Information</h2>
+
+                <div class="form-group">
+                    <label for="check-date">Check Date</label>
+                    <input type="date" id="check-date" required>
+                </div>
+
+                <div class="form-group">
+                    <label>Plants/Vessels</label>
+                    <div id="plants-container"></div>
+                    <button type="button" class="btn-secondary" id="add-plant-btn">+ Add Plant</button>
+                </div>
+
+                <div class="form-group">
+                    <label for="qa-team">QA Team Member(s)</label>
+                    <input type="text" id="qa-team" placeholder="Name(s) separated by commas">
+                </div>
+
+                <div class="form-group">
+                    <label for="system-provider">System Provider/Dredge Representative</label>
+                    <input type="text" id="system-provider" placeholder="Representative name">
+                </div>
+
+                <div class="form-group">
+                    <label>Timeline</label>
+                    <div class="timeline-controls">
+                        <button type="button" class="btn-secondary" id="add-timeline-comment-btn">+ Add Comment to
+                            Timeline</button>
+                    </div>
+                    <div class="timeline-table-container">
+                        <table class="timeline-table" id="timeline-table">
+                            <thead>
+                                <tr>
+                                    <th>Time</th>
+                                    <th>Activity</th>
+                                    <th>Notes</th>
+                                    <th></th>
+                                </tr>
+                            </thead>
+                            <tbody id="timeline-body">
+                                <!-- Timeline entries will be added here -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="general-comments">General Comments</label>
+                    <textarea id="general-comments" rows="3"
+                        placeholder="Overall observations and comments..."></textarea>
+                </div>
+            </section>
+
+            <!-- QA Check Forms Container -->
+            <div id="qa-checks-container"></div>
+
+            <!-- Action Buttons -->
+            <div class="actions">
+                <button type="button" class="btn-primary" id="save-draft-btn">💾 Save Draft</button>
+                <button type="button" class="btn-primary" id="export-btn">📥 Export JSON</button>
+                <button type="button" class="btn-secondary" id="clear-btn">🗑️ Clear All</button>
+            </div>
+        </main>
+
+        <footer>
+            <p>USACE National Dredging Quality Management Program</p>
+        </footer>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>
