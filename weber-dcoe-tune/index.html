@@ -1,0 +1,349 @@
+﻿<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description"
+        content="Weber DCOE 40 carburetor configuration calculator with mathematical modeling of component relationships. Configure jetting for Triumph TR250, TR6, and other classic engines.">
+    <meta name="keywords" content="Weber DCOE, carburetor, tuning, jetting, TR250, TR6, classic cars, automotive">
+    <meta name="author" content="Weber DCOE Config Tool">
+    <title>Weber DCOE 40 Carburetor Configuration Tool</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>⚙️ Weber DCOE 40 Configuration Tool</h1>
+            <p class="header-subtitle">Carburetor calculator with real-world examples and troubleshooting</p>
+        </header>
+
+        <!-- Main Navigation Tabs -->
+        <nav class="tabs" role="tablist">
+            <button class="tab-btn active" data-tab="calculator" role="tab" aria-selected="true" id="tab-calculator">
+                Calculator
+            </button>
+            <button class="tab-btn" data-tab="examples" role="tab" aria-selected="false" id="tab-examples">
+                Example Configs
+            </button>
+            <button class="tab-btn" data-tab="simulator" role="tab" aria-selected="false" id="tab-simulator">
+                Simulator
+            </button>
+            <button class="tab-btn" data-tab="troubleshooting" role="tab" aria-selected="false"
+                id="tab-troubleshooting">
+                Troubleshooting
+            </button>
+            <button class="tab-btn" data-tab="tuning-guide" role="tab" aria-selected="false" id="tab-tuning-guide">
+                Tuning Guide
+            </button>
+        </nav>
+
+        <!-- Tab Contents -->
+
+        <!-- CALCULATOR TAB -->
+        <div id="calculator-tab" class="tab-content active" role="tabpanel">
+            <div class="app-grid">
+                <!-- Left Column: Engine Specifications -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon"></div>
+                        <h2 class="card-title">Engine Specifications</h2>
+                    </div>
+
+                    <form id="engine-form">
+                        <!-- Quick Presets -->
+                        <div class="form-group">
+                            <label class="form-label" for="preset-select">Quick Start Preset</label>
+                            <select class="form-select" id="preset-select">
+                                <option value="">-- Select a preset or enter custom specs --</option>
+                                <option value="tr250-stock-cam">Triumph TR250 - Stock Cam Street</option>
+                                <option value="tr250-mild-cam">Triumph TR250 - Mild Performance</option>
+                                <option value="tr6-race">Triumph TR6 - Race Configuration</option>
+                                <option value="ford-kent-1600">Ford Kent 1600cc - Twin DCOE</option>
+                                <option value="alfa-twin-cam-2000">Alfa Romeo 2000 Twin Cam</option>
+                                <option value="bmw-m10-2002">BMW M10 (2002) - Twin DCOE</option>
+                                <option value="porsche-911-27">Porsche 911 2.7L - Triple IDA/DCOE</option>
+                                <option value="datsun-240z-l24">Datsun 240Z L24 - Triple DCOE</option>
+                                <option value="mini-cooper-s-1275">Mini Cooper S 1275cc - Weber 45</option>
+                                <option value="fiat-124-twin-cam">Fiat 124 Spider 2.0L Twin Cam</option>
+                            </select>
+                        </div>
+
+                        <!-- Engine Specs -->
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="displacement">Displacement (cc)</label>
+                                <input type="number" class="form-input" id="displacement" placeholder="2498" min="500"
+                                    max="8000" step="1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="num-carbs">Number of Carbs</label>
+                                <select class="form-select" id="num-carbs">
+                                    <option value="1">1 (Single)</option>
+                                    <option value="2">2 (Twin)</option>
+                                    <option value="3" selected>3 (Triple)</option>
+                                    <option value="4">4 (Quad)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="compression">Compression Ratio</label>
+                                <input type="number" class="form-input" id="compression" placeholder="8.5" min="6"
+                                    max="14" step="0.1">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="max-rpm">Max RPM</label>
+                                <input type="number" class="form-input" id="max-rpm" placeholder="6000" min="3000"
+                                    max="9000" step="100">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label" for="cam-profile">Camshaft Profile</label>
+                                <select class="form-select" id="cam-profile">
+                                    <option value="stock">Stock / Mild</option>
+                                    <option value="mild">Sport / Performance</option>
+                                    <option value="race">Race / High Performance</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label" for="usage">Primary Usage</label>
+                                <select class="form-select" id="usage">
+                                    <option value="street">Street / Touring</option>
+                                    <option value="sport">Sport / Track Day</option>
+                                    <option value="race">Racing</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="throttle-response">Throttle Response</label>
+                            <select class="form-select" id="throttle-response">
+                                <option value="mild">Mild (Smooth)</option>
+                                <option value="normal" selected>Normal</option>
+                                <option value="aggressive">Aggressive (Snappy)</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label" for="venturi-override">Venturi Size Override (optional)</label>
+                            <select class="form-select" id="venturi-override">
+                                <option value="">Auto Calculate</option>
+                                <option value="28">28mm</option>
+                                <option value="30">30mm</option>
+                                <option value="32">32mm</option>
+                                <option value="34">34mm</option>
+                                <option value="36">36mm</option>
+                                <option value="38">38mm</option>
+                                <option value="40">40mm</option>
+                            </select>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary btn-block" id="calculate-btn">
+                            Calculate Configuration
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Right Column: Results -->
+                <div class="card">
+                    <div class="card-header">
+                        <div class="card-icon"></div>
+                        <h2 class="card-title">Recommended Configuration</h2>
+                    </div>
+
+                    <div id="results-container">
+                        <p class="text-center" style="color: var(--color-text-tertiary); padding: var(--space-2xl) 0;">
+                            Enter engine specifications and click "Calculate Configuration" to see recommendations.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- EXAMPLE CONFIGS TAB -->
+        <div id="examples-tab" class="tab-content" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"></div>
+                    <h2 class="card-title">Real-World Configuration Examples</h2>
+                </div>
+
+                <!-- Filter Controls -->
+                <div class="form-row mb-lg">
+                    <div class="form-group">
+                        <label class="form-label" for="filter-usage">Filter by Usage</label>
+                        <select class="form-select" id="filter-usage">
+                            <option value="">All</option>
+                            <option value="street">Street</option>
+                            <option value="sport">Sport</option>
+                            <option value="race">Race</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="filter-verified">Verified Only</label>
+                        <select class="form-select" id="filter-verified">
+                            <option value="">All Configs</option>
+                            <option value="true">Verified Only</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="examples-container">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- SIMULATOR TAB -->
+        <div id="simulator-tab" class="tab-content" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"></div>
+                    <h2 class="card-title">Interactive Tuning Simulator</h2>
+                </div>
+
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--space-xl);">
+                    Experiment with component changes and see real-time impact analysis. Adjust jets, venturis,
+                    and emulsion
+                    tubes to understand how each change affects engine behavior across all RPM ranges.
+                </p>
+
+                <!-- Load Baseline Section -->
+                <div class="simulator-baseline">
+                    <div class="baseline-header">
+                        <h3 class="baseline-title">Baseline Configuration</h3>
+                        <div class="baseline-actions">
+                            <button class="btn btn-secondary btn-load-baseline" id="load-from-calc">From
+                                Calculator</button>
+                            <button class="btn btn-secondary btn-load-baseline" id="load-from-preset">From
+                                Preset</button>
+                        </div>
+                    </div>
+                    <div id="baseline-display">
+                        <p class="text-center" style="color: var(--color-text-tertiary); padding: var(--space-lg) 0;">
+                            Load a baseline configuration to begin experimenting
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Component Controls -->
+                <div class="simulator-controls" id="simulator-controls" style="display: none;">
+                    <h3 style="margin-bottom: var(--space-lg);">Adjust Components</h3>
+                    <div class="controls-grid" id="controls-grid">
+                        <!-- Controls will be populated by JavaScript -->
+                    </div>
+                </div>
+
+                <!-- Impact Analysis -->
+                <div class="simulator-analysis" id="simulator-analysis" style="display: none;">
+                    <!-- RPM Range Impacts -->
+                    <div class="rpm-range-impacts">
+                        <h3>Mixture Status by RPM Range</h3>
+                        <div class="rpm-ranges-grid" id="rpm-ranges-grid">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Performance Predictions -->
+                    <div class="performance-predictions">
+                        <h3>Performance Characteristics</h3>
+                        <div class="performance-grid" id="performance-grid">
+                            <!-- Will be populated by JavaScript -->
+                        </div>
+                    </div>
+
+                    <!-- Warnings -->
+                    <div class="simulator-warnings" id="simulator-warnings">
+                        <!-- Will be populated by JavaScript -->
+                    </div>
+
+                    <!-- Comparison -->
+                    <div class="simulator-comparison">
+                        <h3>Baseline vs Modified</h3>
+                        <table class="comparison-table" id="comparison-table">
+                            <thead>
+                                <tr>
+                                    <th>Component</th>
+                                    <th>Baseline</th>
+                                    <th>Modified</th>
+                                    <th>Change</th>
+                                </tr>
+                            </thead>
+                            <tbody id="comparison-tbody">
+                                <!-- Will be populated by JavaScript -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Actions -->
+                    <div class="simulator-actions">
+                        <button class="btn btn-secondary" id="reset-simulator">Reset to Baseline</button>
+                        <button class="btn btn-primary" id="save-config">Save Configuration</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- TROUBLESHOOTING TAB -->
+        <div id="troubleshooting-tab" class="tab-content" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"></div>
+                    <h2 class="card-title">Tuning Troubleshooting Guide</h2>
+                </div>
+
+                <!-- Search -->
+                <div class="form-group mb-xl">
+                    <label class="form-label" for="symptom-search">Search by Symptom</label>
+                    <input type="text" class="form-input" id="symptom-search"
+                        placeholder="e.g., hesitation, rough idle, flat spot, backfire...">
+                </div>
+
+                <!-- Category Filter -->
+                <div class="tabs mb-lg">
+                    <button class="filter-btn active" data-category="all" id="cat-all">All Issues</button>
+                    <button class="filter-btn" data-category="idle" id="cat-idle">Idle</button>
+                    <button class="filter-btn" data-category="transition" id="cat-transition">Transition</button>
+                    <button class="filter-btn" data-category="midrange" id="cat-midrange">Mid-Range</button>
+                    <button class="filter-btn" data-category="topEnd" id="cat-topend">High RPM</button>
+                    <button class="filter-btn" data-category="specific" id="cat-specific">Specific</button>
+                </div>
+
+                <div id="troubleshooting-container">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- TUNING GUIDE TAB -->
+        <div id="tuning-guide-tab" class="tab-content" role="tabpanel">
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon"></div>
+                    <h2 class="card-title">Systematic Tuning Procedure</h2>
+                </div>
+
+                <div id="tuning-procedure-container">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+
+                <h3 class="mt-lg mb-lg">Quick Reference Chart</h3>
+                <div id="quick-reference-container">
+                    <!-- Will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Bundled JavaScript (all modules combined) -->
+    <script src="app-standalone.js"></script>
+</body>
+
+</html>
