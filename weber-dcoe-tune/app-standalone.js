@@ -4,6 +4,8 @@
  */
 
 // ===== WEBER CALCULATOR =====
+let currentConfig = null;
+
 class WeberCalculator {
     static calculateMainJet(venturiSize, displacement, compression, camProfile = 'stock', numCarbs = 3) {
         let mainJet = venturiSize * 4;
@@ -751,7 +753,8 @@ function getProblemsByRPMRange(range) {
 }
 
 // ===== MAIN APPLICATION LOGIC =====
-let currentConfig = null;
+// ===== MAIN APPLICATION LOGIC =====
+
 
 function initTabs() {
     const tabButtons = document.querySelectorAll('.tab-btn');
@@ -1213,12 +1216,12 @@ function loadSimulatorBaseline(source) {
     if (source === 'calculator') {
         if (configSource) {
             simulatorBaseline = {
-                venturi: configSource.venturiSize || configSource.carbSetup.venturi, // Handle different structures
-                mainJet: configSource.mainJet || configSource.carbSetup.mainJet,
-                airCorrector: configSource.airCorrector || configSource.carbSetup.airCorrector,
-                idleJet: configSource.idleJet || configSource.carbSetup.idleJet,
-                pumpJet: configSource.pumpJet || configSource.carbSetup.pumpJet,
-                emulsionTube: configSource.emulsionTube || configSource.carbSetup.emulsionTube || 'F11'
+                venturi: configSource.venturi || configSource.venturiSize || (configSource.carbSetup ? configSource.carbSetup.venturi : 0),
+                mainJet: configSource.mainJet || (configSource.carbSetup ? configSource.carbSetup.mainJet : 0),
+                airCorrector: configSource.airCorrector || (configSource.carbSetup ? configSource.carbSetup.airCorrector : 0),
+                idleJet: configSource.idleJet || (configSource.carbSetup ? configSource.carbSetup.idleJet : '50F9'),
+                pumpJet: configSource.pumpJet || (configSource.carbSetup ? configSource.carbSetup.pumpJet : 0),
+                emulsionTube: configSource.emulsionTube || (configSource.carbSetup ? configSource.carbSetup.emulsionTube : 'F11')
             };
             simulatorModified = { ...simulatorBaseline };
             displaySimulatorBaseline();
