@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>YSI EXO Profile Viewer</title>
+  <link rel="stylesheet" href="style.css" />
+  <!-- Plotly (from CDN) -->
+  <script src="https://cdn.plot.ly/plotly-2.34.0.min.js"></script>
+  <!-- PapaParse CSV parser (from CDN) -->
+  <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+</head>
+<body>
+  <header>
+    <h1>YSI EXO Profile Viewer</h1>
+    <p>Load YSI EXO profile CSVs, extract downcasts, and plot depth vs parameters.</p>
+  </header>
+
+  <main>
+    <section id="file-section">
+      <h2>Load CSV files</h2>
+      <input type="file" id="file-input" multiple accept=".csv" />
+      <div id="file-list"></div>
+    </section>
+
+    <section id="single-cast">
+      <h2>Single cast plot</h2>
+      <div class="controls-row">
+        <label for="cast-select">Cast:</label>
+        <select id="cast-select"></select>
+
+        <label for="param-select">Parameters:</label>
+        <select id="param-select" multiple size="6"></select>
+
+        <label>
+          <input type="checkbox" id="invert-depth" checked />
+          Invert depth axis
+        </label>
+
+        <button id="plot-single-btn">Plot downcast</button>
+        <button id="export-downcast-btn">Export downcast CSV</button>
+      </div>
+      <div id="single-plot" class="plot-container"></div>
+    </section>
+
+    <section id="comparison">
+      <h2>Cast comparison</h2>
+      <div class="controls-row">
+        <label for="cast-a-select">Cast A:</label>
+        <select id="cast-a-select"></select>
+
+        <label for="cast-b-select">Cast B:</label>
+        <select id="cast-b-select"></select>
+
+        <label for="comparison-param-select">Parameter:</label>
+        <select id="comparison-param-select"></select>
+      </div>
+      <div class="controls-row">
+        <label for="comparison-title">Title:</label>
+        <input type="text" id="comparison-title"
+               value="Parameter vs Depth (Cast A vs Cast B)" />
+
+        <label for="legend-a">Legend A:</label>
+        <input type="text" id="legend-a" placeholder="Cast A label" />
+
+        <label for="legend-b">Legend B:</label>
+        <input type="text" id="legend-b" placeholder="Cast B label" />
+
+        <label>
+          <input type="checkbox" id="invert-depth-compare" checked />
+          Invert depth axis
+        </label>
+
+        <button id="plot-compare-btn">Plot comparison</button>
+      </div>
+      <div id="comparison-plot" class="plot-container"></div>
+    </section>
+  </main>
+
+  <footer>
+    <p>All processing is done in your browser. No data is uploaded.</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>
