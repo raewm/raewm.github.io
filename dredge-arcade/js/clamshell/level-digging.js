@@ -277,7 +277,7 @@ export class LevelDigging {
                     this.game.hud.flash(`+${pts} pts`, '#2dca72');
 
                     // Deform seabed — lower it at the grab point
-                    const biteDropPx = 10 + Math.random() * 8;  // 10–18 px drop
+                    const biteDropPx = 22 + Math.random() * 14;  // 22–36 px drop
                     this._deformSeabed(bp.x, biteDropPx);
 
                     this.buckState = BUCK.RAISING;
@@ -498,8 +498,6 @@ export class LevelDigging {
             ctx.restore();
         }
 
-        // Controls hint
-        this._drawHint();
     }
 
     _drawGradeLine() {
@@ -523,19 +521,7 @@ export class LevelDigging {
         ctx.restore();
     }
 
-    _drawHint() {
-        const ctx = this.ctx;
-        ctx.save();
-        ctx.font = '12px Outfit, sans-serif';
-        ctx.fillStyle = 'rgba(180,220,255,0.7)';
-        ctx.textAlign = 'left';
-        const lines = [
-            '↓ Lower bucket   ↑ Raise bucket',
-            '← → Move barge',
-        ];
-        lines.forEach((l, i) => ctx.fillText(l, 12, this.H - 36 + i * 16));
-        ctx.restore();
-    }
+
 
     _drawCloud(c) {
         const ctx = this.ctx;
@@ -648,14 +634,15 @@ export class LevelDigging {
     _drawBucket(x, y) {
         const ctx = this.ctx;
         const isOpen = this.buckState === BUCK.IDLE || this.buckState === BUCK.LOWERING;
+        const isRaising = this.buckState === BUCK.RAISING || this.buckState === BUCK.STUCK;
         const isGrab = this.buckState === BUCK.GRABBING;
         const isDump = this.buckState === BUCK.DUMPING;
         const isStuck = this.buckState === BUCK.STUCK;
         const grabT = isGrab ? (1 - this.buckTimer / GRAB_DURATION) : 0;
 
-        // Gap between jaw tips: large when open, 0 when closed
+        // Gap between jaw tips: large when open, 0 when closed/raising
         const maxGap = 22;  // px open gap (radius from centre to each tip)
-        const jawGap = isOpen ? maxGap : isDump ? maxGap * 0.7 : maxGap * (1 - grabT);
+        const jawGap = isOpen ? maxGap : (isRaising ? 0 : isDump ? maxGap * 0.7 : maxGap * (1 - grabT));
 
         const jawW = 28;   // horizontal extent of each jaw
         const jawH = 18;   // height of each jaw blade
