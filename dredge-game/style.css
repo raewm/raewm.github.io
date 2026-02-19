@@ -1,0 +1,144 @@
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  background: #0a1628;
+  overflow: hidden;
+  font-family: 'Outfit', sans-serif;
+}
+
+#gameCanvas {
+  display: block;
+  position: fixed;
+  top: 0; left: 0;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ============ OVERLAYS ============ */
+.overlay {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(5, 15, 35, 0.88);
+  z-index: 100;
+  backdrop-filter: blur(4px);
+  transition: opacity 0.3s;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.menu-box {
+  background: linear-gradient(160deg, #0e2a4a 0%, #091a30 100%);
+  border: 3px solid #2ab8e0;
+  border-radius: 24px;
+  padding: 40px 52px;
+  text-align: center;
+  max-width: 520px;
+  width: 90vw;
+  box-shadow: 0 0 60px rgba(42,184,224,0.3), 0 8px 32px rgba(0,0,0,0.5);
+}
+
+.title-line1 {
+  font-size: 4rem;
+  font-weight: 900;
+  color: #2ab8e0;
+  letter-spacing: 6px;
+  text-shadow: 0 0 20px rgba(42,184,224,0.8);
+  line-height: 1;
+}
+
+.title-line2 {
+  font-size: 5rem;
+  font-weight: 900;
+  color: #f5a623;
+  letter-spacing: 4px;
+  text-shadow: 0 0 20px rgba(245,166,35,0.7);
+  line-height: 1;
+}
+
+.subtitle {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #7fe0f5;
+  letter-spacing: 8px;
+  margin: 4px 0 20px;
+}
+
+.menu-ship {
+  font-size: 3rem;
+  margin: 8px 0;
+  filter: drop-shadow(0 2px 8px rgba(42,184,224,0.5));
+  animation: bob 2s ease-in-out infinite;
+}
+
+@keyframes bob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.instructions {
+  background: rgba(255,255,255,0.05);
+  border-radius: 12px;
+  padding: 14px 18px;
+  text-align: left;
+  margin-bottom: 24px;
+}
+
+.instructions p {
+  color: #c9e8f5;
+  font-size: 0.82rem;
+  line-height: 1.5;
+  margin-bottom: 8px;
+}
+
+.instructions p:last-child { margin-bottom: 0; }
+.instructions strong { color: #f5a623; }
+
+button {
+  background: linear-gradient(135deg, #f5a623, #e8820c);
+  color: #fff;
+  border: none;
+  border-radius: 50px;
+  padding: 14px 44px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 1.2rem;
+  font-weight: 900;
+  letter-spacing: 2px;
+  cursor: pointer;
+  box-shadow: 0 4px 20px rgba(245,166,35,0.5);
+  transition: transform 0.15s, box-shadow 0.15s;
+  text-transform: uppercase;
+}
+
+button:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 28px rgba(245,166,35,0.7);
+}
+
+button:active {
+  transform: translateY(1px) scale(0.98);
+}
+
+.high-score-display {
+  color: #7fe0f5;
+  font-size: 0.85rem;
+  margin-top: 14px;
+  min-height: 1.2em;
+}
+
+.go-stats {
+  color: #c9e8f5;
+  font-size: 0.95rem;
+  margin: 18px 0 24px;
+  line-height: 1.8;
+}
+
+.go-stats strong { color: #f5a623; }
