@@ -144,14 +144,47 @@ export class LevelCutting {
     }
 
     _genCell(row, col, round) {
-        const rng = lcg(row * 7919 + col * 104729 + round * 2053);
-        const rockChance = 0.05 + round * 0.03;
-        const clayChance = 0.22 + round * 0.02;
+        // ── Zone-coherent material noise ──────────────────────────────────────
+        // Sample noise at a coarse grid (ZONE_R × ZONE_C cells per zone).
+        // Bilinear smooth-step interpolation between zone corners produces large,
+        // gradually-transitioning geological patches rather than salt-and-pepper noise.
+        const ZONE_R = 18, ZONE_C = 14;
+        const zr = Math.floor(row / ZONE_R);
+        const zc = Math.floor(col / ZONE_C);
+        const fr = (row % ZONE_R) / ZONE_R;
+        const fc = (col % ZONE_C) / ZONE_C;
+
+        // Smooth-step (ease in-out)
+        const sfr = fr * fr * (3 - 2 * fr);
+        const sfc = fc * fc * (3 - 2 * fc);
+
+        const seed = (zr, zc) => lcg(zr * 7919 + zc * 104729 + round * 2053);
+        const n00 = seed(zr, zc);
+        const n10 = seed(zr + 1, zc);
+        const n01 = seed(zr, zc + 1);
+        const n11 = seed(zr + 1, zc + 1);
+
+        const baseNoise = n00 * (1 - sfr) * (1 - sfc)
+            + n10 * sfr * (1 - sfc)
+            + n01 * (1 - sfr) * sfc
+            + n11 * sfr * sfc;
+
+        // Map smooth noise → material type.
+        // Higher rounds shift thresholds slightly toward harder material.
+        const shift = Math.min(round * 0.04, 0.2);
         let type;
-        if (rng < rockChance) type = CT.ROCK;
-        else if (rng < rockChance + clayChance) type = CT.CLAY;
-        else if (rng < 0.72) type = CT.SAND;
-        else type = CT.SILT;
+        if (baseNoise < 0.30 - shift) type = CT.SILT;
+        else if (baseNoise < 0.60) type = CT.SAND;
+        else if (baseNoise < 0.88 + shift) type = CT.CLAY;
+        else type = CT.CLAY;  // top of range stays clay
+
+        // ── Sparse rock inclusions ────────────────────────────────────────────
+        // Completely independent noise — only fires at low probability so rocks
+        // appear as isolated boulders inside an otherwise consistent stratum.
+        const rockRng = lcg(row * 31337 + col * 6271 + round * 9973);
+        const rockChance = 0.025 + round * 0.008;
+        if (rockRng < rockChance) type = CT.ROCK;
+
         return { type, cut: 0 };
     }
 
