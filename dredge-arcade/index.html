@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Dredge Arcade</title>
+    <meta name="description" content="Play Hopper Dredge or Clamshell Dredge — two dredging simulation games in one." />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="style.css" />
+    <style>
+        /* ── Menu Button (always visible during gameplay) ─────────────────── */
+        #menuBtn {
+            position: fixed;
+            top: 14px;
+            right: 14px;
+            z-index: 999;
+            background: rgba(10, 20, 50, 0.88);
+            color: #2ab8e0;
+            border: 1.5px solid rgba(42, 184, 224, 0.55);
+            border-radius: 8px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.1em;
+            padding: 7px 16px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: background 0.15s, color 0.15s;
+            backdrop-filter: blur(4px);
+        }
+
+        #menuBtn:hover {
+            background: rgba(42, 184, 224, 0.2);
+            color: #fff;
+        }
+
+        /* ── Arcade picker overlay ─────────────────────────────────────────── */
+        #arcadeMenu {
+            position: fixed;
+            inset: 0;
+            z-index: 200;
+            display: none;
+            /* hidden by default; shown via .arcade-visible */
+            align-items: center;
+            justify-content: center;
+            background: transparent;
+        }
+
+        #arcadeMenu.arcade-visible {
+            display: flex;
+        }
+
+        #arcadeMenu .arcade-box {
+            text-align: center;
+            padding: 44px 36px 36px;
+            background: rgba(5, 16, 38, 0.92);
+            border: 2px solid rgba(42, 184, 224, 0.35);
+            border-radius: 24px;
+            backdrop-filter: blur(8px);
+            max-width: 640px;
+            width: 90%;
+        }
+
+        #arcadeMenu .arcade-logo {
+            font-size: 3rem;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        #arcadeMenu h1 {
+            font-size: clamp(2rem, 5vw, 3.2rem);
+            font-weight: 900;
+            margin-bottom: 4px;
+            line-height: 1.1;
+        }
+
+        #arcadeMenu h1 span:first-child {
+            color: #2ab8e0;
+            display: block;
+        }
+
+        #arcadeMenu h1 span:last-child {
+            color: #f5a623;
+            display: block;
+        }
+
+        #arcadeMenu .arcade-tag {
+            color: rgba(180, 220, 255, 0.55);
+            font-size: 0.85rem;
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            margin-bottom: 36px;
+        }
+
+        .game-cards {
+            display: flex;
+            gap: 20px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .game-card {
+            background: rgba(10, 28, 60, 0.8);
+            border: 2px solid rgba(42, 184, 224, 0.25);
+            border-radius: 16px;
+            padding: 24px 20px 20px;
+            width: 220px;
+            cursor: pointer;
+            transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
+            text-align: left;
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px) scale(1.02);
+            border-color: rgba(42, 184, 224, 0.75);
+            box-shadow: 0 10px 32px rgba(42, 184, 224, 0.2);
+        }
+
+        .game-card.orange:hover {
+            border-color: rgba(245, 166, 35, 0.75);
+            box-shadow: 0 10px 32px rgba(245, 166, 35, 0.2);
+        }
+
+        .game-card-icon {
+            font-size: 2.4rem;
+            display: block;
+            margin-bottom: 10px;
+        }
+
+        .game-card-title {
+            font-size: 1.05rem;
+            font-weight: 900;
+            letter-spacing: 0.04em;
+            margin-bottom: 2px;
+            color: #2ab8e0;
+        }
+
+        .game-card.orange .game-card-title {
+            color: #f5a623;
+        }
+
+        .game-card-sub {
+            font-size: 0.72rem;
+            color: rgba(180, 220, 255, 0.5);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 10px;
+        }
+
+        .game-card-desc {
+            font-size: 0.82rem;
+            color: rgba(200, 228, 255, 0.7);
+            line-height: 1.5;
+            margin-bottom: 16px;
+        }
+
+        .card-play-btn {
+            display: inline-block;
+            padding: 7px 18px;
+            border-radius: 50px;
+            font-family: 'Outfit', sans-serif;
+            font-weight: 700;
+            font-size: 0.8rem;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            border: none;
+            cursor: pointer;
+            color: #040e22;
+            transition: filter 0.15s;
+        }
+
+        .card-play-btn.blue {
+            background: linear-gradient(90deg, #2ab8e0, #2dca72);
+        }
+
+        .card-play-btn.orange {
+            background: linear-gradient(90deg, #f5a623, #e84040);
+        }
+
+        .card-play-btn:hover {
+            filter: brightness(1.12);
+        }
+    </style>
+</head>
+
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- Always-visible back-to-menu button (hidden on arcade menu) -->
+    <button id="menuBtn" class="hidden">⬅ MENU</button>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       ARCADE GAME PICKER
+  ════════════════════════════════════════════════════════════════════════ -->
+    <div id="arcadeMenu" class="arcade-visible">
+        <div class="arcade-box">
+            <span class="arcade-logo">⚓</span>
+            <h1><span>DREDGE</span><span>ARCADE</span></h1>
+            <p class="arcade-tag">Select your machine</p>
+            <div class="game-cards">
+
+                <div class="game-card" id="selectHopper">
+                    <span class="game-card-icon">🚢</span>
+                    <div class="game-card-title">HOPPER DREDGE</div>
+                    <div class="game-card-sub">Trailing Suction</div>
+                    <div class="game-card-desc">Lower the draghead, follow the contour, avoid sea turtles, deliver to
+                        the disposal site.</div>
+                    <div class="card-play-btn blue">SELECT →</div>
+                </div>
+
+                <div class="game-card orange" id="selectClamshell">
+                    <span class="game-card-icon">🏗️</span>
+                    <div class="game-card-title">CLAMSHELL DREDGE</div>
+                    <div class="game-card-sub">Crane &amp; Scow</div>
+                    <div class="game-card-desc">Position the barge, work the grab bucket, avoid pilings and the
+                        overdepth limit.</div>
+                    <div class="card-play-btn orange">SELECT →</div>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       HOPPER GAME MENU
+  ════════════════════════════════════════════════════════════════════════ -->
+    <div id="hopperMenu" class="overlay hidden">
+        <div class="menu-box">
+            <div class="title-line1">HOPPER</div>
+            <div class="title-line2">DREDGE</div>
+            <div class="subtitle">THE GAME</div>
+            <div class="menu-ship">⚓</div>
+            <div class="instructions">
+                <p><strong>Level 1 — Dredging:</strong> Use ↑↓ to raise/lower the draghead. Collect material from the
+                    seabed. Avoid sea turtles!</p>
+                <p><strong>Level 2 — Disposal:</strong> Use ↑↓←→ to navigate to the disposal site. Manage wind &amp;
+                    current.</p>
+                <p><strong>Score:</strong> Loading rate + fast disposal − turtle penalties</p>
+            </div>
+            <button id="startHopper">START DREDGING</button>
+            <div class="high-score-display" id="highScoreDisplay"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       CLAMSHELL GAME MENU
+  ════════════════════════════════════════════════════════════════════════ -->
+    <div id="clamshellMenu" class="overlay hidden">
+        <div class="menu-box">
+            <div class="title-line1">CLAMSHELL</div>
+            <div class="title-line2">DREDGE</div>
+            <div class="subtitle">THE GAME</div>
+            <div class="menu-ship">🏗️</div>
+            <div class="instructions">
+                <p><strong>Level 1 — Digging:</strong> Use ↑↓ to raise/lower the bucket, ←→ to move the barge. Grab
+                    auto-triggers on seabed contact. Avoid pilings!</p>
+                <p><strong>Level 2 — Transport:</strong> Use ↑↓←→ to steer the tugboat and tow the laden scow to the
+                    disposal buoy.</p>
+                <p><strong>Score:</strong> Bites loaded + fast delivery − piling penalties</p>
+            </div>
+            <button id="startClamshell">START DREDGING</button>
+            <div class="high-score-display" id="highScoreDisplay"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       GAME OVER
+  ════════════════════════════════════════════════════════════════════════ -->
+    <div id="gameOverOverlay" class="overlay hidden">
+        <div class="menu-box">
+            <div class="title-line1" style="font-size:3rem;">GAME</div>
+            <div class="title-line2" style="font-size:3.5rem;">OVER</div>
+            <div class="go-stats" id="goStats"></div>
+            <button id="restartBtn">PLAY AGAIN</button>
+        </div>
+    </div>
+
+    <script src="js/engine.js" type="module"></script>
+</body>
+
+</html>
