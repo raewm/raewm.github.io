@@ -2,8 +2,9 @@
 // Handles: game selection, shared canvas/input/resize, per-game state machine
 
 // ── Exports used by level modules ──────────────────────────────────────────
-//   Hopper:   transitionToDisposal, transitionToLoading, showGameOver
+//   Hopper:    transitionToDisposal, transitionToLoading, showGameOver
 //   Clamshell: transitionToTransport, transitionToDigging, showGameOver
+//   Cutter:    transitionNextCutterRound, showGameOver
 
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
@@ -18,7 +19,7 @@ export const STATE = {
 
 export const game = {
     state: STATE.ARCADE_MENU,
-    activeGame: null,   // 'hopper' | 'clamshell'
+    activeGame: null,   // 'hopper' | 'clamshell' | 'cutter'
 
     // shared per-game fields
     width: 0, height: 0,
@@ -32,10 +33,14 @@ export const game = {
     scowFill: 0,
     highScore_clamshell: parseInt(localStorage.getItem('clamshell_hs') || '0'),
 
+    // cutter-specific
+    highScore_cutter: parseInt(localStorage.getItem('cutter_hs') || '0'),
+
     // per-game references (set at game init)
     scoring: null, hud: null,
     levelLoading: null, levelDisposal: null,    // hopper
     levelDigging: null, levelTransport: null,   // clamshell
+    levelCutting: null,                         // cutter
 
     // transition
     fadeAlpha: 0, fadeDir: 0,
@@ -47,7 +52,9 @@ export const game = {
 export const keys = {
     ArrowUp: false, ArrowDown: false,
     ArrowLeft: false, ArrowRight: false,
+    KeyW: false, KeyS: false,
 };
+
 window.addEventListener('keydown', e => {
     if (Object.prototype.hasOwnProperty.call(keys, e.code)) {
         keys[e.code] = true; e.preventDefault();
@@ -67,6 +74,7 @@ function resize() {
     if (game.levelDisposal) game.levelDisposal.onResize();
     if (game.levelDigging) game.levelDigging.onResize();
     if (game.levelTransport) game.levelTransport.onResize();
+    if (game.levelCutting) game.levelCutting.onResize();
 }
 window.addEventListener('resize', resize);
 
@@ -77,9 +85,10 @@ async function initGame(which) {
     game.round = 1;
     game.penalties = 0;
 
-    // Clear the other game's refs so resize doesn't call stale objects
+    // Clear all game refs so resize doesn't call stale objects
     game.levelLoading = null; game.levelDisposal = null;
     game.levelDigging = null; game.levelTransport = null;
+    game.levelCutting = null;
 
     if (which === 'hopper') {
         game.hopperFill = 0;
@@ -95,13 +104,11 @@ async function initGame(which) {
         game.levelLoading = new LevelLoading(ctx, canvas, game, keys);
         game.levelDisposal = new LevelDisposal(ctx, canvas, game, keys);
 
-        // First level key — fade in from black immediately
         game.transitionNextLevel = 'LOADING';
         game.transitionFrom = null;
-        game.fadeAlpha = 1;   // start fully black, fade in
-        game.fadeDir = -1;
+        game.fadeAlpha = 1; game.fadeDir = -1;
         game.state = STATE.TRANSITION;
-    } else {
+    } else if (which === 'clamshell') {
         game.scowFill = 0;
 
         const { Scoring } = await import('./clamshell/scoring.js');
@@ -114,11 +121,22 @@ async function initGame(which) {
         game.levelDigging = new LevelDigging(ctx, canvas, game, keys);
         game.levelTransport = new LevelTransport(ctx, canvas, game, keys);
 
-        // First level key — start playing immediately (fade in from black)
         game.transitionNextLevel = 'DIGGING';
         game.transitionFrom = null;
-        game.fadeAlpha = 1;   // start fully black, fade in
-        game.fadeDir = -1;
+        game.fadeAlpha = 1; game.fadeDir = -1;
+        game.state = STATE.TRANSITION;
+    } else {  // 'cutter'
+        const { Scoring } = await import('./cutter/scoring.js');
+        const { HUD } = await import('./cutter/hud.js');
+        const { LevelCutting } = await import('./cutter/level-cutting.js');
+
+        game.scoring = new Scoring(game);
+        game.hud = new HUD(ctx, game);
+        game.levelCutting = new LevelCutting(ctx, canvas, game, keys);
+
+        game.transitionNextLevel = 'CUTTING';
+        game.transitionFrom = null;
+        game.fadeAlpha = 1; game.fadeDir = -1;
         game.state = STATE.TRANSITION;
     }
 }
@@ -137,13 +155,20 @@ export function transitionToDisposal() { startFade('DISPOSING'); }
 export function transitionToLoading() { game.round++; startFade('LOADING'); }
 export function transitionToTransport() { startFade('TRANSPORTING'); }
 export function transitionToDigging() { game.round++; startFade('DIGGING'); }
+export function transitionNextCutterRound() {
+    game.round++;
+    if (game.levelCutting) { game.levelCutting.transitioned = false; game.levelCutting.reset(); }
+    startFade('CUTTING');
+}
 
 // ── Show game-over overlay ──────────────────────────────────────────────────
 export function showGameOver() {
     const isHopper = game.activeGame === 'hopper';
-    const hsKey = isHopper ? 'dredge_hs' : 'clamshell_hs';
-    const hsField = isHopper ? 'highScore_hopper' : 'highScore_clamshell';
-    const penLabel = isHopper ? 'Turtle penalties' : 'Piling penalties';
+    const isCutter = game.activeGame === 'cutter';
+    const hsKey = isHopper ? 'dredge_hs' : isCutter ? 'cutter_hs' : 'clamshell_hs';
+    const hsField = isHopper ? 'highScore_hopper' : isCutter ? 'highScore_cutter' : 'highScore_clamshell';
+    const penLabel = isHopper ? 'Turtle penalties' : isCutter ? 'Cavitations' : 'Piling penalties';
+    const penValue = isHopper ? (game.penalties + game.turtlePenalties) : game.penalties;
 
     if (game.score > game[hsField]) {
         game[hsField] = game.score;
@@ -154,7 +179,7 @@ export function showGameOver() {
     document.getElementById('goStats').innerHTML = `
         <div>Score: <strong>${game.score.toLocaleString()}</strong></div>
         <div>Rounds: <strong>${game.round - 1}</strong></div>
-        <div>${penLabel}: <strong>${game.penalties + game.turtlePenalties}</strong></div>
+        <div>${penLabel}: <strong>${penValue}</strong></div>
         ${game.score >= hs && hs > 0
             ? '<div style="color:#f5a623;font-weight:700;">🏆 New High Score!</div>'
             : `<div>Best: ${hs.toLocaleString()}</div>`}
@@ -220,24 +245,23 @@ function drawActiveGame(dt, ag) {
 
 function drawLevel(key, ag, dt) {
     if (ag === 'hopper') {
-        if (key === 'LOADING' && game.levelLoading) {
-            if (dt > 0) game.levelLoading.update(dt);
-            game.levelLoading.draw();
-            game.hud.drawLoadingHUD();
-        } else if (key === 'DISPOSING' && game.levelDisposal) {
-            if (dt > 0) game.levelDisposal.update(dt);
-            game.levelDisposal.draw();
-            game.hud.drawDisposalHUD();
-        }
-    } else {
-        if (key === 'DIGGING' && game.levelDigging) {
-            if (dt > 0) game.levelDigging.update(dt);
-            game.levelDigging.draw();
-            game.hud.drawDiggingHUD();
-        } else if (key === 'TRANSPORTING' && game.levelTransport) {
-            if (dt > 0) game.levelTransport.update(dt);
-            game.levelTransport.draw();
-            game.hud.drawTransportHUD();
+        if (key === 'LOADING' && game.levelLoading) { if (dt > 0) game.levelLoading.update(dt); game.levelLoading.draw(); game.hud.drawLoadingHUD(); }
+        else if (key === 'DISPOSING' && game.levelDisposal) { if (dt > 0) game.levelDisposal.update(dt); game.levelDisposal.draw(); game.hud.drawDisposalHUD(); }
+    } else if (ag === 'clamshell') {
+        if (key === 'DIGGING' && game.levelDigging) { if (dt > 0) game.levelDigging.update(dt); game.levelDigging.draw(); game.hud.drawDiggingHUD(); }
+        else if (key === 'TRANSPORTING' && game.levelTransport) { if (dt > 0) game.levelTransport.update(dt); game.levelTransport.draw(); game.hud.drawTransportHUD(); }
+    } else if (ag === 'cutter') {
+        if (key === 'CUTTING' && game.levelCutting) {
+            if (dt > 0) game.levelCutting.update(dt);
+            game.levelCutting.draw();
+            game.hud.drawCuttingHUD(
+                game.levelCutting.pumpPressure,
+                game.levelCutting.ladderDepth,
+                game.levelCutting.cavitations,
+                3,
+                game.levelCutting.overpressureTime,
+                5.0,   // CAV_OVERPRESS_TIME — seconds above 100% before cavitation
+            );
         }
     }
 }
@@ -246,9 +270,11 @@ function resetLevel(key, ag) {
     if (ag === 'hopper') {
         if (key === 'LOADING' && game.levelLoading) game.levelLoading.reset();
         if (key === 'DISPOSING' && game.levelDisposal) game.levelDisposal.reset();
-    } else {
+    } else if (ag === 'clamshell') {
         if (key === 'DIGGING' && game.levelDigging) game.levelDigging.reset();
         if (key === 'TRANSPORTING' && game.levelTransport) game.levelTransport.reset();
+    } else if (ag === 'cutter') {
+        if (key === 'CUTTING' && game.levelCutting) game.levelCutting.reset();
     }
 }
 
@@ -279,9 +305,9 @@ function drawArcadeMenu(dt) {
 function updateHighScoreDisplay() {
     const el = document.getElementById('highScoreDisplay');
     if (!el) return;
-    const hs = game.activeGame === 'hopper'
-        ? game.highScore_hopper
-        : game.highScore_clamshell;
+    const hs = game.activeGame === 'hopper' ? game.highScore_hopper
+        : game.activeGame === 'cutter' ? game.highScore_cutter
+            : game.highScore_clamshell;
     el.textContent = hs > 0 ? `Best: ${hs.toLocaleString()} pts` : '';
 }
 
@@ -290,6 +316,7 @@ function showArcadeMenu() {
     document.getElementById('arcadeMenu').classList.add('arcade-visible');
     document.getElementById('hopperMenu').classList.add('hidden');
     document.getElementById('clamshellMenu').classList.add('hidden');
+    document.getElementById('cutterMenu').classList.add('hidden');
     document.getElementById('gameOverOverlay').classList.add('hidden');
     document.getElementById('menuBtn').classList.add('hidden');
     game.state = STATE.ARCADE_MENU;
@@ -298,7 +325,9 @@ function showArcadeMenu() {
 
 function showGameMenu(which) {
     document.getElementById('arcadeMenu').classList.remove('arcade-visible');
-    document.getElementById(which === 'hopper' ? 'hopperMenu' : 'clamshellMenu').classList.remove('hidden');
+    const menuId = which === 'hopper' ? 'hopperMenu'
+        : which === 'cutter' ? 'cutterMenu' : 'clamshellMenu';
+    document.getElementById(menuId).classList.remove('hidden');
     document.getElementById('menuBtn').classList.remove('hidden');
     game.activeGame = which;
     updateHighScoreDisplay();
@@ -306,6 +335,7 @@ function showGameMenu(which) {
 
 document.getElementById('selectHopper').addEventListener('click', () => showGameMenu('hopper'));
 document.getElementById('selectClamshell').addEventListener('click', () => showGameMenu('clamshell'));
+document.getElementById('selectCutter').addEventListener('click', () => showGameMenu('cutter'));
 
 document.getElementById('startHopper').addEventListener('click', () => {
     document.getElementById('hopperMenu').classList.add('hidden');
@@ -314,6 +344,10 @@ document.getElementById('startHopper').addEventListener('click', () => {
 document.getElementById('startClamshell').addEventListener('click', () => {
     document.getElementById('clamshellMenu').classList.add('hidden');
     initGame('clamshell');
+});
+document.getElementById('startCutter').addEventListener('click', () => {
+    document.getElementById('cutterMenu').classList.add('hidden');
+    initGame('cutter');
 });
 
 document.getElementById('restartBtn').addEventListener('click', () => {

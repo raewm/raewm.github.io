@@ -5,7 +5,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Dredge Arcade</title>
-    <meta name="description" content="Play Hopper Dredge or Clamshell Dredge — two dredging simulation games in one." />
+    <meta name="description"
+        content="Play Hopper Dredge, Clamshell Dredge or Cutter Suction Dredge — three dredging simulation games in one." />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
@@ -183,6 +184,19 @@
         .card-play-btn:hover {
             filter: brightness(1.12);
         }
+
+        .game-card.green:hover {
+            border-color: rgba(45, 202, 114, 0.75);
+            box-shadow: 0 10px 32px rgba(45, 202, 114, 0.2);
+        }
+
+        .card-play-btn.green {
+            background: linear-gradient(90deg, #2dca72, #1ab8a0);
+        }
+
+        .game-card.green .game-card-title {
+            color: #2dca72;
+        }
     </style>
 </head>
 
@@ -218,6 +232,15 @@
                     <div class="game-card-desc">Position the barge, work the grab bucket, avoid pilings and the
                         overdepth limit.</div>
                     <div class="card-play-btn orange">SELECT →</div>
+                </div>
+
+                <div class="game-card green" id="selectCutter">
+                    <span class="game-card-icon">⚙️</span>
+                    <div class="game-card-title">CUTTER SUCTION</div>
+                    <div class="game-card-sub">Pipeline Dredge</div>
+                    <div class="game-card-desc">Swing the ladder arc, manage pump pressure, step forward through
+                        the cut section.</div>
+                    <div class="card-play-btn green">SELECT →</div>
                 </div>
 
             </div>
@@ -262,6 +285,27 @@
                 <p><strong>Score:</strong> Bites loaded + fast delivery − piling penalties</p>
             </div>
             <button id="startClamshell">START DREDGING</button>
+            <div class="high-score-display" id="highScoreDisplay"></div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════════════════════
+       CUTTER SUCTION GAME MENU
+  ════════════════════════════════════════════════════════════════════════ -->
+    <div id="cutterMenu" class="overlay hidden">
+        <div class="menu-box">
+            <div class="title-line1">CUTTER</div>
+            <div class="title-line2">SUCTION</div>
+            <div class="subtitle">THE GAME</div>
+            <div class="menu-ship">⚙️</div>
+            <div class="instructions">
+                <p><strong>Swing:</strong> Use ← → to drive the cutter head arc across the cut face.</p>
+                <p><strong>Depth:</strong> Use ↑ ↓ to raise/lower the cutter ladder. Stay in the green zone!</p>
+                <p><strong>Pump:</strong> Watch the pressure gauge — 3 cavitations ends your round.</p>
+                <p><strong>Step:</strong> Every 2 passes, the dredge advances automatically.</p>
+                <p><strong>Score:</strong> Material cut + step bonuses − cavitation penalties</p>
+            </div>
+            <button id="startCutter">START DREDGING</button>
             <div class="high-score-display" id="highScoreDisplay"></div>
         </div>
     </div>
