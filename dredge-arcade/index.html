@@ -13,57 +13,69 @@
     <link rel="stylesheet" href="style.css" />
     <style>
         /* ── Mobile D-pad controls ─────────────────────────────────────────── */
+        /*
+         * #mobileControls is a visibility-only wrapper (display:none / block).
+         * Child pads use position:fixed to anchor themselves to specific
+         * viewport regions, completely avoiding the canvas HUD areas.
+         *
+         * Layout (landscape phone, all games):
+         *   LEFT side, mid-screen  → ◀ ▶  (swing / lateral)
+         *   RIGHT side, mid-screen → ▲ ▼  (depth)
+         *   BOTTOM centre          → STEP FWD / STEP BACK  (cutter only)
+         */
         #mobileControls {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            padding: 10px 14px 18px;
             display: none;
-            /* shown by JS only on touch devices */
-            justify-content: space-between;
-            align-items: flex-end;
-            pointer-events: none;
-            /* container transparent; buttons opt-in */
-            z-index: 500;
-            user-select: none;
+            /* JS shows as 'block'; children escape to viewport */
         }
 
         .mc-pad {
+            position: fixed;
+            z-index: 500;
             display: flex;
-            gap: 8px;
             pointer-events: auto;
+            user-select: none;
         }
 
+        /* Left side: ◀ ▶ horizontal pair, vertically centred */
         .mc-left {
+            left: 8px;
+            top: 52%;
+            transform: translateY(-50%);
             flex-direction: row;
-            align-items: center;
-        }
-
-        .mc-right {
-            flex-direction: column;
-            align-items: center;
-        }
-
-        .mc-center {
-            flex-direction: column;
-            align-items: center;
             gap: 6px;
         }
 
+        /* Right side: ▲ ▼ vertical stack, vertically centred */
+        .mc-right {
+            right: 8px;
+            top: 52%;
+            transform: translateY(-50%);
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        /* Bottom centre: step buttons — clear of left/right HUD areas */
+        .mc-center {
+            left: 50%;
+            transform: translateX(-50%);
+            bottom: max(10px, env(safe-area-inset-bottom, 0px));
+            flex-direction: row;
+            gap: 8px;
+        }
+
         .mc-btn {
-            width: 72px;
-            height: 72px;
-            border-radius: 14px;
-            background: rgba(8, 18, 44, 0.82);
-            border: 2px solid rgba(42, 184, 224, 0.45);
+            width: 58px;
+            height: 58px;
+            border-radius: 12px;
+            background: rgba(8, 18, 44, 0.75);
+            border: 1.5px solid rgba(42, 184, 224, 0.40);
             color: #a8f0c8;
-            font-size: 1.7rem;
+            font-size: 1.5rem;
             font-family: 'Outfit', sans-serif;
             cursor: pointer;
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
-            backdrop-filter: blur(6px);
+            backdrop-filter: blur(4px);
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -74,36 +86,35 @@
         }
 
         .mc-btn span {
-            font-size: 0.5rem;
+            font-size: 0.45rem;
             letter-spacing: 0.06em;
             font-weight: 700;
             text-transform: uppercase;
-            color: rgba(168, 240, 200, 0.65);
+            color: rgba(168, 240, 200, 0.60);
         }
 
         .mc-btn.mc-active {
-            background: rgba(42, 184, 224, 0.32);
-            border-color: rgba(42, 184, 224, 0.9);
-            box-shadow: 0 0 12px rgba(42, 184, 224, 0.4);
+            background: rgba(42, 184, 224, 0.28);
+            border-color: rgba(42, 184, 224, 0.85);
+            box-shadow: 0 0 10px rgba(42, 184, 224, 0.35);
         }
 
-        /* Smaller step buttons so they don't dominate */
         .mc-step {
-            width: 82px;
-            height: 52px;
-            font-size: 1.0rem;
-            border-color: rgba(245, 166, 35, 0.45);
+            width: 76px;
+            height: 46px;
+            font-size: 0.85rem;
+            border-color: rgba(245, 166, 35, 0.40);
             color: #f5a623;
         }
 
         .mc-step span {
-            color: rgba(245, 166, 35, 0.65);
+            color: rgba(245, 166, 35, 0.60);
         }
 
         .mc-step.mc-active {
-            background: rgba(245, 166, 35, 0.25);
-            border-color: rgba(245, 166, 35, 0.9);
-            box-shadow: 0 0 12px rgba(245, 166, 35, 0.35);
+            background: rgba(245, 166, 35, 0.22);
+            border-color: rgba(245, 166, 35, 0.85);
+            box-shadow: 0 0 10px rgba(245, 166, 35, 0.30);
         }
 
         /* ── Menu Button (always visible during gameplay) ─────────────────── */

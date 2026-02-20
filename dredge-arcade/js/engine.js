@@ -325,7 +325,7 @@ const _isTouch = () => ('ontouchstart' in window) || navigator.maxTouchPoints > 
 
 function showMobileControls(which) {
     if (!_mcEl || !_isTouch()) return;
-    _mcEl.style.display = 'flex';
+    _mcEl.style.display = 'block';
     // Step pad is cutter-exclusive
     if (_mcStepEl) _mcStepEl.style.display = which === 'cutter' ? 'flex' : 'none';
 }
