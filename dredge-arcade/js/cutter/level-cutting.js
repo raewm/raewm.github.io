@@ -551,22 +551,39 @@ export class LevelCutting {
         ctx.restore();
     }
 
-    // Pipeline exits from stern, rotates with the hull
+    // Pipeline exits from stern, curves down to bottom of screen
     _drawPipeline() {
         const ctx = this.ctx;
         ctx.save();
-        ctx.translate(this.spudX, this.spudY);
-        ctx.rotate(this.swingAngle);
+
+        const sternX = this.spudX - Math.sin(this.swingAngle) * 8;
+        const sternY = this.spudY + Math.cos(this.swingAngle) * 8;
+
+        const endX = this.spudX;
+        const endY = this.H + 20; // past bottom of screen
+
+        // Control point: pushed backward from the hull to make a curve
+        const cpX = sternX - Math.sin(this.swingAngle) * 80;
+        const cpY = sternY + Math.cos(this.swingAngle) * 80;
+
         ctx.strokeStyle = '#444'; ctx.lineWidth = 10; ctx.lineCap = 'round';
-        ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(0, 220); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(sternX, sternY);
+        ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        ctx.stroke();
+
         ctx.strokeStyle = '#e84040'; ctx.lineWidth = 6;
         ctx.setLineDash([18, 10]);
-        ctx.beginPath(); ctx.moveTo(0, 8); ctx.lineTo(0, 220); ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(sternX, sternY);
+        ctx.quadraticCurveTo(cpX, cpY, endX, endY);
+        ctx.stroke();
+
         ctx.setLineDash([]);
         ctx.restore();
     }
 
-    // Dashed swing-arc guide + port/stbd anchor wires from spud
+    // Dashed swing-arc guide + port/stbd anchor wires
     _drawSwingWires() {
         const ctx = this.ctx;
         ctx.save();
@@ -579,23 +596,21 @@ export class LevelCutting {
         ctx.stroke();
         ctx.setLineDash([]);
 
-        // Anchor wires to port and starboard buoys
-        const portAng = -Math.PI / 2 - MAX_SWING * 1.35;
-        const stbdAng = -Math.PI / 2 + MAX_SWING * 1.35;
-        const wireLen = TOTAL_LEN * 1.25;
+        // Swing anchors placed wide and forward (top 1/3 of the screen)
+        const anchorY = this.spudY - TOTAL_LEN * 1.1;
+        const portBx = this.spudX - TOTAL_LEN * 1.3;
+        const stbdBx = this.spudX + TOTAL_LEN * 1.3;
+        const cutter = this._cutterXY();
+
         ctx.strokeStyle = 'rgba(200,200,180,0.5)'; ctx.lineWidth = 1.5;
         ctx.setLineDash([6, 4]);
-        for (const ang of [portAng, stbdAng]) {
-            const bx = this.spudX + Math.cos(ang) * wireLen;
-            const by = this.spudY + Math.sin(ang) * wireLen;
-            ctx.beginPath(); ctx.moveTo(this.spudX, this.spudY); ctx.lineTo(bx, by); ctx.stroke();
+        for (const bx of [portBx, stbdBx]) {
+            ctx.beginPath(); ctx.moveTo(cutter.x, cutter.y); ctx.lineTo(bx, anchorY); ctx.stroke();
         }
         ctx.setLineDash([]);
         ctx.fillStyle = '#f5a623';
-        for (const ang of [portAng, stbdAng]) {
-            const bx = this.spudX + Math.cos(ang) * wireLen;
-            const by = this.spudY + Math.sin(ang) * wireLen;
-            ctx.beginPath(); ctx.arc(bx, by, 6, 0, Math.PI * 2); ctx.fill();
+        for (const bx of [portBx, stbdBx]) {
+            ctx.beginPath(); ctx.arc(bx, anchorY, 6, 0, Math.PI * 2); ctx.fill();
         }
         ctx.restore();
     }
