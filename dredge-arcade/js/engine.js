@@ -315,6 +315,48 @@ function updateHighScoreDisplay() {
     el.textContent = hs > 0 ? `Best: ${hs.toLocaleString()} pts` : '';
 }
 
+// ── Mobile touch controls ────────────────────────────────────────────────────
+// Wire pointer events on the D-pad buttons → mutate the shared keys object.
+// Only shown on devices that support touch (phones, tablets, touch laptops).
+
+const _mcEl = document.getElementById('mobileControls');
+const _mcStepEl = document.getElementById('mcStepBtns');
+const _isTouch = () => ('ontouchstart' in window) || navigator.maxTouchPoints > 0;
+
+function showMobileControls(which) {
+    if (!_mcEl || !_isTouch()) return;
+    _mcEl.style.display = 'flex';
+    // Step pad is cutter-exclusive
+    if (_mcStepEl) _mcStepEl.style.display = which === 'cutter' ? 'flex' : 'none';
+}
+
+function hideMobileControls() {
+    if (_mcEl) _mcEl.style.display = 'none';
+}
+
+// Bind pointer events once for all buttons
+if (_mcEl) {
+    _mcEl.querySelectorAll('.mc-btn[data-key]').forEach(btn => {
+        const code = btn.dataset.key;
+        // Pointer down → key held
+        btn.addEventListener('pointerdown', e => {
+            e.preventDefault();
+            if (Object.prototype.hasOwnProperty.call(keys, code)) keys[code] = true;
+            btn.classList.add('mc-active');
+            btn.setPointerCapture(e.pointerId);  // keep receiving events even if finger slides off
+        });
+        // Pointer up / leave / cancel → key released
+        const release = e => {
+            if (Object.prototype.hasOwnProperty.call(keys, code)) keys[code] = false;
+            btn.classList.remove('mc-active');
+        };
+        btn.addEventListener('pointerup', release);
+        btn.addEventListener('pointercancel', release);
+        // Prevent context menu on long-press (mobile)
+        btn.addEventListener('contextmenu', e => e.preventDefault());
+    });
+}
+
 // ── HTML button wiring ─────────────────────────────────────────────────────
 function showArcadeMenu() {
     document.getElementById('arcadeMenu').classList.add('arcade-visible');
@@ -323,6 +365,7 @@ function showArcadeMenu() {
     document.getElementById('cutterMenu').classList.add('hidden');
     document.getElementById('gameOverOverlay').classList.add('hidden');
     document.getElementById('menuBtn').classList.add('hidden');
+    hideMobileControls();
     game.state = STATE.ARCADE_MENU;
     game.activeGame = null;
 }
@@ -343,19 +386,23 @@ document.getElementById('selectCutter').addEventListener('click', () => showGame
 
 document.getElementById('startHopper').addEventListener('click', () => {
     document.getElementById('hopperMenu').classList.add('hidden');
+    showMobileControls('hopper');
     initGame('hopper');
 });
 document.getElementById('startClamshell').addEventListener('click', () => {
     document.getElementById('clamshellMenu').classList.add('hidden');
+    showMobileControls('clamshell');
     initGame('clamshell');
 });
 document.getElementById('startCutter').addEventListener('click', () => {
     document.getElementById('cutterMenu').classList.add('hidden');
+    showMobileControls('cutter');
     initGame('cutter');
 });
 
 document.getElementById('restartBtn').addEventListener('click', () => {
     document.getElementById('gameOverOverlay').classList.add('hidden');
+    showMobileControls(game.activeGame);
     initGame(game.activeGame);
 });
 

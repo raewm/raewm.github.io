@@ -3,7 +3,7 @@
 
 <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
     <title>Dredge Arcade</title>
     <meta name="description"
         content="Play Hopper Dredge, Clamshell Dredge or Cutter Suction Dredge — three dredging simulation games in one." />
@@ -12,6 +12,100 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="style.css" />
     <style>
+        /* ── Mobile D-pad controls ─────────────────────────────────────────── */
+        #mobileControls {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px 14px 18px;
+            display: none;
+            /* shown by JS only on touch devices */
+            justify-content: space-between;
+            align-items: flex-end;
+            pointer-events: none;
+            /* container transparent; buttons opt-in */
+            z-index: 500;
+            user-select: none;
+        }
+
+        .mc-pad {
+            display: flex;
+            gap: 8px;
+            pointer-events: auto;
+        }
+
+        .mc-left {
+            flex-direction: row;
+            align-items: center;
+        }
+
+        .mc-right {
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .mc-center {
+            flex-direction: column;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .mc-btn {
+            width: 72px;
+            height: 72px;
+            border-radius: 14px;
+            background: rgba(8, 18, 44, 0.82);
+            border: 2px solid rgba(42, 184, 224, 0.45);
+            color: #a8f0c8;
+            font-size: 1.7rem;
+            font-family: 'Outfit', sans-serif;
+            cursor: pointer;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            backdrop-filter: blur(6px);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 1px;
+            user-select: none;
+            transition: background 0.07s, border-color 0.07s;
+        }
+
+        .mc-btn span {
+            font-size: 0.5rem;
+            letter-spacing: 0.06em;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: rgba(168, 240, 200, 0.65);
+        }
+
+        .mc-btn.mc-active {
+            background: rgba(42, 184, 224, 0.32);
+            border-color: rgba(42, 184, 224, 0.9);
+            box-shadow: 0 0 12px rgba(42, 184, 224, 0.4);
+        }
+
+        /* Smaller step buttons so they don't dominate */
+        .mc-step {
+            width: 82px;
+            height: 52px;
+            font-size: 1.0rem;
+            border-color: rgba(245, 166, 35, 0.45);
+            color: #f5a623;
+        }
+
+        .mc-step span {
+            color: rgba(245, 166, 35, 0.65);
+        }
+
+        .mc-step.mc-active {
+            background: rgba(245, 166, 35, 0.25);
+            border-color: rgba(245, 166, 35, 0.9);
+            box-shadow: 0 0 12px rgba(245, 166, 35, 0.35);
+        }
+
         /* ── Menu Button (always visible during gameplay) ─────────────────── */
         #menuBtn {
             position: fixed;
@@ -322,7 +416,31 @@
         </div>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════════════════════
+         MOBILE TOUCH D-PAD  (hidden on desktop, shown by JS on touch devices)
+    ══════════════════════════════════════════════════════════════════════════ -->
+    <div id="mobileControls">
+        <!-- Left pad: swing / lateral movement (◀ ▶) -->
+        <div class="mc-pad mc-left">
+            <button class="mc-btn" data-key="ArrowLeft">◀</button>
+            <button class="mc-btn" data-key="ArrowRight">▶</button>
+        </div>
+
+        <!-- Centre: step forward / back (cutter only, hidden by default) -->
+        <div id="mcStepBtns" class="mc-pad mc-center" style="display:none">
+            <button class="mc-btn mc-step" data-key="KeyW">▲<span>Step Fwd</span></button>
+            <button class="mc-btn mc-step" data-key="KeyS">▼<span>Step Back</span></button>
+        </div>
+
+        <!-- Right pad: depth / raise-lower (▲ ▼) -->
+        <div class="mc-pad mc-right">
+            <button class="mc-btn" data-key="ArrowUp">▲</button>
+            <button class="mc-btn" data-key="ArrowDown">▼</button>
+        </div>
+    </div>
+
     <script src="js/engine.js" type="module"></script>
+
 </body>
 
 </html>
