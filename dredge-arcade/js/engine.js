@@ -31,7 +31,9 @@ export const game = {
 
     // clamshell-specific
     scowFill: 0,
+    seabedState: null,   // persists deformed seabed across rounds; null = regenerate
     highScore_clamshell: parseInt(localStorage.getItem('clamshell_hs') || '0'),
+
 
     // cutter-specific
     highScore_cutter: parseInt(localStorage.getItem('cutter_hs') || '0'),
@@ -110,6 +112,8 @@ async function initGame(which) {
         game.state = STATE.TRANSITION;
     } else if (which === 'clamshell') {
         game.scowFill = 0;
+        game.seabedState = null;   // fresh seabed on new game
+
 
         const { Scoring } = await import('./clamshell/scoring.js');
         const { HUD } = await import('./clamshell/hud.js');

@@ -72,15 +72,31 @@ export class LevelDigging {
     onResize() {
         this.W = this.canvas.width; this.H = this.canvas.height;
         this._buildDims();
-        this._buildSeabed();  // rebuild grid at new resolution
+        // Rebuilds seabed at new resolution from stored noise, updates seabedState
+        if (this.game.seabedState) {
+            this._noise1 = this.game.seabedState.noise1;
+            this._noise2 = this.game.seabedState.noise2;
+        }
+        this._buildSeabed();
     }
 
     reset() {
         this.W = this.canvas.width; this.H = this.canvas.height;
-        this._noise1 = makeNoise(128, 23456 + this.game.round * 5);
-        this._noise2 = makeNoise(64, 77777 + this.game.round * 11);
         this._buildDims();
-        this._buildSeabed();
+        if (!this.game.seabedState) {
+            // New game — generate fresh seabed with a fixed seed (not round-based)
+            // so the same contour persists and only deforms round-over-round.
+            this._noise1 = makeNoise(128, 23456);
+            this._noise2 = makeNoise(64, 77777);
+            this._buildSeabed();   // also saves to game.seabedState
+        } else {
+            // Between rounds — reuse the accumulated (deformed) seabed.
+            this._noise1 = this.game.seabedState.noise1;
+            this._noise2 = this.game.seabedState.noise2;
+            this._seabed = this.game.seabedState.seabed;   // Float32Array reference
+            this._sbCols = this._seabed.length;
+            this._sbStep = 4;
+        }
 
         this.waveOffset = 0;
         this.time = 0;
@@ -149,6 +165,12 @@ export class LevelDigging {
             const wx = i * this._sbStep;
             this._seabed[i] = this._baseSeabedY(wx);
         }
+        // Persist seabed across rounds
+        this.game.seabedState = {
+            noise1: this._noise1,
+            noise2: this._noise2,
+            seabed: this._seabed,
+        };
     }
 
     _baseSeabedY(screenX) {
