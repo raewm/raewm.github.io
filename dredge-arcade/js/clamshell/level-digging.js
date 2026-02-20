@@ -387,6 +387,23 @@ export class LevelDigging {
             this.game.hud.flash(`SCOW FULL! +${bonus} pts`, '#f5a623');
             setTimeout(() => transitionToTransport(), 1400);
         }
+
+        // Check if level is completely cleared
+        if (!this.transitioned) {
+            let cleared = true;
+            for (let i = 0; i < this._sbCols; i++) {
+                if (this._seabed[i] < this.gradeY - 4) {
+                    cleared = false;
+                    break;
+                }
+            }
+            if (cleared) {
+                this.transitioned = true;
+                this.game.score += 5000;
+                this.game.hud.flash('SEABED CLEARED! +5000 pts', '#2dca72');
+                setTimeout(() => showGameOver(), 3000);
+            }
+        }
     }
 
     // ── Particle factories ───────────────────────────────────────────────────

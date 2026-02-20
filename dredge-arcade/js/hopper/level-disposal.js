@@ -2,9 +2,9 @@
 
 import { transitionToLoading } from '../engine.js';
 
-const SHIP_ACCEL = 300;        // px/s² (increased for better control against strong environment)
+const SHIP_ACCEL = 450;        // px/s² (increased for better control against strong environment)
 const SHIP_FRICTION = 0.88;    // velocity damping per frame factor
-const MAX_SPEED = 210;         // px/s (increased)
+const MAX_SPEED = 315;         // px/s (increased)
 const UNLOAD_RATE = 0.12;      // fraction per second (full unload ~8.5s)
 const DISPOSAL_ZONE_W = 160;
 const DISPOSAL_ZONE_H = 100;

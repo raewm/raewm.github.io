@@ -10,7 +10,7 @@ const ARM_LENGTH = 220;          // fixed pixel length of suction arm
 // Arm angle limits (measured from hull stern vertical):
 //   0 = pointing straight down, positive = swept back, negative = pushed forward
 const ARM_ANGLE_MIN = -0.18;     // nearly vertical forward
-const ARM_ANGLE_MAX = 1.25;      // swept back ~72°
+const ARM_ANGLE_MAX = 1.65;      // swept back to surface level (horizontal)
 const ARM_ANGLE_DEFAULT = 0.55;  // start mid-range
 
 const COLLECTION_RATE = 0.065;   // fraction of hopper filled per second of contact (~15s full)
@@ -392,6 +392,23 @@ export class LevelLoading {
             const pts = this.game.scoring.finishLoading();
             this.game.hud.flash(`HOPPER FULL! +${pts} pts`, '#f5a623');
             setTimeout(() => transitionToDisposal(), 1200);
+        }
+
+        // Check if level is completely cleared
+        if (!this.transitioned) {
+            let cleared = true;
+            for (let i = 0; i < this._seabed.length; i++) {
+                if (this._seabed[i] < this.gradeY - 4) {
+                    cleared = false;
+                    break;
+                }
+            }
+            if (cleared) {
+                this.transitioned = true;
+                this.game.score += 5000;
+                this.game.hud.flash('SEABED CLEARED! +5000 pts', '#2dca72');
+                setTimeout(() => showGameOver(), 3000);
+            }
         }
     }
 
