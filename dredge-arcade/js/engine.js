@@ -60,11 +60,13 @@ export const keys = {
 };
 
 window.addEventListener('keydown', e => {
+    if (e.target && e.target.tagName === 'INPUT') return;
     if (Object.prototype.hasOwnProperty.call(keys, e.code)) {
         keys[e.code] = true; e.preventDefault();
     }
 });
 window.addEventListener('keyup', e => {
+    if (e.target && e.target.tagName === 'INPUT') return;
     if (Object.prototype.hasOwnProperty.call(keys, e.code)) keys[e.code] = false;
 });
 

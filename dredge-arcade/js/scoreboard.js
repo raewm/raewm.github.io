@@ -37,7 +37,8 @@ export async function submitScore(game, initials, score) {
     // occupy multiple slots, we'd need a random suffix. But normally arcade boards keep your *best* score.
     // Dreamlo natively keeps the highest score for a given name. This is perfect for an arcade!
 
-    const url = `${BASE_URL}${DREAMLO_PRIVATE_KEY}/add/${playerName}/${score}`;
+    const targetUrl = `${BASE_URL}${DREAMLO_PRIVATE_KEY}/add/${playerName}/${score}`;
+    const url = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
     try {
         await fetch(url);
@@ -54,7 +55,8 @@ export async function submitScore(game, initials, score) {
  */
 export async function getTopScores(game, limit = 5) {
     const prefix = GAME_PREFIXES[game] || 'X_';
-    const url = `${BASE_URL}${DREAMLO_PUBLIC_KEY}/json`;
+    const targetUrl = `${BASE_URL}${DREAMLO_PUBLIC_KEY}/json`;
+    const url = `https://corsproxy.io/?${encodeURIComponent(targetUrl)}`;
 
     try {
         const response = await fetch(url);
