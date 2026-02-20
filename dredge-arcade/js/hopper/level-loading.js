@@ -11,7 +11,7 @@ const ARM_LENGTH = 220;          // fixed pixel length of suction arm
 //   0 = pointing straight down, positive = swept back, negative = pushed forward
 const ARM_ANGLE_MIN = -0.18;     // nearly vertical forward
 const ARM_ANGLE_MAX = 1.65;      // swept back to surface level (horizontal)
-const ARM_ANGLE_DEFAULT = 0.55;  // start mid-range
+const ARM_ANGLE_DEFAULT = 1.65;  // start with arm all the way up
 
 const COLLECTION_RATE = 0.065;   // fraction of hopper filled per second of contact (~15s full)
 const MAX_EMBED_DEPTH = 8;       // px below seabed before grounding triggers (~2m)
