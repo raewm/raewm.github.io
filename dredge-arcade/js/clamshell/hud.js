@@ -108,6 +108,49 @@ export class HUD {
         ctx.restore();
     }
 
+    drawLives(x, y) {
+        const ctx = this.ctx;
+        const maxLives = 3;
+        const lives = Math.max(0, maxLives - this.game.penalties);
+        ctx.save();
+        ctx.fillStyle = 'rgba(5,20,40,0.82)';
+        roundRect(ctx, x, y, 130, 44, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#2dca72';
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 130, 44, 10);
+        ctx.stroke();
+
+        ctx.fillStyle = '#2dca72';
+        ctx.font = "bold 11px 'Outfit', sans-serif";
+        ctx.fillText('LIVES', x + 12, y + 16);
+
+        const spacing = 28;
+        for (let i = 0; i < maxLives; i++) {
+            const ix = x + 40 + i * spacing;
+            const iy = y + 28;
+            ctx.beginPath();
+            ctx.arc(ix, iy, 7, 0, Math.PI * 2);
+            if (i < lives) {
+                // Alive
+                ctx.fillStyle = '#2dca72';
+                ctx.fill();
+            } else {
+                // Lost
+                ctx.strokeStyle = 'rgba(45, 202, 114, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                // red X
+                ctx.strokeStyle = '#ff4444';
+                ctx.beginPath();
+                ctx.moveTo(ix - 5, iy - 5); ctx.lineTo(ix + 5, iy + 5);
+                ctx.moveTo(ix + 5, iy - 5); ctx.lineTo(ix - 5, iy + 5);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    }
+
     drawFlash() {
         if (this.flashTimer <= 0) return;
         const ctx = this.ctx;
@@ -139,6 +182,7 @@ export class HUD {
         this.drawScowGauge(HUD_PAD, HUD_PAD, 180, 26);
         this.drawScore(W - 196, HUD_PAD);
         this.drawRound(W - 196, HUD_PAD + 54);
+        this.drawLives(W - 196, HUD_PAD + 108);
         this._drawDiggingControls(H);
         this.drawPenaltyFlash();
         this.drawFlash();
@@ -167,6 +211,7 @@ export class HUD {
         this.drawScowGauge(HUD_PAD, HUD_PAD, 180, 26);
         this.drawScore(W - 196, HUD_PAD);
         this.drawRound(W - 196, HUD_PAD + 54);
+        this.drawLives(W - 196, HUD_PAD + 108);
         if (this.game.levelTransport) {
             this.drawWindIndicator(HUD_PAD, H - 140);
             this.drawCurrentIndicator(HUD_PAD + 130, H - 140);

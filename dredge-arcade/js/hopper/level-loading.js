@@ -1,6 +1,6 @@
 // js/level-loading.js — Level 1: Side-scrolling dredging (pivot-arm draghead)
 
-import { transitionToDisposal } from '../engine.js';
+import { transitionToDisposal, showGameOver } from '../engine.js';
 
 const SHIP_SPEED = 60;           // px/s horizontal scroll
 const SEABED_SEGMENTS = 180;     // terrain resolution
@@ -276,6 +276,11 @@ export class LevelLoading {
                 const penalty = this.game.scoring.applyTurtlePenalty();
                 this.game.hud.flash(`TURTLE HIT! −${penalty} pts`, '#ff4444');
                 this.game.hud.flashPenalty();
+
+                if (this.game.turtlePenalties >= 3 && !this.transitioned) {
+                    this.transitioned = true;
+                    setTimeout(() => showGameOver(), 1400);
+                }
             }
         }
 

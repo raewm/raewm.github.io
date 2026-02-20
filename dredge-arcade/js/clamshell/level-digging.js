@@ -1,6 +1,6 @@
 // js/level-digging.js — Level 1: Stationary clamshell crane with L/R barge movement
 
-import { transitionToTransport } from '../engine.js';
+import { transitionToTransport, showGameOver } from '../engine.js';
 
 // ── Constants ───────────────────────────────────────────────────────────────
 const BARGE_SPEED = 90;     // px/s left/right
@@ -280,6 +280,11 @@ export class LevelDigging {
                         const pen = this.game.scoring.applyPilingPenalty();
                         this.game.hud.flash(`OVERDEPTH! −${pen}`, '#ff4444');
                         this.game.hud.flashPenalty();
+
+                        if (this.game.penalties >= 3 && !this.transitioned) {
+                            this.transitioned = true;
+                            setTimeout(() => showGameOver(), 1400);
+                        }
                     } else {
                         this.cableLen = seabedY - this.boomTipY;
                         this.buckState = BUCK.GRABBING;
@@ -357,6 +362,11 @@ export class LevelDigging {
                     this.game.hud.flash(`PILING HIT! −${pen} pts`, '#ff4444');
                     this.game.hud.flashPenalty();
                     this.buckState = BUCK.RAISING;
+
+                    if (this.game.penalties >= 3 && !this.transitioned) {
+                        this.transitioned = true;
+                        setTimeout(() => showGameOver(), 1400);
+                    }
                 }
             }
         }

@@ -122,6 +122,46 @@ export class HUD {
         ctx.restore();
     }
 
+    drawLives(x, y) {
+        const ctx = this.ctx;
+        const maxLives = 3;
+        const lives = Math.max(0, maxLives - this.game.turtlePenalties);
+        ctx.save();
+        ctx.fillStyle = 'rgba(5,20,40,0.82)';
+        roundRect(ctx, x, y, 130, 44, 10);
+        ctx.fill();
+        ctx.strokeStyle = '#2dca72';
+        ctx.lineWidth = 2;
+        roundRect(ctx, x, y, 130, 44, 10);
+        ctx.stroke();
+
+        ctx.fillStyle = '#2dca72';
+        ctx.font = "bold 11px 'Outfit', sans-serif";
+        ctx.fillText('LIVES', x + 12, y + 16);
+
+        const spacing = 28;
+        for (let i = 0; i < maxLives; i++) {
+            const ix = x + 40 + i * spacing;
+            const iy = y + 28;
+            ctx.beginPath();
+            ctx.arc(ix, iy, 7, 0, Math.PI * 2);
+            if (i < lives) {
+                ctx.fillStyle = '#2dca72';
+                ctx.fill();
+            } else {
+                ctx.strokeStyle = 'rgba(45, 202, 114, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                ctx.strokeStyle = '#ff4444';
+                ctx.beginPath();
+                ctx.moveTo(ix - 5, iy - 5); ctx.lineTo(ix + 5, iy + 5);
+                ctx.moveTo(ix + 5, iy - 5); ctx.lineTo(ix - 5, iy + 5);
+                ctx.stroke();
+            }
+        }
+        ctx.restore();
+    }
+
     drawFlash() {
         if (this.flashTimer <= 0) return;
         const ctx = this.ctx;
@@ -156,6 +196,8 @@ export class HUD {
         this.drawScore(W - 196, HUD_PAD);
         // Round
         this.drawRound(W - 196, HUD_PAD + 54);
+        // Lives
+        this.drawLives(W - 196, HUD_PAD + 108);
         // Depth hint
         this.drawDepthControl();
         // Flashes
@@ -189,6 +231,8 @@ export class HUD {
         this.drawScore(W - 196, HUD_PAD);
         // Round
         this.drawRound(W - 196, HUD_PAD + 54);
+        // Lives
+        this.drawLives(W - 196, HUD_PAD + 108);
         // Wind indicator
         if (this.game.levelDisposal) {
             this.drawWindIndicator(HUD_PAD, H - 140);
