@@ -1,6 +1,8 @@
 // js/engine.js — Unified Dredge Arcade orchestrator
 // Handles: game selection, shared canvas/input/resize, per-game state machine
 
+import { submitScore, getTopScores } from './scoreboard.js';
+
 // ── Exports used by level modules ──────────────────────────────────────────
 //   Hopper:    transitionToDisposal, transitionToLoading, showGameOver
 //   Clamshell: transitionToTransport, transitionToDigging, showGameOver
@@ -166,7 +168,7 @@ export function transitionNextCutterRound() {
 }
 
 // ── Show game-over overlay ──────────────────────────────────────────────────
-export function showGameOver() {
+export async function showGameOver() {
     const isHopper = game.activeGame === 'hopper';
     const isCutter = game.activeGame === 'cutter';
     const hsKey = isHopper ? 'dredge_hs' : isCutter ? 'cutter_hs' : 'clamshell_hs';
@@ -188,9 +190,18 @@ export function showGameOver() {
             ? '<div style="color:#f5a623;font-weight:700;">🏆 New High Score!</div>'
             : `<div>Best: ${hs.toLocaleString()}</div>`}
     `;
-    updateHighScoreDisplay();
     document.getElementById('gameOverOverlay').classList.remove('hidden');
     game.state = STATE.ARCADE_MENU;
+
+    // Submit score to global leaderboard
+    const initialsInput = document.getElementById('playerInitials');
+    let initials = initialsInput ? initialsInput.value.trim() : '';
+    if (!initials) initials = localStorage.getItem('dredge_initials') || 'AAA';
+
+    // Save initials for next time
+    if (initialsInput) localStorage.setItem('dredge_initials', initials);
+
+    await submitScore(game.activeGame, initials, game.score);
 }
 
 // ── Main loop ──────────────────────────────────────────────────────────────
@@ -306,13 +317,26 @@ function drawArcadeMenu(dt) {
 }
 
 // ── HUD high-score display ─────────────────────────────────────────────────
-function updateHighScoreDisplay() {
-    const el = document.getElementById('highScoreDisplay');
-    if (!el) return;
-    const hs = game.activeGame === 'hopper' ? game.highScore_hopper
-        : game.activeGame === 'cutter' ? game.highScore_cutter
-            : game.highScore_clamshell;
-    el.textContent = hs > 0 ? `Best: ${hs.toLocaleString()} pts` : '';
+async function updateLeaderboardDisplay(whichGame) {
+    if (!whichGame) return;
+    const tbody = document.getElementById(`${whichGame}LeaderboardBody`);
+    if (!tbody) return;
+
+    tbody.innerHTML = '<tr><td colspan="3" style="text-align:center; color:#2ab8e0;">Loading...</td></tr>';
+
+    const scores = await getTopScores(whichGame, 5);
+
+    let html = '';
+    scores.forEach((entry, idx) => {
+        html += `
+            <tr>
+                <td class="rank">#${idx + 1}</td>
+                <td class="initials">${entry.initials}</td>
+                <td class="score">${entry.score.toLocaleString()}</td>
+            </tr>
+        `;
+    });
+    tbody.innerHTML = html;
 }
 
 // ── Mobile touch controls ────────────────────────────────────────────────────
@@ -377,7 +401,13 @@ function showGameMenu(which) {
     document.getElementById(menuId).classList.remove('hidden');
     document.getElementById('menuBtn').classList.remove('hidden');
     game.activeGame = which;
-    updateHighScoreDisplay();
+    updateLeaderboardDisplay(which);
+
+    // Save initials if entered
+    const initialsInput = document.getElementById('playerInitials');
+    if (initialsInput && initialsInput.value.trim() !== '') {
+        localStorage.setItem('dredge_initials', initialsInput.value.trim());
+    }
 }
 
 document.getElementById('selectHopper').addEventListener('click', () => showGameMenu('hopper'));
@@ -412,5 +442,8 @@ document.getElementById('menuBtn').addEventListener('click', () => {
 
 // Start
 resize();
-updateHighScoreDisplay();
+const savedInitials = localStorage.getItem('dredge_initials');
+if (savedInitials && document.getElementById('playerInitials')) {
+    document.getElementById('playerInitials').value = savedInitials;
+}
 requestAnimationFrame(loop);

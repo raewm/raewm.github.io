@@ -205,3 +205,99 @@ button:active {
         font-size: 1.0rem;
     }
 }
+
+/* ── Global Scoreboard Styles ─────────────────────────────────────────── */
+.player-profile {
+    margin-bottom: 24px;
+    display: inline-flex;
+    align-items: center;
+    gap: 12px;
+    background: rgba(10, 28, 60, 0.8);
+    padding: 10px 20px;
+    border-radius: 50px;
+    border: 2px solid rgba(42, 184, 224, 0.4);
+}
+
+.player-profile label {
+    color: #2ab8e0;
+    font-weight: 900;
+    letter-spacing: 2px;
+    font-size: 0.9rem;
+}
+
+.player-profile input {
+    background: transparent;
+    border: none;
+    color: #fff;
+    font-family: 'Outfit', sans-serif;
+    font-size: 1.5rem;
+    font-weight: 900;
+    width: 60px;
+    text-align: center;
+    outline: none;
+    text-transform: uppercase;
+    border-bottom: 2px solid rgba(245, 166, 35, 0.5);
+    transition: border-color 0.2s;
+}
+
+.player-profile input:focus {
+    border-bottom: 2px solid #f5a623;
+}
+
+.player-profile input::placeholder {
+    color: rgba(255, 255, 255, 0.2);
+}
+
+.global-leaderboard {
+    margin-top: 24px;
+    background: rgba(5, 12, 28, 0.6);
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid rgba(42, 184, 224, 0.2);
+}
+
+.global-leaderboard h3 {
+    color: #f5a623;
+    font-size: 1rem;
+    letter-spacing: 2px;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+}
+
+.leaderboard-table {
+    width: 100%;
+    border-collapse: collapse;
+    color: #c9e8f5;
+    font-size: 0.9rem;
+    text-align: left;
+}
+
+.leaderboard-table th,
+.leaderboard-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid rgba(42, 184, 224, 0.1);
+}
+
+.leaderboard-table tr:last-child td {
+    border-bottom: none;
+}
+
+.leaderboard-table .rank {
+    width: 30px;
+    color: rgba(255, 255, 255, 0.4);
+    font-weight: 700;
+    text-align: center;
+}
+
+.leaderboard-table .initials {
+    font-weight: 900;
+    color: #2ab8e0;
+    letter-spacing: 1px;
+}
+
+.leaderboard-table .score {
+    text-align: right;
+    font-family: monospace;
+    font-size: 1rem;
+    color: #fff;
+}

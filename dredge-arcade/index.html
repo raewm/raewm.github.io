@@ -319,6 +319,12 @@
             <span class="arcade-logo">⚓</span>
             <h1><span>DREDGE</span><span>ARCADE</span></h1>
             <p class="arcade-tag">Select your machine</p>
+
+            <div class="player-profile">
+                <label for="playerInitials">INITIALS:</label>
+                <input type="text" id="playerInitials" maxlength="3" placeholder="AAA" autocomplete="off" />
+            </div>
+
             <div class="game-cards">
 
                 <div class="game-card" id="selectHopper">
@@ -369,7 +375,16 @@
                 <p><strong>Score:</strong> Loading rate + fast disposal − turtle penalties</p>
             </div>
             <button id="startHopper">START DREDGING</button>
-            <div class="high-score-display" id="highScoreDisplay"></div>
+            <div class="global-leaderboard" id="hopperLeaderboard">
+                <h3>GLOBAL TOP 5</h3>
+                <table class="leaderboard-table">
+                    <tbody id="hopperLeaderboardBody">
+                        <tr>
+                            <td>Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -390,7 +405,16 @@
                 <p><strong>Score:</strong> Bites loaded + fast delivery − piling penalties</p>
             </div>
             <button id="startClamshell">START DREDGING</button>
-            <div class="high-score-display" id="highScoreDisplay"></div>
+            <div class="global-leaderboard" id="clamshellLeaderboard">
+                <h3>GLOBAL TOP 5</h3>
+                <table class="leaderboard-table">
+                    <tbody id="clamshellLeaderboardBody">
+                        <tr>
+                            <td>Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
@@ -411,7 +435,16 @@
                 <p><strong>Score:</strong> Material cut + step bonuses − cavitation penalties</p>
             </div>
             <button id="startCutter">START DREDGING</button>
-            <div class="high-score-display" id="highScoreDisplay"></div>
+            <div class="global-leaderboard" id="cutterLeaderboard">
+                <h3>GLOBAL TOP 5</h3>
+                <table class="leaderboard-table">
+                    <tbody id="cutterLeaderboardBody">
+                        <tr>
+                            <td>Loading...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 
