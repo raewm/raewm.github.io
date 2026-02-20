@@ -99,6 +99,7 @@ async function initGame(which) {
     if (which === 'hopper') {
         game.hopperFill = 0;
         game.turtlePenalties = 0;
+        game.hopperSeabedState = null;
 
         const { Scoring } = await import('./hopper/scoring.js');
         const { HUD } = await import('./hopper/hud.js');

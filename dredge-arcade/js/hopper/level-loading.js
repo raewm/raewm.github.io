@@ -17,6 +17,9 @@ const COLLECTION_RATE = 0.065;   // fraction of hopper filled per second of cont
 const MAX_EMBED_DEPTH = 8;       // px below seabed before grounding triggers (~2m)
 const GROUNDING_PENALTY_TIME = 1.8; // seconds the dredge is slowed when grounded
 
+const WORLD_WIDTH = 2400;        // Looping terrain width (px)
+const SEABED_STEP = 4;           // Seabed array resolution (px)
+
 // Seabed close to surface — ship can almost always reach with good arm angle
 // expressed as fraction of H from the bottom
 const SEABED_HEIGHT_MIN = 0.30;  // shallowest areas (30% from bottom)
@@ -43,6 +46,7 @@ const C = {
     dragheadBody: '#e87c20',
     dragheadOutline: '#222',
     turtleBody: '#3a8a3a',
+    gradeLineCol: 'rgba(255,60,60,0.75)',
 };
 
 // ── Noise ───────────────────────────────────────────────────────────────────
@@ -79,6 +83,13 @@ export class LevelLoading {
         this.W = this.canvas.width;
         this.H = this.canvas.height;
         this._buildDimensions();
+
+        // Rebuild base noise geometry to fit new H, restoring deformed state
+        if (this.game.hopperSeabedState) {
+            this._noiseArr1 = this.game.hopperSeabedState.noise1;
+            this._noiseArr2 = this.game.hopperSeabedState.noise2;
+        }
+        this._buildSeabed();
     }
 
     reset() {
@@ -101,11 +112,18 @@ export class LevelLoading {
         this.groundedTimer = 0;
         this.groundWarningFlash = 0;
 
-        // Noise for seabed
-        this._noiseArr1 = makeNoiseArr(128, 12345 + this.game.round * 3);
-        this._noiseArr2 = makeNoiseArr(64, 99991 + this.game.round * 7);
-
         this._buildDimensions();
+
+        // Seabed initialization
+        if (!this.game.hopperSeabedState) {
+            this._noiseArr1 = makeNoiseArr(128, 12345);
+            this._noiseArr2 = makeNoiseArr(64, 99991);
+            this._buildSeabed();
+        } else {
+            this._noiseArr1 = this.game.hopperSeabedState.noise1;
+            this._noiseArr2 = this.game.hopperSeabedState.noise2;
+            this._seabed = this.game.hopperSeabedState.seabed;
+        }
 
         // Particles
         this.particles = [];
@@ -146,6 +164,14 @@ export class LevelLoading {
         // Pivot exits from the STERN side at the waterline.
         this.pivotOffsetX = -this.shipW * 0.32;  // behind center
         this.pivotOffsetY = this.shipH * 0.82;    // near hull bottom
+
+        // Overdepth limit
+        const piv = {
+            x: this.shipX + this.pivotOffsetX,
+            y: this.shipWorldY + this.pivotOffsetY,
+        };
+        const maxReachY = piv.y + ARM_LENGTH;
+        this.gradeY = this.waterY + (maxReachY - this.waterY) * 0.9;
     }
 
     // Compute pivot world position
@@ -167,7 +193,22 @@ export class LevelLoading {
         };
     }
 
-    _getSeabedY(worldX) {
+    _buildSeabed() {
+        const cols = Math.ceil(WORLD_WIDTH / SEABED_STEP);
+        this._seabed = new Float32Array(cols);
+        for (let i = 0; i < cols; i++) {
+            const wx = i * SEABED_STEP;
+            this._seabed[i] = this._baseSeabedY(wx);
+        }
+
+        this.game.hopperSeabedState = {
+            noise1: this._noiseArr1,
+            noise2: this._noiseArr2,
+            seabed: this._seabed,
+        };
+    }
+
+    _baseSeabedY(worldX) {
         const H = this.H;
         const segW = 120; // world pixels per segment
         const idx = worldX / segW;
@@ -177,9 +218,41 @@ export class LevelLoading {
         return H - frac * H;
     }
 
+    _seabedAt(worldX) {
+        const wrappedX = ((worldX % WORLD_WIDTH) + WORLD_WIDTH) % WORLD_WIDTH;
+        const fi = wrappedX / SEABED_STEP;
+        const cols = this._seabed.length;
+        const i0 = Math.floor(fi) % cols;
+        const i1 = (i0 + 1) % cols;
+        const f = fi - Math.floor(fi);
+        return this._seabed[i0] * (1 - f) + this._seabed[i1] * f;
+    }
+
+    _deformSeabed(worldX, amount) {
+        const wrappedX = ((worldX % WORLD_WIDTH) + WORLD_WIDTH) % WORLD_WIDTH;
+        const cols = this._seabed.length;
+        const radius = 24; // Trench width effect
+
+        for (let i = 0; i < cols; i++) {
+            const wx = i * SEABED_STEP;
+            let dist = Math.abs(wx - wrappedX);
+            // Handle wrap-around distance
+            if (dist > WORLD_WIDTH / 2) {
+                dist = WORLD_WIDTH - dist;
+            }
+
+            if (dist <= radius) {
+                const t = 1 - (dist / radius);
+                const drop = amount * t * t;
+                const newY = this._seabed[i] + drop;
+                this._seabed[i] = Math.min(newY, this.gradeY + 2); // Cap at overdepth + slight buffer
+            }
+        }
+    }
+
     _getSeabedYAtDraghead() {
         const dh = this._dragheadPos();
-        return this._getSeabedY(dh.x + this.scrollX);
+        return this._seabedAt(dh.x + this.scrollX);
     }
 
     update(dt) {
@@ -210,17 +283,36 @@ export class LevelLoading {
 
         // Draghead vs seabed
         const dh = this._dragheadPos();
-        const seabedY = this._getSeabedYAtDraghead();
+        const dhWorldX = dh.x + this.scrollX;
+        const seabedY = this._seabedAt(dhWorldX);
         const embedDepth = dh.y - seabedY; // positive = below seabed (bad)
 
         // Grounding check
         if (embedDepth > MAX_EMBED_DEPTH) {
             if (!this.grounded) {
-                this.grounded = true;
-                this.groundedTimer = GROUNDING_PENALTY_TIME;
-                this.groundWarningFlash = 1.5;
-                this.game.hud.flash('GROUNDED! Raise the arm!', '#ff4444');
-                this.game.hud.flashPenalty();
+                // If seabed is at grade line limit, we trigger overdepth penalty instead of grounding
+                if (seabedY >= this.gradeY - 2) {
+                    this.armAngle = Math.max(ARM_ANGLE_MIN, this.armAngle - 0.2); // Force arm up
+
+                    if (this.groundWarningFlash <= 0) {
+                        this.groundWarningFlash = 1.0;
+                        const pen = this.game.scoring.applyPilingPenalty(); // Reuse piling penalty value (150 pts)
+                        this.game.hud.flash(`OVERDEPTH! −${pen}`, '#ff4444');
+                        this.game.hud.flashPenalty();
+
+                        if (this.game.penalties >= 3 && !this.transitioned) {
+                            this.transitioned = true;
+                            setTimeout(() => showGameOver(), 1400);
+                        }
+                    }
+                } else {
+                    // Regular grounding
+                    this.grounded = true;
+                    this.groundedTimer = GROUNDING_PENALTY_TIME;
+                    this.groundWarningFlash = 1.5;
+                    this.game.hud.flash('GROUNDED! Raise the arm!', '#ff4444');
+                    this.game.hud.flashPenalty();
+                }
             }
         }
 
@@ -240,6 +332,7 @@ export class LevelLoading {
             const delta = COLLECTION_RATE * dt;
             this.game.hopperFill = Math.min(1, this.game.hopperFill + delta);
             this.game.scoring.onMaterialLoaded(delta);
+            this._deformSeabed(dhWorldX, 150 * delta); // 150px removed over 1 full hopper
             if (Math.random() < 0.35) this._spawnParticle(dh.x, dh.y);
         }
 
@@ -309,7 +402,7 @@ export class LevelLoading {
         const fromRight = Math.random() < 0.5;
         const waterY = this.H * SEA_LEVEL_RATIO;
         // Turtle spawns somewhere in the water column in front of the ship
-        const seabedSample = this._getSeabedY(this.scrollX + (fromRight ? this.W + 60 : -60));
+        const seabedSample = this._seabedAt(this.scrollX + (fromRight ? this.W + 60 : -60));
         const y = waterY + 30 + Math.random() * Math.max(30, seabedSample - waterY - 60);
         this.turtles.push({
             x: fromRight ? this.W + 60 : -60,
@@ -359,6 +452,9 @@ export class LevelLoading {
 
         // Seabed
         this._drawSeabed();
+
+        // Grade line
+        this._drawGradeLine();
 
         // Caustic light rays
         ctx.save();
@@ -450,7 +546,7 @@ export class LevelLoading {
         ctx.moveTo(-2, H);
         for (let sx = 0; sx <= W + segW; sx += segW) {
             const worldX = sx + this.scrollX;
-            const sy = this._getSeabedY(worldX);
+            const sy = this._seabedAt(worldX);
             if (sx === 0) ctx.lineTo(sx, sy);
             else ctx.lineTo(sx, sy);
         }
@@ -468,7 +564,7 @@ export class LevelLoading {
         ctx.lineWidth = 3;
         ctx.beginPath();
         for (let sx = 0; sx <= W + segW; sx += segW) {
-            const sy = this._getSeabedY(sx + this.scrollX);
+            const sy = this._seabedAt(sx + this.scrollX);
             if (sx === 0) ctx.moveTo(sx, sy); else ctx.lineTo(sx, sy);
         }
         ctx.stroke();
@@ -477,11 +573,32 @@ export class LevelLoading {
         ctx.fillStyle = '#8a6228';
         for (let i = 0; i < 16; i++) {
             const px = ((i * 137 + this.scrollX * 0.7) % W + W) % W;
-            const psy = this._getSeabedY(px + this.scrollX);
+            const psy = this._seabedAt(px + this.scrollX);
             ctx.beginPath();
             ctx.ellipse(px, psy - 5, 7, 4, 0, 0, Math.PI * 2);
             ctx.fill();
         }
+        ctx.restore();
+    }
+
+    _drawGradeLine() {
+        const ctx = this.ctx;
+        ctx.save();
+        ctx.strokeStyle = C.gradeLineCol;
+        ctx.lineWidth = 2.5;
+        ctx.setLineDash([14, 8]);
+        ctx.shadowColor = '#ff3333';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(0, this.gradeY);
+        ctx.lineTo(this.W, this.gradeY);
+        ctx.stroke();
+        ctx.setLineDash([]);
+
+        // Label
+        ctx.font = 'bold 11px Outfit, sans-serif';
+        ctx.fillStyle = 'rgba(255,100,100,0.9)';
+        ctx.fillText('▶ OVERDEPTH LIMIT', 8, this.gradeY - 5);
         ctx.restore();
     }
 
