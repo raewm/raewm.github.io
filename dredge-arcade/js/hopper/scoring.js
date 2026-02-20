@@ -52,4 +52,11 @@ export class Scoring {
         this.game.turtlePenalties++;
         return penalty;
     }
+
+    applyOverdepthPenalty() {
+        const penalty = 150;
+        this.game.score = Math.max(0, this.game.score - penalty);
+        this.game.penalties++;
+        return penalty;
+    }
 }

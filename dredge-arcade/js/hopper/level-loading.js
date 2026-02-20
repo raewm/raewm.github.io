@@ -209,13 +209,19 @@ export class LevelLoading {
     }
 
     _baseSeabedY(worldX) {
-        const H = this.H;
         const segW = 120; // world pixels per segment
         const idx = worldX / segW;
         const h1 = smoothNoise(this._noiseArr1, idx * 0.8);
         const h2 = smoothNoise(this._noiseArr2, idx * 1.6) * 0.45;
-        const frac = SEABED_HEIGHT_MIN + (SEABED_HEIGHT_MAX - SEABED_HEIGHT_MIN) * ((h1 + h2 + 1) / 2);
-        return H - frac * H;
+        const noise = (h1 + h2 + 1) / 2;
+
+        const piv = this._pivotPos();
+        const maxReachY = piv.y + ARM_LENGTH;
+        const reachRange = maxReachY - this.waterY;
+
+        // Seabed depth scales natively with the arm length so that it's
+        // always reachable and always leaves room before the gradeLine (which is 90%).
+        return this.waterY + reachRange * (0.4 + 0.45 * noise);
     }
 
     _seabedAt(worldX) {
@@ -231,7 +237,7 @@ export class LevelLoading {
     _deformSeabed(worldX, amount) {
         const wrappedX = ((worldX % WORLD_WIDTH) + WORLD_WIDTH) % WORLD_WIDTH;
         const cols = this._seabed.length;
-        const radius = 24; // Trench width effect
+        const radius = 50; // Wider trench effect
 
         for (let i = 0; i < cols; i++) {
             const wx = i * SEABED_STEP;
@@ -245,7 +251,10 @@ export class LevelLoading {
                 const t = 1 - (dist / radius);
                 const drop = amount * t * t;
                 const newY = this._seabed[i] + drop;
-                this._seabed[i] = Math.min(newY, this.gradeY + 2); // Cap at overdepth + slight buffer
+                // Cap the trench depth so it doesn't go below the overdepth limit.
+                // We also use Math.max so that we NEVER lift material UP if the seabead
+                // was somehow naturally deeper than the limit.
+                this._seabed[i] = Math.max(this._seabed[i], Math.min(newY, this.gradeY + 2));
             }
         }
     }
@@ -296,7 +305,7 @@ export class LevelLoading {
 
                     if (this.groundWarningFlash <= 0) {
                         this.groundWarningFlash = 1.0;
-                        const pen = this.game.scoring.applyPilingPenalty(); // Reuse piling penalty value (150 pts)
+                        const pen = this.game.scoring.applyOverdepthPenalty();
                         this.game.hud.flash(`OVERDEPTH! −${pen}`, '#ff4444');
                         this.game.hud.flashPenalty();
 
@@ -332,7 +341,7 @@ export class LevelLoading {
             const delta = COLLECTION_RATE * dt;
             this.game.hopperFill = Math.min(1, this.game.hopperFill + delta);
             this.game.scoring.onMaterialLoaded(delta);
-            this._deformSeabed(dhWorldX, 150 * delta); // 150px removed over 1 full hopper
+            this._deformSeabed(dhWorldX, 450 * delta); // Deeper material removal (450px removed over 1 full hopper)
             if (Math.random() < 0.35) this._spawnParticle(dh.x, dh.y);
         }
 

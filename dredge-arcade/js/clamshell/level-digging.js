@@ -204,8 +204,9 @@ export class LevelDigging {
             const t = 1 - dist / BUCKET_GRAB_RADIUS;
             const drop = biteDepth * t * t;  // lower = bigger Y
             const newY = this._seabed[i] + drop;
-            // Never deform below grade line (capped at gradeY + a soft band)
-            this._seabed[i] = Math.min(newY, this.gradeY + 2);
+            // Never deform below grade line (capped at gradeY + a soft band),
+            // and never pull the terrain UP if it was naturally deeper.
+            this._seabed[i] = Math.max(this._seabed[i], Math.min(newY, this.gradeY + 2));
         }
     }
 
