@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CSD Dredge Simulator</title>
+  <meta name="description" content="High-fidelity Cutterhead Suction Dredge operator training simulator" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;700;900&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+
+  <div id="console">
+
+    <!-- ═══ WINDOW ROW — 20 / 60 / 20 ═══════════════════════════════════════ -->
+    <div id="windows">
+
+      <div class="window-cell side">
+        <span class="window-label">Plan View — Bathymetry</span>
+        <canvas id="planCanvas"></canvas>
+      </div>
+
+      <div class="window-cell center">
+        <span class="window-label">Forward View</span>
+        <canvas id="bridgeCanvas"></canvas>
+      </div>
+
+      <div class="window-cell side">
+        <span class="window-label">System Status</span>
+        <canvas id="rightCanvas"></canvas>
+      </div>
+
+    </div>
+
+    <!-- ═══ INSTRUMENT PANEL ROW ══════════════════════════════════════════════ -->
+    <div id="panel">
+      <canvas id="gaugeCanvas"></canvas>
+
+      <!-- Controls row — sits below the gauge canvas, NEVER overlapping gauges -->
+      <div id="controls-bar">
+
+        <div class="ctrl-group">
+          <span class="ctrl-label">Swing P/S</span>
+          <input id="slSwing" class="hslider" type="range" min="-0.0292" max="0.0292" step="0.0005" value="0" />
+          <span class="ctrl-val" id="valSwing">0.000 r/s</span>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <div class="ctrl-group">
+          <span class="ctrl-label">Ladder</span>
+          <input id="slLadder" class="vslider" type="range" min="2" max="75" step="0.5" value="22" />
+          <span class="ctrl-val" id="valLadder">22°</span>
+        </div>
+
+        <div class="ctrl-group">
+          <span class="ctrl-label">Cutter</span>
+          <input id="slCutter" class="vslider" type="range" min="0" max="40" step="0.5" value="0" />
+          <span class="ctrl-val" id="valCutter">0 RPM</span>
+        </div>
+
+        <div class="ctrl-group">
+          <span class="ctrl-label">Pump</span>
+          <input id="slPump" class="vslider" type="range" min="0" max="800" step="5" value="0" />
+          <span class="ctrl-val" id="valPump">0 RPM</span>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <div class="ctrl-group">
+          <span class="ctrl-label">Advance</span>
+          <button id="btnStep" class="ctrl-btn">STEP →</button>
+          <span class="ctrl-val" id="valStep">IDLE</span>
+        </div>
+
+        <div class="ctrl-group">
+          <span class="ctrl-label">Safety</span>
+          <button id="btnEstop" class="ctrl-btn">⛔ E-STOP</button>
+        </div>
+
+        <div class="ctrl-sep"></div>
+
+        <!-- Key guide -->
+        <div class="ctrl-group" style="text-align:left;">
+          <span class="ctrl-label" style="font-size:7px;color:#444;line-height:1.7;">
+            ← → SWING &nbsp;↑ ↓ LADDER<br>
+            W/S CUTTER &nbsp;&nbsp;E/D PUMP<br>
+            SPACE STEP &nbsp;&nbsp;ESC E-STOP
+          </span>
+        </div>
+
+      </div><!-- /controls-bar -->
+    </div>
+
+  </div><!-- /console -->
+
+  <div id="gamepadIndicator">🎮 NO GAMEPAD</div>
+
+  <script type="module">
+    import { dredge } from './js/dredge.js';
+
+    const valSwing = document.getElementById('valSwing');
+    const valLadder = document.getElementById('valLadder');
+    const valCutter = document.getElementById('valCutter');
+    const valPump = document.getElementById('valPump');
+    const valStep = document.getElementById('valStep');
+
+    function updateDisplays() {
+      const s = dredge.swingTarget;
+      valSwing.textContent = `${s >= 0 ? '+' : ''}${s.toFixed(3)} r/s`;
+      valLadder.textContent = `${dredge.ladderWinchTarget.toFixed(0)}°`;
+      valCutter.textContent = `${dredge.cutterRPMTarget.toFixed(0)} RPM`;
+      valPump.textContent = `${dredge.pumpRPMTarget.toFixed(0)} RPM`;
+      valStep.textContent = dredge.steppingState;
+      requestAnimationFrame(updateDisplays);
+    }
+    requestAnimationFrame(updateDisplays);
+
+    window.addEventListener('gamepadconnected', e => {
+      const el = document.getElementById('gamepadIndicator');
+      el.textContent = `🎮 ${e.gamepad.id.slice(0, 26)}`;
+      el.classList.add('connected');
+    });
+    window.addEventListener('gamepaddisconnected', () => {
+      const el = document.getElementById('gamepadIndicator');
+      el.textContent = '🎮 NO GAMEPAD';
+      el.classList.remove('connected');
+    });
+  </script>
+
+  <script type="module" src="./js/main.js"></script>
+</body>
+
+</html>

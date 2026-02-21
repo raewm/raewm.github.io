@@ -1,0 +1,257 @@
+/* style.css — CSD Simulator operator console */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: #1a0d00;
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  color: #ccc;
+  user-select: none;
+}
+
+/* ─── Outer console ────────────────────────────────────────────────────────── */
+#console {
+  display: flex;
+  flex-direction: column;
+  width: 100vw;
+  height: 100vh;
+}
+
+/* ─── Window row (top 56%) — 20 / 60 / 20 split ─────────────────────────── */
+#windows {
+  display: flex;
+  flex: 0 0 56%;
+  background: #0a0a0a;
+  gap: 5px;
+  padding: 6px 6px 0;
+  border-bottom: 5px solid #2a1a05;
+}
+
+.window-cell {
+  position: relative;
+  border-radius: 5px 5px 0 0;
+  overflow: hidden;
+  border: 2px solid #333;
+  background: #000;
+  box-shadow: inset 0 0 18px rgba(0, 0, 0, 0.7);
+}
+
+/* 20% side windows */
+.window-cell.side {
+  flex: 0 0 20%;
+}
+
+/* 60% center window */
+.window-cell.center {
+  flex: 1 1 60%;
+}
+
+.window-cell canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+.window-label {
+  position: absolute;
+  top: 5px;
+  left: 8px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.35);
+  text-transform: uppercase;
+  pointer-events: none;
+  z-index: 2;
+}
+
+/* ─── Instrument panel row (bottom 44%) ───────────────────────────────────── */
+#panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(180deg, #4e3010 0%, #3b2508 50%, #2a1a05 100%);
+  position: relative;
+}
+
+/* Chrome top strip */
+#panel::before {
+  content: '';
+  display: block;
+  height: 4px;
+  background: linear-gradient(90deg, #666, #ccc 30%, #ccc 70%, #666);
+  flex-shrink: 0;
+}
+
+/* Gauge canvas — takes the upper portion of the panel */
+#gaugeCanvas {
+  display: block;
+  width: 100%;
+  flex: 1 1 0%;
+}
+
+/* ─── Controls bar — BELOW the gauge canvas, never on top of gauges ────────── */
+#controls-bar {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 5px 12px 7px;
+  background: rgba(0, 0, 0, 0.55);
+  border-top: 1px solid #3a2a00;
+}
+
+.ctrl-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+}
+
+.ctrl-label {
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: #777;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.ctrl-val {
+  font-size: 9px;
+  font-family: monospace;
+  color: #2ab8e0;
+  min-width: 50px;
+  text-align: center;
+}
+
+/* Vertical slider */
+input[type="range"].vslider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 4px;
+  height: 58px;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  background: #1a1a1a;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+  rotate: 180deg;
+}
+
+input[type="range"].vslider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  background: #f39c12;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  cursor: grab;
+}
+
+/* Horizontal slider */
+input[type="range"].hslider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 90px;
+  height: 4px;
+  background: #1a1a1a;
+  border-radius: 3px;
+  outline: none;
+  cursor: pointer;
+}
+
+input[type="range"].hslider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: 13px;
+  height: 13px;
+  background: #2ab8e0;
+  border-radius: 50%;
+  border: 2px solid #fff;
+  cursor: grab;
+}
+
+/* Separator */
+.ctrl-sep {
+  width: 1px;
+  height: 52px;
+  background: #3a2a00;
+  flex-shrink: 0;
+}
+
+/* ─── Buttons ──────────────────────────────────────────────────────────────── */
+.ctrl-btn {
+  padding: 4px 10px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  border: 1.5px solid #555;
+  border-radius: 4px;
+  background: #1a1a1a;
+  color: #aaa;
+  cursor: pointer;
+  transition: background 0.12s, color 0.12s;
+  white-space: nowrap;
+}
+
+.ctrl-btn:hover {
+  background: #333;
+  color: #fff;
+}
+
+#btnEstop {
+  background: #5a0000;
+  border-color: #c0392b;
+  color: #ff6666;
+  font-size: 11px;
+  padding: 6px 14px;
+}
+
+#btnEstop.estop-active {
+  background: #c0392b;
+  color: #fff;
+  animation: pulse-red 0.7s infinite alternate;
+}
+
+#btnStep {
+  border-color: #f39c12;
+  color: #f39c12;
+}
+
+@keyframes pulse-red {
+  from {
+    box-shadow: 0 0 4px rgba(192, 57, 43, 0.5);
+  }
+
+  to {
+    box-shadow: 0 0 14px rgba(192, 57, 43, 0.9);
+  }
+}
+
+/* ─── Gamepad indicator ────────────────────────────────────────────────────── */
+#gamepadIndicator {
+  position: fixed;
+  top: 7px;
+  right: 10px;
+  font-size: 9px;
+  color: #444;
+  letter-spacing: 0.1em;
+  pointer-events: none;
+  z-index: 100;
+}
+
+#gamepadIndicator.connected {
+  color: #2dca72;
+}
