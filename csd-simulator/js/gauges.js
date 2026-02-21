@@ -135,7 +135,7 @@ export function drawAnalogGauge(ctx, cx, cy, r, value, min, max, label, unit, op
 }
 
 // ── Vertical Depth Bar ────────────────────────────────────────────────────
-// 0 ft = top, maxFt = bottom. Ticks + current value on right side, tiny text.
+// 0 ft = top, maxFt = bottom. Colors match bathymetry: green→yellow→orange→red.
 export function drawDepthBar(ctx, x, y, w, h, valueFt, maxFt) {
     ctx.save();
 
@@ -145,35 +145,39 @@ export function drawDepthBar(ctx, x, y, w, h, valueFt, maxFt) {
     // Track
     ctx.fillStyle = '#080808'; ctx.fillRect(x, y, w, h);
 
-    // Fill from top down (surface at top)
+    // Fill from top down — gradient matches bathymetry depthColor exactly
     const frac = Math.max(0, Math.min(1, valueFt / maxFt));
     const fillH = h * frac;
     const gr = ctx.createLinearGradient(x, y, x, y + h);
-    gr.addColorStop(0.0, '#27ae60');
-    gr.addColorStop(0.4, '#f39c12');
-    gr.addColorStop(1.0, '#c0392b');
+    gr.addColorStop(0.00, 'rgb(60,210,40)');   // 0ft  — bright green (shoal)
+    gr.addColorStop(0.28, 'rgb(140,210,10)');   // 7ft  — yellow-green
+    gr.addColorStop(0.46, 'rgb(255,230,0)');    // 12ft — yellow
+    gr.addColorStop(0.55, 'rgb(255,100,0)');    // 14ft — orange
+    gr.addColorStop(0.78, 'rgb(235,10,0)');     // 20ft — red
+    gr.addColorStop(1.00, 'rgb(155,10,30)');    // 25ft — dark red/maroon
     ctx.fillStyle = gr; ctx.fillRect(x, y, w, fillH);
 
     // Indicator line
     const vy = y + fillH;
-    ctx.strokeStyle = '#ff6600'; ctx.lineWidth = 1.5; ctx.setLineDash([3, 2]);
+    ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.setLineDash([3, 2]);
     ctx.beginPath(); ctx.moveTo(x, vy); ctx.lineTo(x + w, vy); ctx.stroke();
     ctx.setLineDash([]);
 
-    // Tick labels on right — 3 ticks only, HIGH CONTRAST white
+    // Tick labels on right — bold white, high contrast
     const tSz = Math.max(7, Math.min(10, w * 0.65));
     ctx.font = `bold ${tSz}px monospace`; ctx.textAlign = 'left';
     [[0, '0'], [0.5, (maxFt / 2).toFixed(0)], [1, maxFt.toFixed(0)]].forEach(([f, lbl]) => {
         const ty = y + f * h;
-        ctx.fillStyle = '#888'; ctx.fillRect(x + w, ty - 0.5, 4, 1);  // tick mark
+        ctx.fillStyle = '#888'; ctx.fillRect(x + w, ty - 0.5, 4, 1);
         ctx.fillStyle = '#ddd'; ctx.fillText(lbl, x + w + 5, ty + tSz * 0.4);
     });
 
-    // 'ft' unit at top-right in cyan
-    ctx.font = `bold ${tSz}px sans-serif`; ctx.fillStyle = '#5af';
-    ctx.fillText('ft', x + w + 5, y - 2);
+    // "Depth" label on right side, below ticks
+    ctx.font = `bold ${Math.max(7, tSz)}px sans-serif`; ctx.fillStyle = '#5af';
+    ctx.textAlign = 'center';
+    ctx.fillText('Depth', x + w / 2 + 10, y + h + tSz + 5);
 
-    // Current value next to indicator — bright orange, large enough to read
+    // Current value next to indicator — bright orange
     const valSz = Math.max(8, Math.min(11, w * 0.72));
     ctx.font = `bold ${valSz}px monospace`; ctx.fillStyle = '#ff8800'; ctx.textAlign = 'center';
     const valY = vy < y + valSz + 5 ? vy + valSz + 4 : vy - 2;

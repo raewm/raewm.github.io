@@ -22,32 +22,28 @@ function ema(prev, next, dt, tau = 2.0) {
     return prev + alpha * (next - prev);
 }
 
-// ─── Stepping FSM ────────────────────────────────────────────────────────────
-const STEP_PHASE = 1.5;
+// ─── Step: instant advance, no animation ─────────────────────────────────────
+// STEP_ROWS is set in planview.js (currently 2 rows = ~24px ≈ cutter diameter).
+// triggerStep just calls shiftGridStep immediately — no FSM delay.
 import { shiftGridStep } from './planview.js';
+
+export function triggerStep() {
+    if (dredge.steppingState !== 'IDLE') return;
+    shiftGridStep();
+    // Brief status flash so operator sees it happened
+    dredge.steppingState = 'ADVANCING';
+    dredge.steppingTimer = 0;
+}
 
 function stepMachine(dt) {
     if (dredge.steppingState === 'IDLE') return;
     dredge.steppingTimer += dt;
-    const t = dredge.steppingTimer;
-    switch (dredge.steppingState) {
-        case 'LOWERING_AUX': dredge.spud.auxiliary.down = true;
-            if (t >= STEP_PHASE) { dredge.steppingState = 'RAISING_WORK'; dredge.steppingTimer = 0; } break;
-        case 'RAISING_WORK': dredge.spud.working.down = false;
-            if (t >= STEP_PHASE) { dredge.steppingState = 'ADVANCING'; dredge.steppingTimer = 0; } break;
-        case 'ADVANCING': dredge.spudCarriageOffset = Math.min(dredge.spudCarriageMax, dredge.spudCarriageOffset + 5 * dt);
-            if (t >= STEP_PHASE * 2) { dredge.steppingState = 'LOWERING_WORK'; dredge.steppingTimer = 0; } break;
-        case 'LOWERING_WORK': dredge.spud.working.down = true; dredge.spudCarriageOffset = 0;
-            shiftGridStep();
-            if (t >= STEP_PHASE) { dredge.steppingState = 'RAISING_AUX'; dredge.steppingTimer = 0; } break;
-        case 'RAISING_AUX': dredge.spud.auxiliary.down = false;
-            if (t >= STEP_PHASE) { dredge.steppingState = 'IDLE'; dredge.steppingTimer = 0; } break;
+    if (dredge.steppingTimer > 0.25) {
+        dredge.steppingState = 'IDLE';
+        dredge.steppingTimer = 0;
     }
 }
 
-export function triggerStep() {
-    if (dredge.steppingState === 'IDLE') { dredge.steppingState = 'LOWERING_AUX'; dredge.steppingTimer = 0; }
-}
 
 // ─── Main tick ────────────────────────────────────────────────────────────────
 export function physicsTick(dt) {

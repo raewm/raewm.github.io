@@ -14,8 +14,9 @@ const get_TOTAL = () => HULL_H + LADDER_LEN;
 const HULL_W = 44;
 const CUTTER_R = 14;
 
-// Step = 1 row = 12px ≈ 5ft. Small steps preserve more arc history.
-const STEP_ROWS = 1;
+// Step = 2 rows = 24px ≈ cutter diameter (2×CUTTER_R=28px).
+// Adjacent swing arcs will overlap slightly so no material is left between passes.
+const STEP_ROWS = 2;
 
 // Material types (physics only)
 const CT = { WATER: 0, SILT: 1, SAND: 2, CLAY: 3, ROCK: 4 };
@@ -181,6 +182,11 @@ export const soil = {
                 const cellCY = r * CELL_SIZE + CELL_SIZE / 2;
                 if (Math.hypot(cx - cellCX, cy - cellCY) > CUTTER_R) continue;
 
+                // ── KEY CHECK: cutter must be DEEPER than the cell's current seabed ──
+                // Total cell depth = base shoal depth + already-cut depth
+                const cellCurrentDepth = cell.baseDepthFt + cell.cutDepthFt;
+                if (cutterDepthFt <= cellCurrentDepth) continue;  // cutter above material = no work
+
                 const depthF = Math.min(1, cutterDepthFt / 12);
                 const hardF = HARDNESS[cell.type] ?? 0.4;
                 const rpmF = cutterRPM / dredge.cutterRPMMax;
@@ -203,6 +209,9 @@ export const soil = {
         if (row < 0 || row >= gridRows || col < 0 || col >= gridCols) return 0.3;
         const cell = grid[row][col];
         if (!cell || cell.cutDepthFt >= 12) return 0;
+        // Return 0 if cutter is above the material surface
+        const cellCurrentDepth = cell.baseDepthFt + cell.cutDepthFt;
+        if (dredge.cutterDepthFt <= cellCurrentDepth) return 0;
         return HARDNESS[cell.type] ?? 0.4;
     },
 };
@@ -313,17 +322,25 @@ export function drawPlanView(ctx, W, H) {
     ctx.fillStyle = '#333'; ctx.beginPath(); ctx.arc(spudX, spudY, 2, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
 
-    // ── Depth legend (right edge)
-    const LX = W - 40, LY = 8, LH = 80, LW = 9;
+    // ── Depth legend (right edge) — dark bg panel for readability
+    const LX = W - 48, LY = 6, LH = 100, LW = 12;
+    // Dark background panel
+    ctx.fillStyle = 'rgba(0,0,0,0.75)';
+    ctx.fillRect(LX - 4, LY - 14, LW + 40, LH + 22);
+    // Title
+    ctx.font = 'bold 8px sans-serif'; ctx.fillStyle = '#fff'; ctx.textAlign = 'center';
+    ctx.fillText('DEPTH', LX + LW / 2 + 14, LY - 3);
+    // Color bar — scale 0-25ft matching depthColor exactly
     for (let i = 0; i < LH; i++) {
-        ctx.fillStyle = depthColor((i / LH) * 32);
+        ctx.fillStyle = depthColor((i / LH) * 25);
         ctx.fillRect(LX, LY + i, LW, 1);
     }
-    ctx.strokeStyle = '#444'; ctx.lineWidth = 0.5; ctx.strokeRect(LX, LY, LW, LH);
-    ctx.font = '7px monospace'; ctx.fillStyle = '#aaa'; ctx.textAlign = 'left';
-    ctx.fillText('0', LX + LW + 2, LY + 5);
-    ctx.fillText('16', LX + LW + 2, LY + LH / 2);
-    ctx.fillText('32ft', LX + LW + 2, LY + LH);
+    ctx.strokeStyle = '#888'; ctx.lineWidth = 0.8; ctx.strokeRect(LX, LY, LW, LH);
+    // Tick labels — bold white, high contrast
+    ctx.font = 'bold 9px monospace'; ctx.fillStyle = '#fff'; ctx.textAlign = 'left';
+    ctx.fillText('0', LX + LW + 3, LY + 5);
+    ctx.fillText('12', LX + LW + 3, LY + LH * 0.48 + 4);
+    ctx.fillText('25ft', LX + LW + 3, LY + LH + 1);
 
     if (dredge.steppingState !== 'IDLE') {
         ctx.font = 'bold 9px sans-serif'; ctx.fillStyle = '#f1c40f'; ctx.textAlign = 'center';

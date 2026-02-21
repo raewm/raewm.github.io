@@ -99,9 +99,9 @@ function drawGauges() {
     drawAnalogGauge(ctx, gx(1), gCY, gR, I.ladderWinchPSI, 0, 3500, 'LADDER WINCH', 'PSI', { redZone: { from: 0.80, to: 1 }, warnZone: { from: 0.65, to: 0.80 } });
     // 3. Cutter Pressure
     drawAnalogGauge(ctx, gx(2), gCY, gR, I.cutterPSI, 0, 3500, 'CUTTER PRESS', 'PSI', { redZone: { from: 0.85, to: 1 }, warnZone: { from: 0.70, to: 0.85 } });
-    // 4. Depth bar
+    // 4. Depth bar (max 25ft matches bathymetry)
     const dbW = Math.floor(slotW * 0.38);
-    drawDepthBar(ctx, gx(3) - dbW / 2, gTop + 14, dbW, gH - 28, I.depthFt, 35, 'DEPTH');
+    drawDepthBar(ctx, gx(3) - dbW / 2, gTop + 10, dbW, gH - 22, I.depthFt, 25);
     // 5a. Velocity  5b. Density (stacked)
     const halfR = Math.floor(gR * 0.58);
     drawAnalogGauge(ctx, gx(4), gCY - halfR * 0.80, halfR, I.velocityFtS, 0, 30, 'VELOCITY', 'ft/s', { majorTicks: 3 });

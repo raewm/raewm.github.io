@@ -9,7 +9,7 @@ export const dredge = {
         auxiliary: { down: false },
     },
     spudCarriageOffset: 0,      // ft, 0–12 per stroke
-    spudCarriageMax: 12,
+    spudCarriageMax: 8,
     steppingState: 'IDLE',      // 'IDLE'|'LOWERING_AUX'|'RAISING_WORK'|'ADVANCING'|'LOWERING_WORK'|'RAISING_AUX'
     steppingTimer: 0,
 
