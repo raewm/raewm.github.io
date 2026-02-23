@@ -72,121 +72,117 @@ function renderEditor() {
 
 // Custom layout for Draft/Ullage (Light/Loaded/Simulated)
 function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
-    const isSimulated = checkType.toLowerCase().includes('simulated');
+    // Render Simulated Draft
+    const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-') || k.toLowerCase().includes('simulated'));
+    if (simKeys.length > 0) {
+        const wrap = document.createElement('div');
+        wrap.style.marginBottom = '20px';
+        wrap.style.padding = '15px';
+        wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
+        wrap.style.borderRadius = '8px';
+        wrap.style.border = '1px solid rgba(255,255,255,0.1)';
 
-    if (isSimulated) {
-        // Render Simulated Draft
-        const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-') || k.toLowerCase().includes('simulated'));
-        if (simKeys.length > 0) {
-            const wrap = document.createElement('div');
-            wrap.style.marginBottom = '20px';
-            wrap.style.padding = '15px';
-            wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
-            wrap.style.borderRadius = '8px';
-            wrap.style.border = '1px solid rgba(255,255,255,0.1)';
+        ['fwd', 'aft'].forEach(pos => {
+            const posKeys = simKeys.filter(k => k.toLowerCase().includes(pos));
+            if (posKeys.length > 0) {
+                const posWrap = document.createElement('div');
+                posWrap.style.marginBottom = '15px';
+                posWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">${pos === 'fwd' ? 'Forward' : 'Aft'} (Simulated)</h5>`;
 
-            ['fwd', 'aft'].forEach(pos => {
-                const posKeys = simKeys.filter(k => k.toLowerCase().includes(pos));
-                if (posKeys.length > 0) {
-                    const posWrap = document.createElement('div');
-                    posWrap.style.marginBottom = '15px';
-                    posWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">${pos === 'fwd' ? 'Forward' : 'Aft'}</h5>`;
+                [1, 2, 3].forEach(num => {
+                    const lineKeys = posKeys.filter(k => k.includes(`-${num}`));
+                    if (lineKeys.length > 0) {
+                        const lineGrid = document.createElement('div');
+                        lineGrid.style.display = 'grid';
+                        lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                        lineGrid.style.gap = '15px';
+                        lineGrid.style.marginBottom = '10px';
 
-                    [1, 2, 3].forEach(num => {
-                        const lineKeys = posKeys.filter(k => k.includes(`-${num}`));
-                        if (lineKeys.length > 0) {
-                            const lineGrid = document.createElement('div');
-                            lineGrid.style.display = 'grid';
-                            lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-                            lineGrid.style.gap = '15px';
-                            lineGrid.style.marginBottom = '10px';
+                        const sortOrder = ['depth', 'reading', 'diff'];
+                        const sortFn = (a, b) => {
+                            const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                            const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                            return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+                        };
 
-                            const sortOrder = ['depth', 'reading', 'diff'];
-                            const sortFn = (a, b) => {
-                                const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
-                                const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
-                                return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-                            };
+                        lineKeys.sort(sortFn).forEach(k => {
+                            buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k));
+                        });
+                        posWrap.appendChild(lineGrid);
+                    }
+                });
+                wrap.appendChild(posWrap);
+            }
+        });
 
-                            lineKeys.sort(sortFn).forEach(k => {
-                                buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k));
-                            });
-                            posWrap.appendChild(lineGrid);
-                        }
-                    });
-                    wrap.appendChild(posWrap);
-                }
+        parentDom.appendChild(wrap);
+    }
+
+    // Render Light or Loaded Draft/Ullage
+    const condKeys = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('sim-') && !k.toLowerCase().includes('remarks'));
+    if (condKeys.length > 0) {
+        const wrap = document.createElement('div');
+        wrap.style.marginBottom = '20px';
+        wrap.style.padding = '15px';
+        wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
+        wrap.style.borderRadius = '8px';
+        wrap.style.border = '1px solid rgba(255,255,255,0.1)';
+
+        const fwdKeys = condKeys.filter(k => k.toLowerCase().includes('fwd'));
+        const aftKeys = condKeys.filter(k => k.toLowerCase().includes('aft'));
+        const otherKeys = condKeys.filter(k => !k.toLowerCase().includes('fwd') && !k.toLowerCase().includes('aft'));
+
+        // Define sort order: Port, Starboard, Avg, DQM, Diff
+        const sortOrder = ['port', 'stbd', 'avg', 'dqm', 'diff'];
+        const sortFn = (a, b) => {
+            const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+            const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+            return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+        };
+
+        // Render Fwd row
+        if (fwdKeys.length > 0) {
+            const fwdWrap = document.createElement('div');
+            fwdWrap.style.marginBottom = '15px';
+            fwdWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Forward</h5>`;
+            const fwdGrid = document.createElement('div');
+            fwdGrid.style.display = 'grid';
+            fwdGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            fwdGrid.style.gap = '15px';
+
+            fwdKeys.sort(sortFn).forEach(k => {
+                buildSingleInput(k, dataObj[k], overrideObj[k], fwdGrid, checkType, k, getShortLabel(k));
             });
-
-            parentDom.appendChild(wrap);
+            fwdWrap.appendChild(fwdGrid);
+            wrap.appendChild(fwdWrap);
         }
-    } else {
-        // Render Light or Loaded Draft/Ullage
-        const condKeys = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('sim-') && !k.toLowerCase().includes('remarks'));
-        if (condKeys.length > 0) {
-            const wrap = document.createElement('div');
-            wrap.style.marginBottom = '20px';
-            wrap.style.padding = '15px';
-            wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
-            wrap.style.borderRadius = '8px';
-            wrap.style.border = '1px solid rgba(255,255,255,0.1)';
 
-            const fwdKeys = condKeys.filter(k => k.toLowerCase().includes('fwd'));
-            const aftKeys = condKeys.filter(k => k.toLowerCase().includes('aft'));
-            const otherKeys = condKeys.filter(k => !k.toLowerCase().includes('fwd') && !k.toLowerCase().includes('aft'));
+        // Render Aft row
+        if (aftKeys.length > 0) {
+            const aftWrap = document.createElement('div');
+            aftWrap.style.marginBottom = '15px';
+            aftWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Aft</h5>`;
+            const aftGrid = document.createElement('div');
+            aftGrid.style.display = 'grid';
+            aftGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            aftGrid.style.gap = '15px';
 
-            // Define sort order: Port, Starboard, DQM
-            const sortOrder = ['port', 'stbd', 'dqm'];
-            const sortFn = (a, b) => {
-                const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
-                const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
-                return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-            };
-
-            // Render Fwd row
-            if (fwdKeys.length > 0) {
-                const fwdWrap = document.createElement('div');
-                fwdWrap.style.marginBottom = '15px';
-                fwdWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Forward</h5>`;
-                const fwdGrid = document.createElement('div');
-                fwdGrid.style.display = 'grid';
-                fwdGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-                fwdGrid.style.gap = '15px';
-
-                fwdKeys.sort(sortFn).forEach(k => {
-                    buildSingleInput(k, dataObj[k], overrideObj[k], fwdGrid, checkType, k, getShortLabel(k));
-                });
-                fwdWrap.appendChild(fwdGrid);
-                wrap.appendChild(fwdWrap);
-            }
-
-            // Render Aft row
-            if (aftKeys.length > 0) {
-                const aftWrap = document.createElement('div');
-                aftWrap.style.marginBottom = '15px';
-                aftWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Aft</h5>`;
-                const aftGrid = document.createElement('div');
-                aftGrid.style.display = 'grid';
-                aftGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-                aftGrid.style.gap = '15px';
-
-                aftKeys.sort(sortFn).forEach(k => {
-                    buildSingleInput(k, dataObj[k], overrideObj[k], aftGrid, checkType, k, getShortLabel(k));
-                });
-                aftWrap.appendChild(aftGrid);
-                wrap.appendChild(aftWrap);
-            }
-
-            // Render Other
-            if (otherKeys.length > 0) {
-                const otherGrid = document.createElement('div');
-                otherGrid.className = 'form-grid';
-                otherKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], otherGrid, checkType, k));
-                wrap.appendChild(otherGrid);
-            }
-
-            parentDom.appendChild(wrap);
+            aftKeys.sort(sortFn).forEach(k => {
+                buildSingleInput(k, dataObj[k], overrideObj[k], aftGrid, checkType, k, getShortLabel(k));
+            });
+            aftWrap.appendChild(aftGrid);
+            wrap.appendChild(aftWrap);
         }
+
+        // Render Other
+        if (otherKeys.length > 0) {
+            const otherGrid = document.createElement('div');
+            otherGrid.className = 'form-grid';
+            otherKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], otherGrid, checkType, k));
+            wrap.appendChild(otherGrid);
+        }
+
+        parentDom.appendChild(wrap);
     }
 
     // Render any keys that aren't specific to the layout above (like remarks, strings)
@@ -196,7 +192,9 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
         !k.toLowerCase().includes('port') &&
         !k.toLowerCase().includes('stbd') &&
         !k.toLowerCase().includes('dqm') &&
-        !k.toLowerCase().includes('sim-')
+        !k.toLowerCase().includes('sim-') &&
+        !k.toLowerCase().includes('avg') &&
+        !k.toLowerCase().includes('diff')
     );
     if (remainingKeys.length > 0) {
         const wrap = document.createElement('div');
@@ -212,7 +210,9 @@ function getShortLabel(prop) {
     const low = prop.toLowerCase();
     if (low.includes('port')) return 'Port';
     if (low.includes('stbd')) return 'Starboard';
+    if (low.includes('avg')) return 'Average';
     if (low.includes('dqm')) return 'DQM System';
+    if (low.includes('diff')) return 'Difference';
     return null;
 }
 
@@ -515,10 +515,20 @@ function saveOverride(checkType, pathStr, value) {
 }
 
 function renderTimelineEditor(parentDom) {
-    if (!window.appState.timeline || window.appState.timeline.length === 0) return;
+    if (!window.appState.timeline) {
+        window.appState.timeline = [];
+    }
 
-    const section = document.createElement('div');
-    section.className = 'editor-section';
+    let section = document.getElementById('timeline-editor-section');
+    if (!section) {
+        section = document.createElement('div');
+        section.id = 'timeline-editor-section';
+        section.className = 'editor-section';
+        parentDom.appendChild(section);
+    }
+
+    // Clear out existing content to allow clean re-rendering
+    section.innerHTML = '';
 
     const header = document.createElement('div');
     header.className = 'editor-section-header';
@@ -527,7 +537,8 @@ function renderTimelineEditor(parentDom) {
 
     const body = document.createElement('div');
     body.className = 'editor-section-body';
-    body.style.display = 'none';
+    // If the section already existed, it should default to open to prevent jarring UX during active editing
+    body.style.display = 'block';
 
     header.addEventListener('click', () => {
         const isHidden = body.style.display === 'none';
@@ -543,7 +554,7 @@ function renderTimelineEditor(parentDom) {
     window.appState.timeline.forEach((item, index) => {
         const row = document.createElement('div');
         row.style.display = 'grid';
-        row.style.gridTemplateColumns = '100px 1fr 2fr';
+        row.style.gridTemplateColumns = '100px 1fr 2fr 40px';
         row.style.gap = '10px';
         row.style.alignItems = 'start';
         row.style.padding = '10px';
@@ -607,14 +618,46 @@ function renderTimelineEditor(parentDom) {
         });
         notesWrap.appendChild(notesInput);
 
+        const delBtnWrap = document.createElement('div');
+        delBtnWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:transparent;">Del</label>`;
+        const delBtn = document.createElement('button');
+        delBtn.type = 'button';
+        delBtn.innerHTML = '🗑️';
+        delBtn.className = 'btn btn-danger';
+        delBtn.style.padding = '8px';
+        delBtn.style.width = '100%';
+        delBtn.onclick = () => {
+            if (confirm('Remove this timeline entry?')) {
+                window.appState.timeline.splice(index, 1);
+                window.updatePreview();
+                renderTimelineEditor(parentDom);
+            }
+        };
+        delBtnWrap.appendChild(delBtn);
+
         row.appendChild(timeWrap);
         row.appendChild(actWrap);
         row.appendChild(notesWrap);
+        row.appendChild(delBtnWrap);
         wrap.appendChild(row);
     });
+
+    const addBtnWrap = document.createElement('div');
+    addBtnWrap.style.marginTop = '15px';
+    addBtnWrap.style.textAlign = 'center';
+    const addBtn = document.createElement('button');
+    addBtn.type = 'button';
+    addBtn.className = 'btn btn-secondary';
+    addBtn.textContent = '+ Add Timeline Entry';
+    addBtn.onclick = () => {
+        window.appState.timeline.push({ time: '', activity: '', notes: '' });
+        window.updatePreview();
+        renderTimelineEditor(parentDom);
+    };
+    addBtnWrap.appendChild(addBtn);
+    wrap.appendChild(addBtnWrap);
 
     body.appendChild(wrap);
     section.appendChild(header);
     section.appendChild(body);
-    parentDom.appendChild(section);
 }

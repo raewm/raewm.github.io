@@ -33,8 +33,12 @@ window.appState = JSON.parse(JSON.stringify(defaultState));
 // --- State Methods ---
 
 function saveDraft() {
-    localStorage.setItem('dqmTripReportDraft', JSON.stringify(window.appState));
-    console.log("Draft saved to localStorage.");
+    try {
+        localStorage.setItem('dqmTripReportDraft', JSON.stringify(window.appState));
+        console.log("Draft saved to localStorage.");
+    } catch (e) {
+        console.warn("Could not save draft to localStorage (likely QuotaExceededError from large image payloads). Session state is maintained in RAM.", e);
+    }
 }
 
 function loadDraft() {

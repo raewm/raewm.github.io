@@ -161,13 +161,15 @@ function renderShipData(data, override, typeName) {
     let dqmFwd = getVal(data, override, `${prefix}dqm-fwd`);
     let dqmAft = getVal(data, override, `${prefix}dqm-aft`);
 
-    // Compute averages
-    let fwdAvg = avg(fwdPort, fwdStbd);
-    let aftAvg = avg(aftPort, aftStbd);
-    let fwdDiff = diff(fwdAvg, dqmFwd);
-    let aftDiff = diff(aftAvg, dqmAft);
+    // Check if physical data exists
+    if (fwdPort !== undefined || fwdStbd !== undefined || aftPort !== undefined || aftStbd !== undefined || dqmFwd !== undefined || dqmAft !== undefined) {
+        // Compute averages
+        let fwdAvg = avg(fwdPort, fwdStbd);
+        let aftAvg = avg(aftPort, aftStbd);
+        let fwdDiff = diff(fwdAvg, dqmFwd);
+        let aftDiff = diff(aftAvg, dqmAft);
 
-    html += `
+        html += `
         <table class="report-table">
         <tr>
             <th>Location</th>
@@ -193,7 +195,17 @@ function renderShipData(data, override, typeName) {
             <td class="text-center">${formatNum(dqmAft)}</td>
             <td class="text-center">${formatNum(aftDiff)}</td>
         </tr>
-    </table>`;
+        </table>`;
+    }
+
+    // Now check for nested simulated data
+    if (typeName === 'draftSensorLight' || typeName === 'draftSensorLoaded') {
+        const simPrefix = `sim-${prefix}`;
+        const hasSim = Object.keys(data).some(k => k.startsWith(simPrefix));
+        if (hasSim) {
+            html += renderSimulatedDraft(data, override, simPrefix);
+        }
+    }
 
     // Remarks: try type-specific key first, then generic
     let remarks = getVal(data, override, `${prefix}remarks`)
@@ -208,13 +220,15 @@ function renderShipData(data, override, typeName) {
     return html;
 }
 
-function renderSimulatedDraft(data, override) {
+function renderSimulatedDraft(data, override, prefixOverride) {
     let html = '';
+    const prefix = prefixOverride || 'sim-';
+
     ['fwd', 'aft'].forEach(pos => {
         let rows = '';
         [1, 2, 3].forEach(num => {
-            let depth = getVal(data, override, `sim-${pos}-depth-${num}`) || getVal(data, override, `sim-${pos}-depth${num}`);
-            let reading = getVal(data, override, `sim-${pos}-reading-${num}`) || getVal(data, override, `sim-${pos}-reading${num}`);
+            let depth = getVal(data, override, `${prefix}${pos}-depth-${num}`) || getVal(data, override, `${prefix}${pos}-depth${num}`);
+            let reading = getVal(data, override, `${prefix}${pos}-reading-${num}`) || getVal(data, override, `${prefix}${pos}-reading${num}`);
             let diffVal = diff(depth, reading);
 
             if (depth !== undefined || reading !== undefined) {
@@ -233,7 +247,7 @@ function renderSimulatedDraft(data, override) {
             <table class="report-table">
                 <tr>
                     <th width="40%">Measurement</th>
-                    <th width="20%" class="text-center">Physical Depth (ft)</th>
+                    <th width="20%" class="text-center">Test Depth (ft)</th>
                     <th width="20%" class="text-center">System Reading (ft)</th>
                     <th width="20%" class="text-center">Difference</th>
                 </tr>
@@ -242,9 +256,11 @@ function renderSimulatedDraft(data, override) {
         }
     });
 
-    let remarks = getVal(data, override, `remarks`);
-    if (remarks) {
-        html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+    if (!prefixOverride) {
+        let remarks = getVal(data, override, `remarks`);
+        if (remarks) {
+            html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+        }
     }
 
     return html;
