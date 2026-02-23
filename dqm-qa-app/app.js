@@ -1,7 +1,7 @@
-// ===== Application State =====
 const appState = {
     plants: [],
     checkDate: '',
+    weatherConditions: '',
     qaTeam: '',
     systemProvider: '',
     timeline: [],
@@ -13,16 +13,18 @@ const appState = {
 const vesselProfiles = {
     'Scow': ['Monitoring', 'Ullage'],
     'Hopper Dredge': ['Standard'],
-    'Pipeline Dredge': ['Standard', 'Small Business']
+    'Pipeline Dredge': ['Standard', 'Small Business'],
+    'Mechanical Dredge': ['Standard']
 };
 
 // ===== Required Checks by Profile =====
 const requiredChecks = {
-    'Scow-Monitoring': ['positionCheck', 'hullStatus', 'draftSensor'],
-    'Scow-Ullage': ['positionCheck', 'hullStatus', 'draftSensor', 'ullage'],
-    'Hopper Dredge-Standard': ['positionCheck', 'hullStatus', 'draftSensor', 'ullage', 'dragheadDepth'],
+    'Scow-Monitoring': ['positionCheck', 'hullStatus', 'draftSensorLight', 'draftSensorLoaded'],
+    'Scow-Ullage': ['positionCheck', 'hullStatus', 'draftSensorLight', 'draftSensorLoaded', 'ullageLight', 'ullageLoaded'],
+    'Hopper Dredge-Standard': ['positionCheck', 'hullStatus', 'draftSensorLight', 'draftSensorLoaded', 'ullageLight', 'ullageLoaded', 'dragheadDepth'],
     'Pipeline Dredge-Standard': ['positionCheck', 'suctionMouthDepth', 'velocity'],
-    'Pipeline Dredge-Small Business': ['positionCheck', 'suctionMouthDepth']
+    'Pipeline Dredge-Small Business': ['positionCheck', 'suctionMouthDepth'],
+    'Mechanical Dredge-Standard': ['positionCheck', 'bucketDepth', 'bucketPosition']
 };
 
 // ===== Initialization =====
@@ -81,6 +83,7 @@ function addPlant() {
                     <option value="Scow">Scow</option>
                     <option value="Hopper Dredge">Hopper Dredge</option>
                     <option value="Pipeline Dredge">Pipeline Dredge</option>
+                    <option value="Mechanical Dredge">Mechanical Dredge</option>
                 </select>
             </div>
             <div class="form-group">
@@ -159,7 +162,6 @@ function updatePlants() {
 
 // ===== QA Checks Management =====
 function updateQAChecks() {
-    // Determine which checks are needed based on all plants
     const checksNeeded = new Set();
 
     appState.plants.forEach(plant => {
@@ -220,16 +222,24 @@ function getCheckContent(checkType) {
             return createPositionCheckForm();
         case 'hullStatus':
             return createHullStatusForm();
-        case 'draftSensor':
-            return createDraftSensorForm();
-        case 'ullage':
-            return createUllageForm();
+        case 'draftSensorLight':
+            return createDraftSensorLightForm();
+        case 'draftSensorLoaded':
+            return createDraftSensorLoadedForm();
+        case 'ullageLight':
+            return createUllageLightForm();
+        case 'ullageLoaded':
+            return createUllageLoadedForm();
         case 'dragheadDepth':
             return createDragheadDepthForm();
         case 'suctionMouthDepth':
             return createSuctionMouthDepthForm();
         case 'velocity':
             return createVelocityForm();
+        case 'bucketDepth':
+            return createBucketDepthForm();
+        case 'bucketPosition':
+            return createBucketPositionForm();
         default:
             return '<p>Unknown check type</p>';
     }
@@ -239,7 +249,7 @@ function createPositionCheckForm() {
     const isScow = appState.plants.some(p => p.vesselType === 'Scow');
 
     return `
-        <h2>📍 Position Check</h2>
+        <h2>Position Check</h2>
         
         <h3>Static Position Check</h3>
         <div class="form-group">
@@ -299,8 +309,8 @@ function createPositionCheckForm() {
 
 function createHullStatusForm() {
     return `
-        <h2>⚓ Hull Status Check</h2>
-        
+        <h2>Hull Status Check</h2>
+
         <div class="form-group">
             <label>Hull Opened</label>
             <select id="hull-opened">
@@ -309,50 +319,42 @@ function createHullStatusForm() {
                 <option value="no">No</option>
             </select>
         </div>
-        
-        <div class="form-group">
-            <label>Closed to Open Trigger Condition</label>
-            <textarea id="hull-open-trigger" rows="2" placeholder="Describe bin/door position when sensor changed from closed to open"></textarea>
-        </div>
-        
+
         <div class="form-group">
             <label>Photo Reference (Closed to Open)</label>
-            <input type="text" id="hull-open-photo" placeholder="Photo filename or reference">
+            <input type="file" id="hull-open-photo" accept="image/*" onchange="previewHullPhoto(this, 'hull-open-photo-preview')">
+            <img id="hull-open-photo-preview" style="display:none; max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Closed to Open photo">
         </div>
-        
-        <div class="form-group">
-            <label>Open to Closed Trigger Condition</label>
-            <textarea id="hull-close-trigger" rows="2" placeholder="Describe bin/door position when sensor changed from open to closed"></textarea>
-        </div>
-        
+
         <div class="form-group">
             <label>Photo Reference (Open to Closed)</label>
-            <input type="text" id="hull-close-photo" placeholder="Photo filename or reference">
+            <input type="file" id="hull-close-photo" accept="image/*" onchange="previewHullPhoto(this, 'hull-close-photo-preview')">
+            <img id="hull-close-photo-preview" style="display:none; max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Open to Closed photo">
         </div>
-        
+
         <div class="form-group">
             <label>Remarks</label>
             <textarea id="hull-remarks" rows="2" placeholder="Additional observations"></textarea>
         </div>
-        
+
         <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
     `;
 }
 
-function createDraftSensorForm() {
+function createDraftSensorLightForm() {
     return `
-        <h2>📏 Draft Sensor Check</h2>
-        
+        <h2>Draft Sensor Check — Light Condition</h2>
+        <p class="text-muted">Perform this check when the vessel is light (empty hopper/scow). Record physical draft marks and compare to DQM system readings.</p>
+
         <div class="form-group">
             <label>Check Method</label>
-            <select id="draft-check-method" onchange="toggleDraftCheckMethod()">
-                <option value="physical">Physical Draft Check (Light & Loaded)</option>
+            <select id="draft-light-check-method" onchange="toggleDraftLightMethod()">
+                <option value="physical">Physical Draft Check</option>
                 <option value="simulated">Simulated Draft Check (Test Pipe Method)</option>
             </select>
         </div>
-        
-        <div id="physical-draft-section">
-            <h3>Physical Draft Check - Light Condition</h3>
+
+        <div id="physical-draft-light-section">
             <div class="input-row">
                 <div class="form-group">
                     <label>Forward Port (ft)</label>
@@ -383,8 +385,71 @@ function createDraftSensorForm() {
                     <input type="number" id="light-dqm-aft" step="0.1" placeholder="0.0">
                 </div>
             </div>
-            
-            <h3>Physical Draft Check - Loaded Condition</h3>
+        </div>
+
+        <div id="simulated-draft-light-section" class="hidden">
+            <h3>Simulated Draft Check — Forward Sensor (Light)</h3>
+            <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
+            <div class="input-row-3">
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-fwd-reading-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
+            </div>
+            <div class="input-row-3">
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-light-fwd-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-light-fwd-reading-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
+            </div>
+            <div class="input-row-3">
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-light-fwd-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-fwd-reading-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
+            </div>
+            <h3>Simulated Draft Check — Aft Sensor (Light)</h3>
+            <div class="input-row-3">
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-aft-reading-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
+            </div>
+            <div class="input-row-3">
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-light-aft-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-light-aft-reading-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
+            </div>
+            <div class="input-row-3">
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-light-aft-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-aft-reading-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
+            </div>
+            <div class="form-group">
+                <label>Test Pipe Details</label>
+                <textarea id="sim-light-pipe-details" rows="2" placeholder="Pipe length, fill method, calibration notes, etc."></textarea>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label>Remarks</label>
+            <textarea id="draft-light-remarks" rows="2" placeholder="Observations, calibration status, etc."></textarea>
+        </div>
+
+        <button type="button" class="log-timeline-btn">📋 Log Light Draft to Timeline</button>
+    `;
+}
+
+function createDraftSensorLoadedForm() {
+    return `
+        <h2>Draft Sensor Check — Loaded Condition</h2>
+        <p class="text-muted">Perform this check when the vessel is loaded (full hopper/scow). Record physical draft marks and compare to DQM system readings.</p>
+
+        <div class="form-group">
+            <label>Check Method</label>
+            <select id="draft-loaded-check-method" onchange="toggleDraftLoadedMethod()">
+                <option value="physical">Physical Draft Check</option>
+                <option value="simulated">Simulated Draft Check (Test Pipe Method)</option>
+            </select>
+        </div>
+
+        <div id="physical-draft-loaded-section">
             <div class="input-row">
                 <div class="form-group">
                     <label>Forward Port (ft)</label>
@@ -415,139 +480,127 @@ function createDraftSensorForm() {
                     <input type="number" id="loaded-dqm-aft" step="0.1" placeholder="0.0">
                 </div>
             </div>
-            
-            <div class="form-group">
-                <label>Sea Conditions</label>
-                <textarea id="draft-sea-conditions" rows="2" placeholder="Wave height, weather conditions, etc."></textarea>
-            </div>
         </div>
-        
-        <div id="simulated-draft-section" class="hidden">
-            <h3>Simulated Draft Check - Forward Sensor</h3>
+
+        <div id="simulated-draft-loaded-section" class="hidden">
+            <h3>Simulated Draft Check — Forward Sensor (Loaded)</h3>
             <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
-            
             <div class="input-row-3">
-                <div class="form-group">
-                    <label>Test Depth 1 (ft)</label>
-                    <input type="number" id="sim-fwd-depth-1" step="0.1" placeholder="e.g., 5.0">
-                </div>
-                <div class="form-group">
-                    <label>DQM Reading 1 (ft)</label>
-                    <input type="number" id="sim-fwd-reading-1" step="0.1" placeholder="0.0">
-                </div>
-                <div class="form-group">
-                    <label>Difference (ft)</label>
-                    <input type="number" id="sim-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc">
-                </div>
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-loaded-fwd-reading-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group">
-                    <label>Test Depth 2 (ft)</label>
-                    <input type="number" id="sim-fwd-depth-2" step="0.1" placeholder="e.g., 10.0">
-                </div>
-                <div class="form-group">
-                    <label>DQM Reading 2 (ft)</label>
-                    <input type="number" id="sim-fwd-reading-2" step="0.1" placeholder="0.0">
-                </div>
-                <div class="form-group">
-                    <label>Difference (ft)</label>
-                    <input type="number" id="sim-fwd-diff-2" step="0.1" readonly placeholder="Auto-calc">
-                </div>
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-loaded-fwd-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-loaded-fwd-reading-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-fwd-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group">
-                    <label>Test Depth 3 (ft)</label>
-                    <input type="number" id="sim-fwd-depth-3" step="0.1" placeholder="e.g., 15.0">
-                </div>
-                <div class="form-group">
-                    <label>DQM Reading 3 (ft)</label>
-                    <input type="number" id="sim-fwd-reading-3" step="0.1" placeholder="0.0">
-                </div>
-                <div class="form-group">
-                    <label>Difference (ft)</label>
-                    <input type="number" id="sim-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc">
-                </div>
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-loaded-fwd-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-loaded-fwd-reading-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
-            
-            <h3>Simulated Draft Check - Aft Sensor</h3>
+            <h3>Simulated Draft Check — Aft Sensor (Loaded)</h3>
             <div class="input-row-3">
-                <div class="form-group">
-                    <label>Test Depth 1 (ft)</label>
-                    <input type="number" id="sim-aft-depth-1" step="0.1" placeholder="e.g., 5.0">
-                </div>
-                <div class="form-group">
-                    <label>DQM Reading 1 (ft)</label>
-                    <input type="number" id="sim-aft-reading-1" step="0.1" placeholder="0.0">
-                </div>
-                <div class="form-group">
-                    <label>Difference (ft)</label>
-                    <input type="number" id="sim-aft-diff-1" step="0.1" readonly placeholder="Auto-calc">
-                </div>
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-loaded-aft-reading-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group">
-                    <label>Test Depth 2 (ft)</label>
-                    <input type="number" id="sim-aft-depth-2" step="0.1" placeholder="e.g., 10.0">
-                </div>
-                <div class="form-group">
-                    <label>DQM Reading 2 (ft)</label>
-                    <input type="number" id="sim-aft-reading-2" step="0.1" placeholder="0.0">
-                </div>
-                <div class="form-group">
-                    <label>Difference (ft)</label>
-                    <input type="number" id="sim-aft-diff-2" step="0.1" readonly placeholder="Auto-calc">
-                </div>
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-loaded-aft-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-loaded-aft-reading-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group">
-                    <label>Test Depth 3 (ft)</label>
-                    <input type="number" id="sim-aft-depth-3" step="0.1" placeholder="e.g., 15.0">
-                </div>
-                <div class="form-group">
-                    <label>DQM Reading 3 (ft)</label>
-                    <input type="number" id="sim-aft-reading-3" step="0.1" placeholder="0.0">
-                </div>
-                <div class="form-group">
-                    <label>Difference (ft)</label>
-                    <input type="number" id="sim-aft-diff-3" step="0.1" readonly placeholder="Auto-calc">
-                </div>
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-loaded-aft-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-loaded-aft-reading-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
-            
             <div class="form-group">
                 <label>Test Pipe Details</label>
-                <textarea id="sim-pipe-details" rows="2" placeholder="Pipe length, fill method, calibration notes, etc."></textarea>
+                <textarea id="sim-loaded-pipe-details" rows="2" placeholder="Pipe length, fill method, calibration notes, etc."></textarea>
             </div>
         </div>
-        
+
         <div class="form-group">
             <label>Remarks</label>
-            <textarea id="draft-remarks" rows="2"></textarea>
+            <textarea id="draft-loaded-remarks" rows="2" placeholder="Observations, calibration status, etc."></textarea>
         </div>
-        
-        <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
+
+        <button type="button" class="log-timeline-btn">📋 Log Loaded Draft to Timeline</button>
     `;
 }
 
-// Toggle function for draft check method
-function toggleDraftCheckMethod() {
-    const method = document.getElementById('draft-check-method')?.value;
-    const physicalSection = document.getElementById('physical-draft-section');
-    const simulatedSection = document.getElementById('simulated-draft-section');
-
-    if (method === 'simulated') {
-        physicalSection?.classList.add('hidden');
-        simulatedSection?.classList.remove('hidden');
-    } else {
-        physicalSection?.classList.remove('hidden');
-        simulatedSection?.classList.add('hidden');
-    }
+// Toggle functions for split draft check methods
+function toggleDraftLightMethod() {
+    const method = document.getElementById('draft-light-check-method')?.value;
+    document.getElementById('physical-draft-light-section')?.classList.toggle('hidden', method === 'simulated');
+    document.getElementById('simulated-draft-light-section')?.classList.toggle('hidden', method !== 'simulated');
 }
 
-function createUllageForm() {
+function toggleDraftLoadedMethod() {
+    const method = document.getElementById('draft-loaded-check-method')?.value;
+    document.getElementById('physical-draft-loaded-section')?.classList.toggle('hidden', method === 'simulated');
+    document.getElementById('simulated-draft-loaded-section')?.classList.toggle('hidden', method !== 'simulated');
+}
+
+function createDraftSensorSimulatedForm() {
     return `
-        <h2>📐 Ullage Check</h2>
-        
-        <h3>Light Condition</h3>
+        <h2>Draft Sensor Check — Simulated (Test Pipe Method)</h2>
+        <p class="text-muted">Use the test pipe method to simulate known water depths at the sensor. Record at least 3 measurements for each sensor location.</p>
+
+        <h3>Forward Sensor</h3>
+        <div class="input-row-3">
+            <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+            <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-fwd-reading-1" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-fwd-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+            <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-fwd-reading-2" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-fwd-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-fwd-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+            <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-fwd-reading-3" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
+        </div>
+
+        <h3>Aft Sensor</h3>
+        <div class="input-row-3">
+            <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+            <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-aft-reading-1" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-aft-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-aft-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+            <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-aft-reading-2" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-aft-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-aft-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+            <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-aft-reading-3" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
+        </div>
+
+        <div class="form-group">
+            <label>Test Pipe Details</label>
+            <textarea id="sim-pipe-details" rows="2" placeholder="Pipe length, fill method, calibration notes, etc."></textarea>
+        </div>
+        <div class="form-group">
+            <label>Remarks</label>
+            <textarea id="sim-draft-remarks" rows="2" placeholder="Observations, calibration status, etc."></textarea>
+        </div>
+
+        <button type="button" class="log-timeline-btn">📋 Log Simulated Draft to Timeline</button>
+    `;
+}
+
+function createUllageLightForm() {
+    return `
+        <h2>Ullage Check — Light Condition</h2>
+        <p class="text-muted">Perform this check when the hopper/bin is empty. Record manual weighted tape soundings and compare to DQM system readings. Acceptable difference: ±0.1 ft.</p>
+
         <div class="input-row">
             <div class="form-group">
                 <label>Forward Port Sounding (ft)</label>
@@ -574,12 +627,35 @@ function createUllageForm() {
                 <input type="number" id="ullage-light-dqm-fwd" step="0.1" placeholder="0.0">
             </div>
             <div class="form-group">
+                <label>Fwd Diff (ft)</label>
+                <input type="number" id="ullage-light-diff-fwd" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="form-group">
                 <label>DQM System Aft (ft)</label>
                 <input type="number" id="ullage-light-dqm-aft" step="0.1" placeholder="0.0">
             </div>
+            <div class="form-group">
+                <label>Aft Diff (ft)</label>
+                <input type="number" id="ullage-light-diff-aft" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
         </div>
-        
-        <h3>Loaded Condition</h3>
+
+        <div class="form-group">
+            <label>Remarks</label>
+            <textarea id="ullage-light-remarks" rows="2" placeholder="Measurement notes, etc."></textarea>
+        </div>
+
+        <button type="button" class="log-timeline-btn">📋 Log Light Ullage to Timeline</button>
+    `;
+}
+
+function createUllageLoadedForm() {
+    return `
+        <h2>Ullage Check — Loaded Condition</h2>
+        <p class="text-muted">Perform this check after the bin/hopper is loaded. Ensure a uniform material surface before taking soundings. Acceptable difference: ±0.1 ft.</p>
+
         <div class="input-row">
             <div class="form-group">
                 <label>Forward Port Sounding (ft)</label>
@@ -606,74 +682,102 @@ function createUllageForm() {
                 <input type="number" id="ullage-loaded-dqm-fwd" step="0.1" placeholder="0.0">
             </div>
             <div class="form-group">
+                <label>Fwd Diff (ft)</label>
+                <input type="number" id="ullage-loaded-diff-fwd" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
+        </div>
+        <div class="input-row">
+            <div class="form-group">
                 <label>DQM System Aft (ft)</label>
                 <input type="number" id="ullage-loaded-dqm-aft" step="0.1" placeholder="0.0">
             </div>
+            <div class="form-group">
+                <label>Aft Diff (ft)</label>
+                <input type="number" id="ullage-loaded-diff-aft" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
         </div>
-        
+
         <div class="form-group">
             <label>Remarks</label>
-            <textarea id="ullage-remarks" rows="2" placeholder="Conditions, measurement method, etc."></textarea>
+            <textarea id="ullage-loaded-remarks" rows="2" placeholder="Material type, measurement notes, etc."></textarea>
         </div>
-        
-        <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
+
+        <button type="button" class="log-timeline-btn">📋 Log Loaded Ullage to Timeline</button>
     `;
 }
 
 function createDragheadDepthForm() {
     return `
-        <h2>🔧 Draghead Depth Check</h2>
+        <h2>Draghead Depth Check</h2>
         
-        <p class="text-muted">Record at least 3 measurements within the operating range</p>
-        
-        <div class="input-row-3">
-            <div class="form-group">
-                <label>Measurement 1 - Manual (ft)</label>
-                <input type="number" id="draghead-manual-1" step="0.1" placeholder="0.0">
+        <p class="text-muted">Select which dragheads to record measurements for:</p>
+        <div class="form-group" style="display: flex; gap: 15px; margin-bottom: 20px;">
+            <label style="display: flex; align-items: center; gap: 5px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="draghead-check-port" onchange="toggleDragheadSections()"> Port
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="draghead-check-center" onchange="toggleDragheadSections()"> Center
+            </label>
+            <label style="display: flex; align-items: center; gap: 5px; font-weight: normal; cursor: pointer;">
+                <input type="checkbox" id="draghead-check-stbd" onchange="toggleDragheadSections()"> Starboard
+            </label>
+        </div>
+
+        <div id="draghead-port-section" class="hidden">
+            <h3>Port Draghead</h3>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-port-manual-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-port-dqm-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-1" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div class="form-group">
-                <label>Measurement 1 - DQM System (ft)</label>
-                <input type="number" id="draghead-dqm-1" step="0.1" placeholder="0.0">
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 2 - Manual (ft)</label><input type="number" id="draghead-port-manual-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 2 - DQM (ft)</label><input type="number" id="draghead-port-dqm-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-2" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div class="form-group">
-                <label>Difference (ft)</label>
-                <input type="number" id="draghead-diff-1" step="0.1" placeholder="Auto-calc" readonly>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 3 - Manual (ft)</label><input type="number" id="draghead-port-manual-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-port-dqm-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
+            </div>
+        </div>
+
+        <div id="draghead-center-section" class="hidden">
+            <h3>Center Draghead</h3>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-center-manual-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-center-dqm-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-center-diff-1" step="0.1" placeholder="Auto-calc" readonly></div>
+            </div>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 2 - Manual (ft)</label><input type="number" id="draghead-center-manual-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 2 - DQM (ft)</label><input type="number" id="draghead-center-dqm-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-center-diff-2" step="0.1" placeholder="Auto-calc" readonly></div>
+            </div>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 3 - Manual (ft)</label><input type="number" id="draghead-center-manual-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-center-dqm-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-center-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
         </div>
         
-        <div class="input-row-3">
-            <div class="form-group">
-                <label>Measurement 2 - Manual (ft)</label>
-                <input type="number" id="draghead-manual-2" step="0.1" placeholder="0.0">
+        <div id="draghead-stbd-section" class="hidden">
+            <h3>Starboard Draghead</h3>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-stbd-manual-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-stbd-dqm-1" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-stbd-diff-1" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div class="form-group">
-                <label>Measurement 2 - DQM System (ft)</label>
-                <input type="number" id="draghead-dqm-2" step="0.1" placeholder="0.0">
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 2 - Manual (ft)</label><input type="number" id="draghead-stbd-manual-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 2 - DQM (ft)</label><input type="number" id="draghead-stbd-dqm-2" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-stbd-diff-2" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div class="form-group">
-                <label>Difference (ft)</label>
-                <input type="number" id="draghead-diff-2" step="0.1" placeholder="Auto-calc" readonly>
+            <div class="input-row-3">
+                <div class="form-group"><label>Measurement 3 - Manual (ft)</label><input type="number" id="draghead-stbd-manual-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-stbd-dqm-3" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-stbd-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-        </div>
-        
-        <div class="input-row-3">
-            <div class="form-group">
-                <label>Measurement 3 - Manual (ft)</label>
-                <input type="number" id="draghead-manual-3" step="0.1" placeholder="0.0">
-            </div>
-            <div class="form-group">
-                <label>Measurement 3 - DQM System (ft)</label>
-                <input type="number" id="draghead-dqm-3" step="0.1" placeholder="0.0">
-            </div>
-            <div class="form-group">
-                <label>Difference (ft)</label>
-                <input type="number" id="draghead-diff-3" step="0.1" placeholder="Auto-calc" readonly>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>Sea/Wave Conditions</label>
-            <textarea id="draghead-conditions" rows="2" placeholder="Wave height and conditions during measurements"></textarea>
         </div>
         
         <div class="form-group">
@@ -685,9 +789,19 @@ function createDragheadDepthForm() {
     `;
 }
 
+function toggleDragheadSections() {
+    const port = document.getElementById('draghead-check-port')?.checked;
+    const center = document.getElementById('draghead-check-center')?.checked;
+    const stbd = document.getElementById('draghead-check-stbd')?.checked;
+
+    document.getElementById('draghead-port-section')?.classList.toggle('hidden', !port);
+    document.getElementById('draghead-center-section')?.classList.toggle('hidden', !center);
+    document.getElementById('draghead-stbd-section')?.classList.toggle('hidden', !stbd);
+}
+
 function createSuctionMouthDepthForm() {
     return `
-        <h2>🔧 Suction Mouth Depth Check</h2>
+        <h2>Suction Mouth Depth Check</h2>
         
         <p class="text-muted">Record at least 3 measurements within the operating range</p>
         
@@ -737,11 +851,6 @@ function createSuctionMouthDepthForm() {
         </div>
         
         <div class="form-group">
-            <label>Sea/Wave Conditions</label>
-            <textarea id="suction-conditions" rows="2" placeholder="Wave height and conditions during measurements"></textarea>
-        </div>
-        
-        <div class="form-group">
             <label>Remarks</label>
             <textarea id="suction-remarks" rows="2"></textarea>
         </div>
@@ -752,64 +861,170 @@ function createSuctionMouthDepthForm() {
 
 function createVelocityForm() {
     return `
-        <h2>💨 Velocity Check</h2>
-        
-        <div class="form-group">
-            <label>Pipeline Length (ft)</label>
-            <input type="number" id="velocity-pipe-length" step="0.1" placeholder="Distance from dye injection to outfall">
-        </div>
+        <h2>Velocity Check</h2>
         
         <div class="form-group">
             <label>Test Method</label>
-            <select id="velocity-method">
+            <select id="velocity-method" onchange="toggleVelocityMethod()">
                 <option value="">Select...</option>
                 <option value="dye">Dye Test</option>
                 <option value="meter">External Meter</option>
             </select>
         </div>
         
-        <div class="input-row">
+        <div id="velocity-dye-section" class="hidden">
             <div class="form-group">
-                <label>Travel Time (seconds)</label>
-                <input type="number" id="velocity-time" step="0.1" placeholder="Time for dye to travel">
+                <label>Pipeline Length (ft)</label>
+                <input type="number" id="velocity-pipe-length" step="0.1" placeholder="Distance from dye injection to outfall">
             </div>
-            <div class="form-group">
-                <label>Calculated Velocity (ft/s)</label>
-                <input type="number" id="velocity-calculated" step="0.01" placeholder="Auto-calculated">
-            </div>
+            
+            <p class="text-muted">Record up to 3 dye tests</p>
+            
+            ${[1, 2, 3].map(i => `
+                <div class="form-group"><label style="color:#666; font-size:0.9em; text-transform:uppercase;">Test ${i}</label></div>
+                <div class="input-row">
+                    <div class="form-group">
+                        <label>Travel Time (sec)</label>
+                        <input type="number" id="velocity-dye-time-${i}" step="0.1" placeholder="Time">
+                    </div>
+                    <div class="form-group">
+                        <label>Calc Velocity (ft/s)</label>
+                        <input type="number" id="velocity-dye-calc-${i}" step="0.01" readonly placeholder="Auto-calc">
+                    </div>
+                </div>
+                <div class="input-row" style="margin-bottom: 12px;">
+                    <div class="form-group">
+                        <label>DQM Velocity (ft/s)</label>
+                        <input type="number" id="velocity-dye-dqm-${i}" step="0.01" placeholder="System">
+                    </div>
+                    <div class="form-group">
+                        <label>Difference (ft/s)</label>
+                        <input type="number" id="velocity-dye-diff-${i}" step="0.01" readonly placeholder="Auto-calc">
+                    </div>
+                </div>
+            `).join('')}
         </div>
         
-        <div class="input-row">
+        <div id="velocity-meter-section" class="hidden">
             <div class="form-group">
-                <label>DQM System Velocity (ft/s)</label>
-                <input type="number" id="velocity-dqm" step="0.01" placeholder="System reading">
+                <label>External Meter Calibration Date</label>
+                <input type="date" id="velocity-cal-date">
             </div>
-            <div class="form-group">
-                <label>Difference (ft/s)</label>
-                <input type="number" id="velocity-diff" step="0.01" placeholder="Auto-calc" readonly>
-            </div>
-        </div>
-        
-        <div class="form-group">
-            <label>Pump RPM</label>
-            <input type="number" id="velocity-rpm" placeholder="RPM during test">
-        </div>
-        
-        <div class="form-group">
-            <label>External Meter Calibration Date</label>
-            <input type="date" id="velocity-cal-date">
+            
+            <p class="text-muted">Record up to 3 external meter tests</p>
+            
+            ${[1, 2, 3].map(i => `
+                <div class="input-row-3">
+                    <div class="form-group"><label>Meter Velocity (ft/s)</label><input type="number" id="velocity-meter-manual-${i}" step="0.01" placeholder="0.00"></div>
+                    <div class="form-group"><label>DQM Velocity (ft/s)</label><input type="number" id="velocity-meter-dqm-${i}" step="0.01" placeholder="0.00"></div>
+                    <div class="form-group"><label>Difference (ft/s)</label><input type="number" id="velocity-meter-diff-${i}" step="0.01" readonly placeholder="Auto-calc"></div>
+                </div>
+            `).join('')}
         </div>
         
         <div class="form-group">
             <label>Remarks</label>
-            <textarea id="velocity-remarks" rows="2" placeholder="Test conditions, observations"></textarea>
+            <textarea id="velocity-remarks" rows="2" placeholder="Test observations, etc."></textarea>
         </div>
         
         <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
     `;
 }
 
-// ===== GPS Functions =====
+function toggleVelocityMethod() {
+    const method = document.getElementById('velocity-method')?.value;
+    document.getElementById('velocity-dye-section')?.classList.toggle('hidden', method !== 'dye');
+    document.getElementById('velocity-meter-section')?.classList.toggle('hidden', method !== 'meter');
+}
+
+function createBucketDepthForm() {
+    return `
+        <h2>Bucket/Grab Depth Check</h2>
+        <p class="text-muted">Lower bucket to known depth and verify DQM sensor accuracy. Record at least 3 measurements. Acceptable difference: ≤0.5 ft.</p>
+
+        <div class="form-group">
+            <label>Depth Offset — Attachment Point to Bucket Heel (ft)</label>
+            <input type="number" id="bucket-offset" step="0.1" placeholder="e.g., 2.0">
+        </div>
+
+        <div class="input-row-3">
+            <div class="form-group"><label>Measurement 1 — Manual (ft)</label><input type="number" id="bucket-manual-1" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Measurement 1 — DQM System (ft)</label><input type="number" id="bucket-dqm-1" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="bucket-diff-1" step="0.1" placeholder="Auto-calc" readonly></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Measurement 2 — Manual (ft)</label><input type="number" id="bucket-manual-2" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Measurement 2 — DQM System (ft)</label><input type="number" id="bucket-dqm-2" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="bucket-diff-2" step="0.1" placeholder="Auto-calc" readonly></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Measurement 3 — Manual (ft)</label><input type="number" id="bucket-manual-3" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Measurement 3 — DQM System (ft)</label><input type="number" id="bucket-dqm-3" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="bucket-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
+        </div>
+
+        <div class="form-group">
+            <label>Remarks</label>
+            <textarea id="bucket-depth-remarks" rows="2" placeholder="Sensor type, calibration notes, etc."></textarea>
+        </div>
+
+        <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
+    `;
+}
+
+function createBucketPositionForm() {
+    return `
+        <h2>Bucket Position Check</h2>
+        <p class="text-muted">Position boom at known angles and verify bucket positioning sensors/offsets against physical measurements. Acceptable difference: ≤10 ft (3 m).</p>
+
+        <div class="form-group">
+            <label>Reference Drawings Available</label>
+            <select id="bucket-pos-drawings">
+                <option value="">Select...</option>
+                <option value="yes">Yes</option>
+                <option value="no">No</option>
+            </select>
+        </div>
+
+        <div class="form-group">
+            <label>Measurement Tool Used</label>
+            <select id="bucket-pos-tool">
+                <option value="">Select...</option>
+                <option value="tape">Measuring Tape</option>
+                <option value="laser">Laser Rangefinder</option>
+                <option value="other">Other</option>
+            </select>
+        </div>
+
+        <div class="input-row-3">
+            <div class="form-group"><label>Position 1 — Manual (ft)</label><input type="number" id="bucket-pos-manual-1" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Position 1 — DQM System (ft)</label><input type="number" id="bucket-pos-dqm-1" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="bucket-pos-diff-1" step="0.1" placeholder="Auto-calc" readonly></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Position 2 — Manual (ft)</label><input type="number" id="bucket-pos-manual-2" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Position 2 — DQM System (ft)</label><input type="number" id="bucket-pos-dqm-2" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="bucket-pos-diff-2" step="0.1" placeholder="Auto-calc" readonly></div>
+        </div>
+        <div class="input-row-3">
+            <div class="form-group"><label>Position 3 — Manual (ft)</label><input type="number" id="bucket-pos-manual-3" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Position 3 — DQM System (ft)</label><input type="number" id="bucket-pos-dqm-3" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>Difference (ft)</label><input type="number" id="bucket-pos-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
+        </div>
+
+        <div class="form-group">
+            <label>Boom Angles Tested</label>
+            <input type="text" id="bucket-pos-angles" placeholder="e.g., 30°, 60°, 90° from centerline">
+        </div>
+
+        <div class="form-group">
+            <label>Remarks</label>
+            <textarea id="bucket-pos-remarks" rows="2" placeholder="Observations, offset corrections applied, etc."></textarea>
+        </div>
+
+        <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
+    `;
+}
 function captureGPS(type) {
     const button = event.target;
 
@@ -855,9 +1070,28 @@ function captureGPS(type) {
     );
 }
 
+// Shows a photo preview for hull status file inputs and persists the data URL to state
+function previewHullPhoto(inputEl, previewId) {
+    const preview = document.getElementById(previewId);
+    const file = inputEl.files && inputEl.files[0];
+    if (!file || !preview) return;
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        const dataUrl = e.target.result;
+        preview.src = dataUrl;
+        preview.style.display = 'block';
+        // Persist photo data directly since file inputs don't serialize via .value
+        if (!appState.qaChecks.hullStatus) appState.qaChecks.hullStatus = {};
+        appState.qaChecks.hullStatus[inputEl.id] = dataUrl;
+        saveDraft();
+    };
+    reader.readAsDataURL(file);
+}
+
 // ===== Data Management =====
 function updateAppState() {
     appState.checkDate = document.getElementById('check-date').value;
+    appState.weatherConditions = document.getElementById('weather-conditions').value;
     appState.qaTeam = document.getElementById('qa-team').value;
     appState.systemProvider = document.getElementById('system-provider').value;
     appState.generalComments = document.getElementById('general-comments').value;
@@ -871,7 +1105,11 @@ function saveCheckData(checkType) {
     const data = {};
     card.querySelectorAll('input, textarea, select').forEach(input => {
         if (input.id) {
-            data[input.id] = input.value;
+            if (input.type === 'checkbox') {
+                data[input.id] = input.checked;
+            } else {
+                data[input.id] = input.value;
+            }
         }
     });
 
@@ -934,10 +1172,16 @@ function loadDraft() {
                     Object.keys(checkData).forEach(inputId => {
                         const input = document.getElementById(inputId);
                         if (input) {
-                            input.value = checkData[inputId];
+                            if (input.type === 'checkbox') {
+                                input.checked = checkData[inputId] === true || checkData[inputId] === 'true';
+                            } else {
+                                input.value = checkData[inputId];
+                            }
                         }
                     });
                 });
+                if (typeof toggleVelocityMethod === 'function') toggleVelocityMethod();
+                if (typeof toggleDragheadSections === 'function') toggleDragheadSections();
             }, 500);
         }
     } catch (e) {
@@ -962,18 +1206,33 @@ function exportJSON() {
         return;
     }
 
+    // Strip check entries where every value is empty/undefined
+    // so the trip-report only sees checks that were actually performed
+    function hasAnyValue(obj) {
+        if (!obj) return false;
+        return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
+    }
+    const filteredChecks = {};
+    Object.entries(appState.qaChecks).forEach(([type, data]) => {
+        if (hasAnyValue(data)) {
+            filteredChecks[type] = data;
+        }
+    });
+
     // Build export object
     const exportData = {
         metadata: {
             plants: appState.plants,
             checkDate: appState.checkDate,
+            weather: appState.weatherConditions,
             qaTeamMembers: appState.qaTeam.split(',').map(s => s.trim()).filter(s => s),
             systemProvider: appState.systemProvider,
+            draftCombo: appState.draftCombo,
             timeline: appState.timeline,
             generalComments: appState.generalComments,
             exportedAt: new Date().toISOString()
         },
-        checks: appState.qaChecks
+        checks: filteredChecks
     };
 
     // Generate filename
@@ -1015,11 +1274,16 @@ function logCheckToTimeline(checkType) {
     const checkNames = {
         'positionCheck': 'Position Check',
         'hullStatus': 'Hull Status Check',
-        'draftSensor': 'Draft Sensor Check',
-        'ullage': 'Ullage Check',
+        'draftSensorLight': 'Draft Sensor Check (Light)',
+        'draftSensorLoaded': 'Draft Sensor Check (Loaded)',
+        'draftSensorSimulated': 'Draft Sensor Check (Simulated)',
+        'ullageLight': 'Ullage Check (Light)',
+        'ullageLoaded': 'Ullage Check (Loaded)',
         'dragheadDepth': 'Draghead Depth Check',
         'suctionMouthDepth': 'Suction Mouth Depth Check',
-        'velocity': 'Velocity Check'
+        'velocity': 'Velocity Check',
+        'bucketDepth': 'Bucket/Grab Depth Check',
+        'bucketPosition': 'Bucket Position Check'
     };
 
     const card = document.getElementById(`${checkType}-card`);
@@ -1088,8 +1352,11 @@ function calculateDifferences(checkType) {
         case 'positionCheck':
             calculatePositionDifference();
             break;
-        case 'draftSensor':
-            calculateSimulatedDraftDifferences();
+        case 'draftSensorLight':
+            calculateSimulatedDraftDifferences('light');
+            break;
+        case 'draftSensorLoaded':
+            calculateSimulatedDraftDifferences('loaded');
             break;
         case 'dragheadDepth':
             calculateDragheadDifferences();
@@ -1099,6 +1366,18 @@ function calculateDifferences(checkType) {
             break;
         case 'velocity':
             calculateVelocity();
+            break;
+        case 'ullageLight':
+            calculateUllageDifferences('light');
+            break;
+        case 'ullageLoaded':
+            calculateUllageDifferences('loaded');
+            break;
+        case 'bucketDepth':
+            calculateBucketDepthDifferences();
+            break;
+        case 'bucketPosition':
+            calculateBucketPositionDifferences();
             break;
     }
 }
@@ -1127,40 +1406,52 @@ function calculatePositionDifference() {
     }
 }
 
-function calculateSimulatedDraftDifferences() {
-    // Calculate differences for forward sensor
+function calculateSimulatedDraftDifferences(condition) {
+    // condition is 'light' or 'loaded'
     for (let i = 1; i <= 3; i++) {
-        const depth = parseFloat(document.getElementById(`sim-fwd-depth-${i}`)?.value);
-        const reading = parseFloat(document.getElementById(`sim-fwd-reading-${i}`)?.value);
-        const diffInput = document.getElementById(`sim-fwd-diff-${i}`);
-
+        const depth = parseFloat(document.getElementById(`sim-${condition}-fwd-depth-${i}`)?.value);
+        const reading = parseFloat(document.getElementById(`sim-${condition}-fwd-reading-${i}`)?.value);
+        const diffInput = document.getElementById(`sim-${condition}-fwd-diff-${i}`);
         if (!isNaN(depth) && !isNaN(reading) && diffInput) {
             diffInput.value = Math.abs(depth - reading).toFixed(1);
         }
     }
-
-    // Calculate differences for aft sensor
     for (let i = 1; i <= 3; i++) {
-        const depth = parseFloat(document.getElementById(`sim-aft-depth-${i}`)?.value);
-        const reading = parseFloat(document.getElementById(`sim-aft-reading-${i}`)?.value);
-        const diffInput = document.getElementById(`sim-aft-diff-${i}`);
-
+        const depth = parseFloat(document.getElementById(`sim-${condition}-aft-depth-${i}`)?.value);
+        const reading = parseFloat(document.getElementById(`sim-${condition}-aft-reading-${i}`)?.value);
+        const diffInput = document.getElementById(`sim-${condition}-aft-diff-${i}`);
         if (!isNaN(depth) && !isNaN(reading) && diffInput) {
             diffInput.value = Math.abs(depth - reading).toFixed(1);
         }
     }
 }
 
-function calculateDragheadDifferences() {
-    for (let i = 1; i <= 3; i++) {
-        const manual = parseFloat(document.getElementById(`draghead-manual-${i}`)?.value);
-        const dqm = parseFloat(document.getElementById(`draghead-dqm-${i}`)?.value);
-        const diffInput = document.getElementById(`draghead-diff-${i}`);
-
-        if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-            diffInput.value = Math.abs(manual - dqm).toFixed(1);
+// Auto-calculations for the standalone Simulated Draft card
+function calculateStandaloneSimulatedDraftDifferences() {
+    ['fwd', 'aft'].forEach(pos => {
+        for (let i = 1; i <= 3; i++) {
+            const depth = parseFloat(document.getElementById(`sim-${pos}-depth-${i}`)?.value);
+            const reading = parseFloat(document.getElementById(`sim-${pos}-reading-${i}`)?.value);
+            const diffInput = document.getElementById(`sim-${pos}-diff-${i}`);
+            if (!isNaN(depth) && !isNaN(reading) && diffInput) {
+                diffInput.value = Math.abs(depth - reading).toFixed(1);
+            }
         }
-    }
+    });
+}
+
+function calculateDragheadDifferences() {
+    ['port', 'center', 'stbd'].forEach(side => {
+        for (let i = 1; i <= 3; i++) {
+            const manual = parseFloat(document.getElementById(`draghead-${side}-manual-${i}`)?.value);
+            const dqm = parseFloat(document.getElementById(`draghead-${side}-dqm-${i}`)?.value);
+            const diffInput = document.getElementById(`draghead-${side}-diff-${i}`);
+
+            if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
+                diffInput.value = Math.abs(manual - dqm).toFixed(1);
+            }
+        }
+    });
 }
 
 function calculateSuctionDifferences() {
@@ -1176,33 +1467,99 @@ function calculateSuctionDifferences() {
 }
 
 function calculateVelocity() {
-    const pipeLength = parseFloat(document.getElementById('velocity-pipe-length')?.value);
-    const time = parseFloat(document.getElementById('velocity-time')?.value);
-    const dqmVelocity = parseFloat(document.getElementById('velocity-dqm')?.value);
+    const method = document.getElementById('velocity-method')?.value;
 
-    // Calculate velocity from pipe length and time
-    if (!isNaN(pipeLength) && !isNaN(time) && time > 0) {
-        const calculated = pipeLength / time;
-        const calcInput = document.getElementById('velocity-calculated');
-        if (calcInput) {
-            calcInput.value = calculated.toFixed(2);
+    if (method === 'dye') {
+        const pipeLength = parseFloat(document.getElementById('velocity-pipe-length')?.value);
+        if (!isNaN(pipeLength) && pipeLength > 0) {
+            [1, 2, 3].forEach(i => {
+                const time = parseFloat(document.getElementById(`velocity-dye-time-${i}`)?.value);
+                const calcInput = document.getElementById(`velocity-dye-calc-${i}`);
+                if (!isNaN(time) && time > 0 && calcInput) {
+                    const calculated = pipeLength / time;
+                    calcInput.value = calculated.toFixed(2);
+
+                    const dqm = parseFloat(document.getElementById(`velocity-dye-dqm-${i}`)?.value);
+                    const diffInput = document.getElementById(`velocity-dye-diff-${i}`);
+                    if (!isNaN(dqm) && diffInput) {
+                        diffInput.value = Math.abs(calculated - dqm).toFixed(2);
+                    }
+                }
+            });
         }
+    } else if (method === 'meter') {
+        [1, 2, 3].forEach(i => {
+            const manual = parseFloat(document.getElementById(`velocity-meter-manual-${i}`)?.value);
+            const dqm = parseFloat(document.getElementById(`velocity-meter-dqm-${i}`)?.value);
+            const diffInput = document.getElementById(`velocity-meter-diff-${i}`);
 
-        // Calculate difference
-        if (!isNaN(dqmVelocity)) {
-            const diffInput = document.getElementById('velocity-diff');
-            if (diffInput) {
-                diffInput.value = Math.abs(calculated - dqmVelocity).toFixed(2);
+            if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
+                diffInput.value = Math.abs(manual - dqm).toFixed(2);
             }
+        });
+    }
+}
+
+function calculateUllageDifferences(condition) {
+    // Forward: average port+stbd manual soundings vs DQM forward reading
+    const fwdPort = parseFloat(document.getElementById(`ullage-${condition}-fwd-port`)?.value);
+    const fwdStbd = parseFloat(document.getElementById(`ullage-${condition}-fwd-stbd`)?.value);
+    const dqmFwd = parseFloat(document.getElementById(`ullage-${condition}-dqm-fwd`)?.value);
+    const fwdDiff = document.getElementById(`ullage-${condition}-diff-fwd`);
+
+    if (fwdDiff) {
+        let manualFwd;
+        if (!isNaN(fwdPort) && !isNaN(fwdStbd)) {
+            manualFwd = (fwdPort + fwdStbd) / 2;
+        } else if (!isNaN(fwdPort)) {
+            manualFwd = fwdPort;
+        } else if (!isNaN(fwdStbd)) {
+            manualFwd = fwdStbd;
+        }
+        if (manualFwd !== undefined && !isNaN(dqmFwd)) {
+            fwdDiff.value = Math.abs(manualFwd - dqmFwd).toFixed(2);
         }
     }
 
-    // Just calculate difference if calculated velocity already exists
-    const calculatedVelocity = parseFloat(document.getElementById('velocity-calculated')?.value);
-    if (!isNaN(calculatedVelocity) && !isNaN(dqmVelocity)) {
-        const diffInput = document.getElementById('velocity-diff');
-        if (diffInput) {
-            diffInput.value = Math.abs(calculatedVelocity - dqmVelocity).toFixed(2);
+    // Aft: average port+stbd manual soundings vs DQM aft reading
+    const aftPort = parseFloat(document.getElementById(`ullage-${condition}-aft-port`)?.value);
+    const aftStbd = parseFloat(document.getElementById(`ullage-${condition}-aft-stbd`)?.value);
+    const dqmAft = parseFloat(document.getElementById(`ullage-${condition}-dqm-aft`)?.value);
+    const aftDiff = document.getElementById(`ullage-${condition}-diff-aft`);
+
+    if (aftDiff) {
+        let manualAft;
+        if (!isNaN(aftPort) && !isNaN(aftStbd)) {
+            manualAft = (aftPort + aftStbd) / 2;
+        } else if (!isNaN(aftPort)) {
+            manualAft = aftPort;
+        } else if (!isNaN(aftStbd)) {
+            manualAft = aftStbd;
+        }
+        if (manualAft !== undefined && !isNaN(dqmAft)) {
+            aftDiff.value = Math.abs(manualAft - dqmAft).toFixed(2);
+        }
+    }
+}
+
+function calculateBucketDepthDifferences() {
+    for (let i = 1; i <= 3; i++) {
+        const manual = parseFloat(document.getElementById(`bucket-manual-${i}`)?.value);
+        const dqm = parseFloat(document.getElementById(`bucket-dqm-${i}`)?.value);
+        const diffInput = document.getElementById(`bucket-diff-${i}`);
+        if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
+            diffInput.value = Math.abs(manual - dqm).toFixed(1);
+        }
+    }
+}
+
+function calculateBucketPositionDifferences() {
+    for (let i = 1; i <= 3; i++) {
+        const manual = parseFloat(document.getElementById(`bucket-pos-manual-${i}`)?.value);
+        const dqm = parseFloat(document.getElementById(`bucket-pos-dqm-${i}`)?.value);
+        const diffInput = document.getElementById(`bucket-pos-diff-${i}`);
+        if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
+            diffInput.value = Math.abs(manual - dqm).toFixed(1);
         }
     }
 }
