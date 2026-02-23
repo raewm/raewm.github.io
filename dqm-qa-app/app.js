@@ -820,6 +820,10 @@ function createDragheadDepthForm() {
 
         <div id="draghead-port-section" class="hidden">
             <h3>Port Draghead</h3>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Depth Offset (ft)</label>
+                <input type="number" id="draghead-port-offset" step="0.1" placeholder="e.g., 2.0">
+            </div>
             <div class="input-row-3">
                 <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-port-manual-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-port-dqm-1" step="0.1" placeholder="0.0"></div>
@@ -843,6 +847,10 @@ function createDragheadDepthForm() {
 
         <div id="draghead-center-section" class="hidden">
             <h3>Center Draghead</h3>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Depth Offset (ft)</label>
+                <input type="number" id="draghead-center-offset" step="0.1" placeholder="e.g., 2.0">
+            </div>
             <div class="input-row-3">
                 <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-center-manual-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-center-dqm-1" step="0.1" placeholder="0.0"></div>
@@ -866,6 +874,10 @@ function createDragheadDepthForm() {
         
         <div id="draghead-stbd-section" class="hidden">
             <h3>Starboard Draghead</h3>
+            <div class="form-group" style="margin-bottom: 20px;">
+                <label>Depth Offset (ft)</label>
+                <input type="number" id="draghead-stbd-offset" step="0.1" placeholder="e.g., 2.0">
+            </div>
             <div class="input-row-3">
                 <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-stbd-manual-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-stbd-dqm-1" step="0.1" placeholder="0.0"></div>
@@ -906,6 +918,11 @@ function toggleDragheadSections() {
 function createSuctionMouthDepthForm() {
     return `
         <h2>Suction Mouth Depth Check</h2>
+
+        <div class="form-group">
+            <label>Depth Offset (ft)</label>
+            <input type="number" id="suction-offset" step="0.1" placeholder="e.g., 2.0">
+        </div>
         
         <p class="text-muted">Record at least 3 measurements within the operating range</p>
         
@@ -942,11 +959,11 @@ function createSuctionMouthDepthForm() {
         <div class="input-row-3">
             <div class="form-group">
                 <label>Measurement 3 - Manual (ft)</label>
-                <input type="number" id="suction-dqm-3" step="0.1" placeholder="0.0">
+                <input type="number" id="suction-manual-3" step="0.1" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Measurement 3 - DQM System (ft)</label>
-                <input type="number" id="suction-manual-3" step="0.1" placeholder="0.0">
+                <input type="number" id="suction-dqm-3" step="0.1" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Difference (ft)</label>
@@ -1602,26 +1619,29 @@ function calculateStandaloneSimulatedDraftDifferences() {
 
 function calculateDragheadDifferences() {
     ['port', 'center', 'stbd'].forEach(side => {
+        const offset = parseFloat(document.getElementById(`draghead-${side}-offset`)?.value) || 0;
         for (let i = 1; i <= 3; i++) {
             const manual = parseFloat(document.getElementById(`draghead-${side}-manual-${i}`)?.value);
             const dqm = parseFloat(document.getElementById(`draghead-${side}-dqm-${i}`)?.value);
             const diffInput = document.getElementById(`draghead-${side}-diff-${i}`);
 
             if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-                diffInput.value = Math.abs(manual - dqm).toFixed(1);
+                diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
             }
         }
     });
 }
 
 function calculateSuctionDifferences() {
+    const offset = parseFloat(document.getElementById('suction-offset')?.value) || 0;
+
     for (let i = 1; i <= 3; i++) {
         const manual = parseFloat(document.getElementById(`suction-manual-${i}`)?.value);
         const dqm = parseFloat(document.getElementById(`suction-dqm-${i}`)?.value);
         const diffInput = document.getElementById(`suction-diff-${i}`);
 
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-            diffInput.value = Math.abs(manual - dqm).toFixed(1);
+            diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
         }
     }
 }
@@ -1703,12 +1723,14 @@ function calculateUllageDifferences(condition) {
 }
 
 function calculateBucketDepthDifferences() {
+    const offset = parseFloat(document.getElementById('bucket-offset')?.value) || 0;
+
     for (let i = 1; i <= 3; i++) {
         const manual = parseFloat(document.getElementById(`bucket-manual-${i}`)?.value);
         const dqm = parseFloat(document.getElementById(`bucket-dqm-${i}`)?.value);
         const diffInput = document.getElementById(`bucket-diff-${i}`);
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-            diffInput.value = Math.abs(manual - dqm).toFixed(1);
+            diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
         }
     }
 }

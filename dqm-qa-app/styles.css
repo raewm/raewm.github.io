@@ -1,21 +1,21 @@
 /* ===== CSS Variables ===== */
 :root {
-    --primary: #1e3a8a;
-    --primary-light: #3b82f6;
-    --primary-dark: #1e40af;
-    --secondary: #0891b2;
-    --success: #10b981;
-    --warning: #f59e0b;
-    --danger: #ef4444;
-    --bg-primary: #0f172a;
-    --bg-secondary: #1e293b;
-    --bg-card: #334155;
-    --text-primary: #f1f5f9;
-    --text-secondary: #cbd5e1;
-    --border: #475569;
-    --shadow: rgba(0, 0, 0, 0.3);
-    --glass-bg: rgba(51, 65, 85, 0.7);
-    --glass-border: rgba(148, 163, 184, 0.2);
+    --primary: #3498db;
+    --primary-light: #5dade2;
+    --primary-dark: #2980b9;
+    --secondary: #2980b9;
+    --success: #2ecc71;
+    --warning: #f1c40f;
+    --danger: #e74c3c;
+    --bg-primary: #121212;
+    --bg-secondary: #1e1e1e;
+    --bg-card: #2d2d2d;
+    --text-primary: #ffffff;
+    --text-secondary: #a0a0a0;
+    --border: #444;
+    --shadow: rgba(0, 0, 0, 0.4);
+    --glass-bg: #1e1e1e;
+    --glass-border: #444;
 }
 
 /* ===== Reset & Base ===== */
@@ -26,8 +26,8 @@
 }
 
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, var(--bg-primary) 0%, var(--bg-secondary) 100%);
+    font-family: 'Inter', 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: var(--bg-primary);
     color: var(--text-primary);
     line-height: 1.6;
     min-height: 100vh;
@@ -55,10 +55,7 @@ header {
 header h1 {
     font-size: 2rem;
     margin-bottom: 0.5rem;
-    background: linear-gradient(135deg, var(--primary-light), var(--secondary));
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
+    color: var(--text-primary);
 }
 
 .subtitle {
