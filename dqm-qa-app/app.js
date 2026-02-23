@@ -355,6 +355,7 @@ function createDraftSensorLightForm() {
         </div>
 
         <div id="physical-draft-light-section">
+            <h3 style="margin-top: 15px; margin-bottom: 10px;">Forward Sensors</h3>
             <div class="input-row">
                 <div class="form-group">
                     <label>Forward Port (ft)</label>
@@ -365,6 +366,27 @@ function createDraftSensorLightForm() {
                     <input type="number" id="light-fwd-stbd" step="0.1" placeholder="0.0">
                 </div>
             </div>
+            <div class="input-row-3">
+                <div class="form-group">
+                    <label>Fwd Avg (ft)</label>
+                    <input type="number" id="light-fwd-avg" step="0.01" readonly placeholder="Auto-calc">
+                </div>
+                <div class="form-group">
+                    <label>DQM System Fwd (ft)</label>
+                    <input type="number" id="light-dqm-fwd" step="0.1" placeholder="0.0">
+                </div>
+                <div class="form-group">
+                    <label>Fwd Diff (ft)</label>
+                    <input type="number" id="light-fwd-diff" step="0.01" readonly placeholder="Auto-calc">
+                </div>
+            </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Physical Draft Check (Forward) Completed', this)">📋 Log Physical Fwd</button>
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+
+            <h3 style="margin-top: 15px; margin-bottom: 10px;">Aft Sensors</h3>
             <div class="input-row">
                 <div class="form-group">
                     <label>Aft Port (ft)</label>
@@ -375,15 +397,22 @@ function createDraftSensorLightForm() {
                     <input type="number" id="light-aft-stbd" step="0.1" placeholder="0.0">
                 </div>
             </div>
-            <div class="input-row">
+            <div class="input-row-3">
                 <div class="form-group">
-                    <label>DQM System Forward (ft)</label>
-                    <input type="number" id="light-dqm-fwd" step="0.1" placeholder="0.0">
+                    <label>Aft Avg (ft)</label>
+                    <input type="number" id="light-aft-avg" step="0.01" readonly placeholder="Auto-calc">
                 </div>
                 <div class="form-group">
                     <label>DQM System Aft (ft)</label>
                     <input type="number" id="light-dqm-aft" step="0.1" placeholder="0.0">
                 </div>
+                <div class="form-group">
+                    <label>Aft Diff (ft)</label>
+                    <input type="number" id="light-aft-diff" step="0.01" readonly placeholder="Auto-calc">
+                </div>
+            </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Physical Draft Check (Aft) Completed', this)">📋 Log Physical Aft</button>
             </div>
         </div>
 
@@ -405,6 +434,12 @@ function createDraftSensorLightForm() {
                 <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-fwd-reading-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Simulated Draft Check (Forward) Completed', this)">📋 Log Simulated Fwd</button>
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+
             <h3>Simulated Draft Check — Aft Sensor (Light)</h3>
             <div class="input-row-3">
                 <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
@@ -421,6 +456,10 @@ function createDraftSensorLightForm() {
                 <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-aft-reading-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Simulated Draft Check (Aft) Completed', this)">📋 Log Simulated Aft</button>
+            </div>
+
             <div class="form-group">
                 <label>Test Pipe Details</label>
                 <textarea id="sim-light-pipe-details" rows="2" placeholder="Pipe length, fill method, calibration notes, etc."></textarea>
@@ -431,8 +470,6 @@ function createDraftSensorLightForm() {
             <label>Remarks</label>
             <textarea id="draft-light-remarks" rows="2" placeholder="Observations, calibration status, etc."></textarea>
         </div>
-
-        <button type="button" class="log-timeline-btn">📋 Log Light Draft to Timeline</button>
     `;
 }
 
@@ -450,6 +487,7 @@ function createDraftSensorLoadedForm() {
         </div>
 
         <div id="physical-draft-loaded-section">
+            <h3 style="margin-top: 15px; margin-bottom: 10px;">Forward Sensors</h3>
             <div class="input-row">
                 <div class="form-group">
                     <label>Forward Port (ft)</label>
@@ -460,6 +498,27 @@ function createDraftSensorLoadedForm() {
                     <input type="number" id="loaded-fwd-stbd" step="0.1" placeholder="0.0">
                 </div>
             </div>
+            <div class="input-row-3">
+                <div class="form-group">
+                    <label>Fwd Avg (ft)</label>
+                    <input type="number" id="loaded-fwd-avg" step="0.01" readonly placeholder="Auto-calc">
+                </div>
+                <div class="form-group">
+                    <label>DQM System Fwd (ft)</label>
+                    <input type="number" id="loaded-dqm-fwd" step="0.1" placeholder="0.0">
+                </div>
+                <div class="form-group">
+                    <label>Fwd Diff (ft)</label>
+                    <input type="number" id="loaded-fwd-diff" step="0.01" readonly placeholder="Auto-calc">
+                </div>
+            </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Loaded Physical Draft Check (Forward) Completed', this)">📋 Log Physical Fwd</button>
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+
+            <h3 style="margin-top: 15px; margin-bottom: 10px;">Aft Sensors</h3>
             <div class="input-row">
                 <div class="form-group">
                     <label>Aft Port (ft)</label>
@@ -470,15 +529,22 @@ function createDraftSensorLoadedForm() {
                     <input type="number" id="loaded-aft-stbd" step="0.1" placeholder="0.0">
                 </div>
             </div>
-            <div class="input-row">
+            <div class="input-row-3">
                 <div class="form-group">
-                    <label>DQM System Forward (ft)</label>
-                    <input type="number" id="loaded-dqm-fwd" step="0.1" placeholder="0.0">
+                    <label>Aft Avg (ft)</label>
+                    <input type="number" id="loaded-aft-avg" step="0.01" readonly placeholder="Auto-calc">
                 </div>
                 <div class="form-group">
                     <label>DQM System Aft (ft)</label>
                     <input type="number" id="loaded-dqm-aft" step="0.1" placeholder="0.0">
                 </div>
+                <div class="form-group">
+                    <label>Aft Diff (ft)</label>
+                    <input type="number" id="loaded-aft-diff" step="0.01" readonly placeholder="Auto-calc">
+                </div>
+            </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Loaded Physical Draft Check (Aft) Completed', this)">📋 Log Physical Aft</button>
             </div>
         </div>
 
@@ -500,6 +566,12 @@ function createDraftSensorLoadedForm() {
                 <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-loaded-fwd-reading-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Loaded Simulated Draft Check (Forward) Completed', this)">📋 Log Simulated Fwd</button>
+            </div>
+
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+
             <h3>Simulated Draft Check — Aft Sensor (Loaded)</h3>
             <div class="input-row-3">
                 <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
@@ -516,6 +588,10 @@ function createDraftSensorLoadedForm() {
                 <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-loaded-aft-reading-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Loaded Simulated Draft Check (Aft) Completed', this)">📋 Log Simulated Aft</button>
+            </div>
+
             <div class="form-group">
                 <label>Test Pipe Details</label>
                 <textarea id="sim-loaded-pipe-details" rows="2" placeholder="Pipe length, fill method, calibration notes, etc."></textarea>
@@ -526,8 +602,6 @@ function createDraftSensorLoadedForm() {
             <label>Remarks</label>
             <textarea id="draft-loaded-remarks" rows="2" placeholder="Observations, calibration status, etc."></textarea>
         </div>
-
-        <button type="button" class="log-timeline-btn">📋 Log Loaded Draft to Timeline</button>
     `;
 }
 
@@ -592,7 +666,10 @@ function createDraftSensorSimulatedForm() {
             <textarea id="sim-draft-remarks" rows="2" placeholder="Observations, calibration status, etc."></textarea>
         </div>
 
-        <button type="button" class="log-timeline-btn">📋 Log Simulated Draft to Timeline</button>
+        <div class="form-group" style="display: flex; gap: 10px; margin-top: 15px;">
+            <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Simulated Draft Check (Forward) Completed', this)">📋 Log Fwd to Timeline</button>
+            <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Simulated Draft Check (Aft) Completed', this)">📋 Log Aft to Timeline</button>
+        </div>
     `;
 }
 
@@ -601,6 +678,7 @@ function createUllageLightForm() {
         <h2>Ullage Check — Light Condition</h2>
         <p class="text-muted">Perform this check when the hopper/bin is empty. Record manual weighted tape soundings and compare to DQM system readings. Acceptable difference: ±0.1 ft.</p>
 
+        <h3 style="margin-top: 15px; margin-bottom: 10px;">Forward Sensors</h3>
         <div class="input-row">
             <div class="form-group">
                 <label>Forward Port Sounding (ft)</label>
@@ -613,22 +691,29 @@ function createUllageLightForm() {
         </div>
         <div class="input-row">
             <div class="form-group">
-                <label>Aft Port Sounding (ft)</label>
-                <input type="number" id="ullage-light-aft-port" step="0.1" placeholder="0.0">
-            </div>
-            <div class="form-group">
-                <label>Aft Starboard Sounding (ft)</label>
-                <input type="number" id="ullage-light-aft-stbd" step="0.1" placeholder="0.0">
-            </div>
-        </div>
-        <div class="input-row">
-            <div class="form-group">
                 <label>DQM System Forward (ft)</label>
                 <input type="number" id="ullage-light-dqm-fwd" step="0.1" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Fwd Diff (ft)</label>
                 <input type="number" id="ullage-light-diff-fwd" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
+        </div>
+        <div style="margin-top: 10px; margin-bottom: 20px;">
+            <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Ullage Check (Forward) Completed', this)">📋 Log Fwd to Timeline</button>
+        </div>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+
+        <h3 style="margin-top: 15px; margin-bottom: 10px;">Aft Sensors</h3>
+        <div class="input-row">
+            <div class="form-group">
+                <label>Aft Port Sounding (ft)</label>
+                <input type="number" id="ullage-light-aft-port" step="0.1" placeholder="0.0">
+            </div>
+            <div class="form-group">
+                <label>Aft Starboard Sounding (ft)</label>
+                <input type="number" id="ullage-light-aft-stbd" step="0.1" placeholder="0.0">
             </div>
         </div>
         <div class="input-row">
@@ -641,13 +726,14 @@ function createUllageLightForm() {
                 <input type="number" id="ullage-light-diff-aft" step="0.01" placeholder="Auto-calc" readonly>
             </div>
         </div>
+        <div style="margin-top: 10px; margin-bottom: 20px;">
+            <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Ullage Check (Aft) Completed', this)">📋 Log Aft to Timeline</button>
+        </div>
 
         <div class="form-group">
             <label>Remarks</label>
             <textarea id="ullage-light-remarks" rows="2" placeholder="Measurement notes, etc."></textarea>
         </div>
-
-        <button type="button" class="log-timeline-btn">📋 Log Light Ullage to Timeline</button>
     `;
 }
 
@@ -656,6 +742,7 @@ function createUllageLoadedForm() {
         <h2>Ullage Check — Loaded Condition</h2>
         <p class="text-muted">Perform this check after the bin/hopper is loaded. Ensure a uniform material surface before taking soundings. Acceptable difference: ±0.1 ft.</p>
 
+        <h3 style="margin-top: 15px; margin-bottom: 10px;">Forward Sensors</h3>
         <div class="input-row">
             <div class="form-group">
                 <label>Forward Port Sounding (ft)</label>
@@ -668,22 +755,29 @@ function createUllageLoadedForm() {
         </div>
         <div class="input-row">
             <div class="form-group">
-                <label>Aft Port Sounding (ft)</label>
-                <input type="number" id="ullage-loaded-aft-port" step="0.1" placeholder="0.0">
-            </div>
-            <div class="form-group">
-                <label>Aft Starboard Sounding (ft)</label>
-                <input type="number" id="ullage-loaded-aft-stbd" step="0.1" placeholder="0.0">
-            </div>
-        </div>
-        <div class="input-row">
-            <div class="form-group">
                 <label>DQM System Forward (ft)</label>
                 <input type="number" id="ullage-loaded-dqm-fwd" step="0.1" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Fwd Diff (ft)</label>
                 <input type="number" id="ullage-loaded-diff-fwd" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
+        </div>
+        <div style="margin-top: 10px; margin-bottom: 20px;">
+            <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Loaded Ullage Check (Forward) Completed', this)">📋 Log Fwd to Timeline</button>
+        </div>
+
+        <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
+
+        <h3 style="margin-top: 15px; margin-bottom: 10px;">Aft Sensors</h3>
+        <div class="input-row">
+            <div class="form-group">
+                <label>Aft Port Sounding (ft)</label>
+                <input type="number" id="ullage-loaded-aft-port" step="0.1" placeholder="0.0">
+            </div>
+            <div class="form-group">
+                <label>Aft Starboard Sounding (ft)</label>
+                <input type="number" id="ullage-loaded-aft-stbd" step="0.1" placeholder="0.0">
             </div>
         </div>
         <div class="input-row">
@@ -696,13 +790,14 @@ function createUllageLoadedForm() {
                 <input type="number" id="ullage-loaded-diff-aft" step="0.01" placeholder="Auto-calc" readonly>
             </div>
         </div>
+        <div style="margin-top: 10px; margin-bottom: 20px;">
+            <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Loaded Ullage Check (Aft) Completed', this)">📋 Log Aft to Timeline</button>
+        </div>
 
         <div class="form-group">
             <label>Remarks</label>
             <textarea id="ullage-loaded-remarks" rows="2" placeholder="Material type, measurement notes, etc."></textarea>
         </div>
-
-        <button type="button" class="log-timeline-btn">📋 Log Loaded Ullage to Timeline</button>
     `;
 }
 
@@ -740,6 +835,10 @@ function createDragheadDepthForm() {
                 <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-port-dqm-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Port) Completed', this)">📋 Log Port to Timeline</button>
+            </div>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
         </div>
 
         <div id="draghead-center-section" class="hidden">
@@ -759,6 +858,10 @@ function createDragheadDepthForm() {
                 <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-center-dqm-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-center-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Center) Completed', this)">📋 Log Center to Timeline</button>
+            </div>
+            <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
         </div>
         
         <div id="draghead-stbd-section" class="hidden">
@@ -778,14 +881,15 @@ function createDragheadDepthForm() {
                 <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-stbd-dqm-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-stbd-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
+            <div style="margin-top: 10px; margin-bottom: 20px;">
+                <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Starboard) Completed', this)">📋 Log Stbd to Timeline</button>
+            </div>
         </div>
         
         <div class="form-group">
             <label>Remarks</label>
             <textarea id="draghead-remarks" rows="2"></textarea>
         </div>
-        
-        <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
     `;
 }
 
@@ -1102,9 +1206,14 @@ function saveCheckData(checkType) {
     const card = document.getElementById(`${checkType}-card`);
     if (!card) return;
 
-    const data = {};
+    // Initialize with existing data to preserve asynchronously loaded Base64 URLs (e.g., from Hull Status photos)
+    const data = { ...(appState.qaChecks[checkType] || {}) };
+
     card.querySelectorAll('input, textarea, select').forEach(input => {
         if (input.id) {
+            // Never serialize fake file paths into the JSON object
+            if (input.type === 'file') return;
+
             if (input.type === 'checkbox') {
                 data[input.id] = input.checked;
             } else {
@@ -1315,6 +1424,30 @@ function logCheckToTimeline(checkType) {
     }
 }
 
+function logCustomToTimeline(activityText, button) {
+    const entry = {
+        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        activity: activityText,
+        notes: '',
+        timestamp: new Date().toISOString()
+    };
+
+    appState.timeline.push(entry);
+    renderTimeline();
+    saveDraft();
+
+    if (button) {
+        button.classList.add('check-logged');
+        const originalText = button.textContent;
+        button.textContent = '✓ Logged';
+        button.disabled = true;
+        setTimeout(() => {
+            button.textContent = originalText;
+            button.disabled = false;
+        }, 2000);
+    }
+}
+
 function renderTimeline() {
     const tbody = document.getElementById('timeline-body');
     if (!tbody) return;
@@ -1353,9 +1486,11 @@ function calculateDifferences(checkType) {
             calculatePositionDifference();
             break;
         case 'draftSensorLight':
+            calculatePhysicalDraftDifferences('light');
             calculateSimulatedDraftDifferences('light');
             break;
         case 'draftSensorLoaded':
+            calculatePhysicalDraftDifferences('loaded');
             calculateSimulatedDraftDifferences('loaded');
             break;
         case 'dragheadDepth':
@@ -1404,6 +1539,31 @@ function calculatePositionDifference() {
     if (diffInput) {
         diffInput.value = distance.toFixed(1);
     }
+}
+
+function calculatePhysicalDraftDifferences(condition) {
+    ['fwd', 'aft'].forEach(pos => {
+        const port = parseFloat(document.getElementById(`${condition}-${pos}-port`)?.value);
+        const stbd = parseFloat(document.getElementById(`${condition}-${pos}-stbd`)?.value);
+        const dqm = parseFloat(document.getElementById(`${condition}-dqm-${pos}`)?.value);
+
+        const avgInput = document.getElementById(`${condition}-${pos}-avg`);
+        const diffInput = document.getElementById(`${condition}-${pos}-diff`);
+
+        if (!isNaN(port) && !isNaN(stbd) && avgInput) {
+            const avg = (port + stbd) / 2;
+            avgInput.value = avg.toFixed(2);
+
+            if (!isNaN(dqm) && diffInput) {
+                diffInput.value = Math.abs(avg - dqm).toFixed(2);
+            } else if (diffInput) {
+                diffInput.value = '';
+            }
+        } else {
+            if (avgInput) avgInput.value = '';
+            if (diffInput) diffInput.value = '';
+        }
+    });
 }
 
 function calculateSimulatedDraftDifferences(condition) {
