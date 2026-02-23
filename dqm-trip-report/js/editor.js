@@ -135,13 +135,60 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
         parentDom.appendChild(wrap);
     });
 
-    // Render any keys that aren't Light or Loaded (e.g. remarks)
-    const otherMain = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('light') && !k.toLowerCase().includes('loaded'));
-    if (otherMain.length > 0) {
+    // Render Sim Keys (for Draft Sensor)
+    const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-'));
+    if (simKeys.length > 0) {
+        const wrap = document.createElement('div');
+        wrap.style.marginBottom = '20px';
+        wrap.style.padding = '15px';
+        wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
+        wrap.style.borderRadius = '8px';
+        wrap.style.border = '1px solid rgba(255,255,255,0.1)';
+        wrap.innerHTML = `<h4 style="margin-bottom:15px; color:var(--primary); font-size: 1.1em;">Simulated Readings</h4>`;
+
+        ['fwd', 'aft'].forEach(pos => {
+            const posKeys = simKeys.filter(k => k.toLowerCase().includes(pos));
+            if (posKeys.length > 0) {
+                const posWrap = document.createElement('div');
+                posWrap.style.marginBottom = '15px';
+                posWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">${pos === 'fwd' ? 'Forward' : 'Aft'}</h5>`;
+
+                [1, 2, 3].forEach(num => {
+                    const lineKeys = posKeys.filter(k => k.includes(`-${num}`));
+                    if (lineKeys.length > 0) {
+                        const lineGrid = document.createElement('div');
+                        lineGrid.style.display = 'grid';
+                        lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                        lineGrid.style.gap = '15px';
+                        lineGrid.style.marginBottom = '10px';
+
+                        const sortOrder = ['depth', 'reading', 'diff'];
+                        const sortFn = (a, b) => {
+                            const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                            const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                            return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+                        };
+
+                        lineKeys.sort(sortFn).forEach(k => {
+                            buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k));
+                        });
+                        posWrap.appendChild(lineGrid);
+                    }
+                });
+                wrap.appendChild(posWrap);
+            }
+        });
+
+        parentDom.appendChild(wrap);
+    }
+
+    // Render any keys that aren't Light, Loaded, or Sim (e.g. remarks, conditions, pipe details)
+    const remainingKeys = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('light') && !k.toLowerCase().includes('loaded') && !k.toLowerCase().includes('sim-'));
+    if (remainingKeys.length > 0) {
         const wrap = document.createElement('div');
         const grid = document.createElement('div');
         grid.className = 'form-grid';
-        otherMain.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
+        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
         wrap.appendChild(grid);
         parentDom.appendChild(wrap);
     }
@@ -155,16 +202,58 @@ function getShortLabel(prop) {
     return null;
 }
 
+function getSimShortLabel(prop) {
+    const low = prop.toLowerCase();
+    if (low.includes('depth')) return 'Depth';
+    if (low.includes('reading')) return 'Reading';
+    if (low.includes('diff')) return 'Difference';
+    return null;
+}
+
+function getDragheadShortLabel(prop) {
+    const low = prop.toLowerCase();
+    if (low.includes('manual')) return 'Manual';
+    if (low.includes('dqm')) return 'DQM System';
+    if (low.includes('diff')) return 'Difference';
+    return null;
+}
+
 // Custom layout for array-like table data (Draghead 1, 2, 3)
 function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title) {
-    const grid = document.createElement('div');
-    grid.className = 'form-grid';
+    const wrap = document.createElement('div');
 
-    for (const [key, value] of Object.entries(dataObj)) {
-        buildSingleInput(key, value, overrideObj[key], grid, checkType, key);
+    [1, 2, 3].forEach(num => {
+        const numKeys = Object.keys(dataObj).filter(k => k.includes(`-${num}`));
+        if (numKeys.length > 0) {
+            const lineGrid = document.createElement('div');
+            lineGrid.style.display = 'grid';
+            lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+            lineGrid.style.gap = '15px';
+            lineGrid.style.marginBottom = '15px';
+
+            const sortOrder = ['manual', 'dqm', 'diff'];
+            const sortFn = (a, b) => {
+                const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+            };
+
+            numKeys.sort(sortFn).forEach(k => {
+                buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getDragheadShortLabel(k));
+            });
+            wrap.appendChild(lineGrid);
+        }
+    });
+
+    const remainingKeys = Object.keys(dataObj).filter(k => !k.includes('-1') && !k.includes('-2') && !k.includes('-3'));
+    if (remainingKeys.length > 0) {
+        const grid = document.createElement('div');
+        grid.className = 'form-grid';
+        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
+        wrap.appendChild(grid);
     }
 
-    parentDom.appendChild(grid);
+    parentDom.appendChild(wrap);
 }
 
 // Generic recursive builder
@@ -207,29 +296,98 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
     const label = document.createElement('label');
     label.textContent = displayLabel;
 
-    const input = document.createElement('input');
-    input.type = typeof originalValue === 'number' ? 'number' : 'text';
-
-    if (input.type === 'number') {
-        input.step = 'any';
-    }
-
     let currentValue = originalValue;
     if (overrideValue !== undefined) {
         currentValue = overrideValue;
     }
-    input.value = currentValue !== null && currentValue !== undefined ? currentValue : '';
 
-    input.addEventListener('input', (e) => {
-        let newVal = e.target.value;
+    // Feature: If the field is a photo, render a file input and image preview
+    if (savePath.toLowerCase().includes('photo')) {
+        const photoContainer = document.createElement('div');
+        photoContainer.style.display = 'flex';
+        photoContainer.style.flexDirection = 'column';
+        photoContainer.style.gap = '10px';
+
+        const fileInput = document.createElement('input');
+        fileInput.type = 'file';
+        fileInput.accept = 'image/*';
+        fileInput.style.padding = '5px 0';
+        fileInput.style.backgroundColor = 'transparent';
+        fileInput.style.border = 'none';
+
+        const preview = document.createElement('img');
+        preview.style.maxWidth = '100%';
+        preview.style.maxHeight = '200px';
+        preview.style.objectFit = 'contain';
+        preview.style.borderRadius = '4px';
+        preview.style.border = '1px solid #444';
+        preview.style.backgroundColor = '#111';
+
+        const hasImage = typeof currentValue === 'string' && currentValue.startsWith('data:image/');
+        preview.style.display = hasImage ? 'block' : 'none';
+        preview.src = hasImage ? currentValue : '';
+
+        const clearBtn = document.createElement('button');
+        clearBtn.textContent = 'Clear Photo';
+        clearBtn.className = 'btn';
+        clearBtn.style.alignSelf = 'flex-start';
+        clearBtn.style.padding = '4px 8px';
+        clearBtn.style.fontSize = '12px';
+        clearBtn.style.display = hasImage ? 'block' : 'none';
+
+        fileInput.addEventListener('change', (e) => {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (ev) => {
+                    const dataUrl = ev.target.result;
+                    preview.src = dataUrl;
+                    preview.style.display = 'block';
+                    clearBtn.style.display = 'block';
+                    saveOverride(checkType, savePath, dataUrl);
+                };
+                reader.readAsDataURL(file);
+            }
+        });
+
+        clearBtn.onclick = () => {
+            fileInput.value = '';
+            preview.src = '';
+            preview.style.display = 'none';
+            clearBtn.style.display = 'none';
+            saveOverride(checkType, savePath, '');
+        };
+
+        photoContainer.appendChild(fileInput);
+        photoContainer.appendChild(preview);
+        photoContainer.appendChild(clearBtn);
+
+        group.appendChild(label);
+        group.appendChild(photoContainer);
+
+    } else {
+        // Standard Text/Number Input
+        const input = document.createElement('input');
+        input.type = typeof originalValue === 'number' ? 'number' : 'text';
+
         if (input.type === 'number') {
-            newVal = newVal === '' ? '' : Number(newVal);
+            input.step = 'any';
         }
-        saveOverride(checkType, savePath, newVal);
-    });
 
-    group.appendChild(label);
-    group.appendChild(input);
+        input.value = currentValue !== null && currentValue !== undefined ? currentValue : '';
+
+        input.addEventListener('input', (e) => {
+            let newVal = e.target.value;
+            if (input.type === 'number') {
+                newVal = newVal === '' ? '' : Number(newVal);
+            }
+            saveOverride(checkType, savePath, newVal);
+        });
+
+        group.appendChild(label);
+        group.appendChild(input);
+    }
+
     parentGrid.appendChild(group);
 }
 

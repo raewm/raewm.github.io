@@ -236,13 +236,18 @@ function renderGenericTable(originalData, overrideData) {
                 recurse(val, overrideObj ? overrideObj[key] : {}, prefix + formatLabel(key) + ' - ');
             } else {
                 let displayStr = finalVal;
-                if (finalVal === null || finalVal === undefined || finalVal === '') {
+                let isImage = typeof finalVal === 'string' && finalVal.startsWith('data:image/');
+
+                if (isImage) {
+                    displayStr = `<img src="${finalVal}" style="max-width: 100%; max-height: 300px; display: block; margin: 5px 0; border: 1px solid #ccc; padding: 3px; background: #fff;" alt="Photo">`;
+                } else if (finalVal === null || finalVal === undefined || finalVal === '') {
                     displayStr = 'N/A';
                 }
+
                 rows += `
                 <tr>
                     <td width="40%" style="font-weight: 500;">${prefix}${formatLabel(key)}</td>
-                    <td width="60%">${escapeHtml(String(displayStr))}</td>
+                    <td width="60%">${isImage ? displayStr : escapeHtml(String(displayStr))}</td>
                 </tr>`;
             }
         }

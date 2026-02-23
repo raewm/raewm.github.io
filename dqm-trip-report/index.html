@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,6 +8,7 @@
     <link rel="stylesheet" href="styles.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 </head>
+
 <body>
     <div class="app-container no-print">
         <header class="app-header">
@@ -36,14 +38,15 @@
                         <input type="file" id="file-input" accept=".json" hidden>
                     </div>
                 </div>
-                
+
                 <div id="load-status" class="hidden status-message"></div>
-                
+
                 <div id="loaded-summary" class="hidden card mt-4">
                     <h3>Loaded Data Summary</h3>
                     <div id="summary-content" class="summary-grid"></div>
                     <div class="mt-4 flex-end">
-                        <button class="btn btn-primary next-tab-btn" data-next="meta-tab">Continue to Report Info &rarr;</button>
+                        <button class="btn btn-primary next-tab-btn" data-next="meta-tab">Continue to Report Info
+                            &rarr;</button>
                     </div>
                 </div>
             </section>
@@ -53,7 +56,7 @@
                 <div class="card">
                     <h2>Report Metadata</h2>
                     <p class="text-muted mb-4">Fill in the administrative details for the final trip report.</p>
-                    
+
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Report Date</label>
@@ -80,25 +83,31 @@
                             <input type="text" id="meta-weather" placeholder="e.g., Clear, 2-3ft Seas">
                         </div>
                     </div>
-                    
+
                     <div class="form-group mt-4">
                         <label>Discrepancies Overview</label>
-                        <textarea id="meta-discrepancies" rows="3" placeholder="Brief summary of any discrepancies found during the QA check..."></textarea>
+                        <textarea id="meta-discrepancies" rows="3"
+                            placeholder="Brief summary of any discrepancies found during the QA check..."></textarea>
                     </div>
-                    
+
                     <div class="form-group mt-4">
                         <label>Methods Narrative</label>
-                        <textarea id="meta-methods" rows="6" placeholder="Narrative description of the QA check process..."></textarea>
+                        <textarea id="meta-methods" rows="6"
+                            placeholder="Narrative description of the QA check process..."></textarea>
                         <div class="mt-2">
-                            <button id="btn-template-hopper" class="btn btn-small btn-secondary">Template: Hopper</button>
+                            <button id="btn-template-hopper" class="btn btn-small btn-secondary">Template:
+                                Hopper</button>
                             <button id="btn-template-scow" class="btn btn-small btn-secondary">Template: Scow</button>
-                            <button id="btn-template-pipeline" class="btn btn-small btn-secondary">Template: Pipeline</button>
-                            <button id="btn-template-mechanical" class="btn btn-small btn-secondary">Template: Mechanical</button>
+                            <button id="btn-template-pipeline" class="btn btn-small btn-secondary">Template:
+                                Pipeline</button>
+                            <button id="btn-template-mechanical" class="btn btn-small btn-secondary">Template:
+                                Mechanical</button>
                         </div>
                     </div>
-                    
+
                     <div class="mt-4 flex-end">
-                        <button class="btn btn-primary next-tab-btn" data-next="edit-tab">Continue to Edit Checks &rarr;</button>
+                        <button class="btn btn-primary next-tab-btn" data-next="edit-tab">Continue to Edit Checks
+                            &rarr;</button>
                     </div>
                 </div>
             </section>
@@ -107,16 +116,18 @@
             <section id="edit-tab" class="tab-pane">
                 <div class="card mb-4">
                     <h2>Edit QA Check Data</h2>
-                    <p class="text-muted">Review and refine the data loaded from the field application before generating the report.</p>
+                    <p class="text-muted">Review and refine the data loaded from the field application before generating
+                        the report.</p>
                 </div>
-                
+
                 <div id="editor-container" class="editor-accordion">
                     <!-- Javascript will populate the editor fields here -->
                     <div class="text-center text-muted p-4">Please load a JSON file first.</div>
                 </div>
-                
+
                 <div class="mt-4 flex-end">
-                    <button class="btn btn-primary next-tab-btn" data-next="preview-tab">Continue to Preview &rarr;</button>
+                    <button class="btn btn-primary next-tab-btn" data-next="preview-tab">Continue to Preview
+                        &rarr;</button>
                 </div>
             </section>
 
@@ -128,11 +139,12 @@
                         <button id="print-btn" class="btn btn-primary">🖨️ Print / Save PDF</button>
                     </div>
                 </div>
-                
+
                 <div class="report-paper-container">
                     <div id="report-render-target" class="report-paper">
                         <!-- Javascript will generate the report HTML here -->
-                        <div class="text-center text-muted p-4" style="margin-top: 100px;">Please load a JSON file to see the preview.</div>
+                        <div class="text-center text-muted p-4" style="margin-top: 100px;">Please load a JSON file to
+                            see the preview.</div>
                     </div>
                 </div>
             </section>
@@ -142,6 +154,7 @@
     <!-- The actual print block (hidden on screen, visible on print) -->
     <div id="print-container" class="print-only"></div>
 
+    <script src="js/config.js"></script>
     <script src="js/state.js"></script>
     <script src="js/ui-tabs.js"></script>
     <script src="js/file-loader.js"></script>
@@ -149,4 +162,5 @@
     <script src="js/report-renderer.js"></script>
     <script src="js/app.js"></script>
 </body>
+
 </html>
