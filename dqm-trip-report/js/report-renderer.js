@@ -54,7 +54,7 @@ function renderReport() {
         <p style="margin-bottom: 20px; font-size: 10pt;">${escapeHtml(state.originalGeneralComments) || 'None'}</p>
 
         <h3>Methods</h3>
-        <p style="text-align: justify; margin-bottom: 30px; font-size: 10pt; line-height: 1.5;">${escapeHtml(meta.methods).replace(/\\n/g, '<br>')}</p>
+        <p style="text-align: justify; margin-bottom: 30px; font-size: 10pt; line-height: 1.5;">${escapeHtml(meta.methods).replace(/\n/g, '<br>')}</p>
 
         ${renderTimeline(state.timeline)}
 
