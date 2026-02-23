@@ -21,7 +21,8 @@ function renderReport() {
                 <strong>For Official Use Only</strong><br>
                 <strong>Date:</strong> ${formatDate(meta.reportDate)}<br>
                 <strong>US Army Corps of Engineers:</strong> ${escapeHtml(meta.district)}<br>
-                <strong>Prepared by:</strong> ${escapeHtml(meta.preparedBy)}
+                <strong>Prepared by:</strong> ${escapeHtml(meta.preparedBy)}<br>
+                <strong>QA Performed by:</strong> ${escapeHtml(meta.qaTeam)}
             </div>
         </div>
 

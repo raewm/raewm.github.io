@@ -12,8 +12,11 @@
 <body>
     <div class="app-container no-print">
         <header class="app-header">
-            <div class="header-logo">
-                <span class="logo-text">DQM</span> Report Generator
+            <div style="display: flex; align-items: center; gap: 15px; flex-shrink: 0;">
+                <img src="assets/logo.png" alt="DQM Logo" style="height: 50px; filter: invert(1);">
+                <div class="header-logo" style="margin: 0; white-space: nowrap;">
+                    <span class="logo-text">DQM</span> Report Generator
+                </div>
             </div>
             <nav class="app-tabs">
                 <button class="tab-btn active" data-tab="load-tab">1. Load Data</button>
@@ -21,9 +24,9 @@
                 <button class="tab-btn" data-tab="edit-tab">3. Edit Checks</button>
                 <button class="tab-btn" data-tab="preview-tab">4. Preview & Print</button>
             </nav>
-            <div class="header-actions">
-                <button id="save-draft-btn" class="btn btn-secondary">Save Draft</button>
-                <button id="clear-data-btn" class="btn btn-danger">Clear All</button>
+            <div class="header-actions" style="display: flex; flex-direction: column; gap: 8px;">
+                <button id="save-draft-btn" class="btn btn-secondary" style="width: 110px;">Save Draft</button>
+                <button id="clear-data-btn" class="btn btn-danger" style="width: 110px;">Clear All</button>
             </div>
         </header>
 
@@ -60,11 +63,15 @@
                     <div class="form-grid">
                         <div class="form-group">
                             <label>Report Date</label>
-                            <input type="date" id="meta-report-date">
+                            <input type="date" id="meta-reportdate">
                         </div>
                         <div class="form-group">
                             <label>Prepared By</label>
-                            <input type="text" id="meta-prepared-by" placeholder="e.g., John Doe">
+                            <input type="text" id="meta-preparedby" placeholder="e.g., John Doe">
+                        </div>
+                        <div class="form-group">
+                            <label>QA Performed By</label>
+                            <input type="text" id="meta-qateam" placeholder="e.g., QA Team Member">
                         </div>
                         <div class="form-group">
                             <label>USACE District</label>

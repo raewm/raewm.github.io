@@ -16,6 +16,7 @@ const defaultState = {
     meta: {
         reportDate: new Date().toISOString().split('T')[0],
         preparedBy: '',
+        qaTeam: '',
         district: '',
         operator: '',
         location: '',
@@ -46,6 +47,17 @@ function loadDraft() {
     if (saved) {
         try {
             window.appState = JSON.parse(saved);
+
+            // Migration for older drafts that didn't have meta.qaTeam separated
+            if (window.appState.meta && window.appState.meta.qaTeam === undefined) {
+                window.appState.meta.qaTeam = window.appState.originalQaTeam || '';
+
+                // If preparedBy was auto-filled with originalQaTeam in the old version, clear it so the true author can type their name
+                if (window.appState.meta.preparedBy === window.appState.originalQaTeam) {
+                    window.appState.meta.preparedBy = '';
+                }
+            }
+
             console.log("Draft loaded from localStorage.");
             return true;
         } catch (e) {
@@ -81,8 +93,8 @@ function setSourceData(jsonData) {
     window.appState.originalCheckDate = meta.checkDate || '';
 
     // Auto-populate some meta fields naturally
-    if (!window.appState.meta.preparedBy && window.appState.originalQaTeam) {
-        window.appState.meta.preparedBy = window.appState.originalQaTeam;
+    if (window.appState.originalQaTeam) {
+        window.appState.meta.qaTeam = window.appState.originalQaTeam;
     }
     if (!window.appState.meta.reportDate && window.appState.originalCheckDate) {
         window.appState.meta.reportDate = window.appState.originalCheckDate;

@@ -44,7 +44,7 @@ function initTabs() {
 // Bind metadata form fields to state
 function initMetaForm() {
     const fields = [
-        'reportDate', 'preparedBy', 'district', 'operator',
+        'reportDate', 'preparedBy', 'qaTeam', 'district', 'operator',
         'location', 'weather', 'discrepancies', 'methods'
     ];
 
