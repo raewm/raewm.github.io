@@ -4,8 +4,11 @@
 const checkLabels = {
     'positionCheck': 'Position Check',
     'hullStatus': 'Hull Status',
-    'draftSensor': 'Draft Sensor (Light & Loaded)',
-    'ullage': 'Ullage (Light & Loaded)',
+    'draftSensorLight': 'Draft Sensor (Light)',
+    'draftSensorLoaded': 'Draft Sensor (Loaded)',
+    'draftSensorSimulated': 'Draft Sensor (Simulated)',
+    'ullageLight': 'Ullage (Light)',
+    'ullageLoaded': 'Ullage (Loaded)',
     'dragheadDepth': 'Draghead Depth',
     'suctionMouthDepth': 'Suction Mouth Depth',
     'velocity': 'Velocity',
@@ -25,6 +28,9 @@ function renderEditor() {
 
     container.innerHTML = '';
 
+    // Render Timeline Editor First
+    renderTimelineEditor(container);
+
     for (const [checkType, data] of Object.entries(qaChecks)) {
         if (!data || Object.keys(data).length === 0) continue;
 
@@ -39,10 +45,12 @@ function renderEditor() {
         body.className = 'editor-section-body';
 
         // Provide custom layout for specific complex checks
-        if (checkType === 'draftSensor' || checkType === 'ullage') {
+        if (checkType.startsWith('draftSensor') || checkType.startsWith('ullage')) {
             renderCustomShipData(data, overrides[checkType] || {}, body, checkType);
         } else if (checkType === 'dragheadDepth') {
             renderCustomTableData(data, overrides[checkType] || {}, body, checkType, 'Draghead Depth');
+        } else if (checkType === 'velocity') {
+            renderVelocityData(data, overrides[checkType] || {}, body, checkType);
         } else {
             // Fallback generic grid
             const grid = document.createElement('div');
@@ -62,128 +70,134 @@ function renderEditor() {
     }
 }
 
-// Custom layout for Draft/Ullage (Light/Loaded grouped)
+// Custom layout for Draft/Ullage (Light/Loaded/Simulated)
 function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
-    const conditions = ['Light', 'Loaded'];
+    const isSimulated = checkType.toLowerCase().includes('simulated');
 
-    conditions.forEach(cond => {
-        const condKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes(cond.toLowerCase()));
-        if (condKeys.length === 0) return;
+    if (isSimulated) {
+        // Render Simulated Draft
+        const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-') || k.toLowerCase().includes('simulated'));
+        if (simKeys.length > 0) {
+            const wrap = document.createElement('div');
+            wrap.style.marginBottom = '20px';
+            wrap.style.padding = '15px';
+            wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
+            wrap.style.borderRadius = '8px';
+            wrap.style.border = '1px solid rgba(255,255,255,0.1)';
 
-        const wrap = document.createElement('div');
-        wrap.style.marginBottom = '20px';
-        wrap.style.padding = '15px';
-        wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
-        wrap.style.borderRadius = '8px';
-        wrap.style.border = '1px solid rgba(255,255,255,0.1)';
-        wrap.innerHTML = `<h4 style="margin-bottom:15px; color:var(--primary); font-size: 1.1em;">${cond} Readings</h4>`;
+            ['fwd', 'aft'].forEach(pos => {
+                const posKeys = simKeys.filter(k => k.toLowerCase().includes(pos));
+                if (posKeys.length > 0) {
+                    const posWrap = document.createElement('div');
+                    posWrap.style.marginBottom = '15px';
+                    posWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">${pos === 'fwd' ? 'Forward' : 'Aft'}</h5>`;
 
-        const fwdKeys = condKeys.filter(k => k.toLowerCase().includes('fwd'));
-        const aftKeys = condKeys.filter(k => k.toLowerCase().includes('aft'));
-        const otherKeys = condKeys.filter(k => !k.toLowerCase().includes('fwd') && !k.toLowerCase().includes('aft'));
+                    [1, 2, 3].forEach(num => {
+                        const lineKeys = posKeys.filter(k => k.includes(`-${num}`));
+                        if (lineKeys.length > 0) {
+                            const lineGrid = document.createElement('div');
+                            lineGrid.style.display = 'grid';
+                            lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                            lineGrid.style.gap = '15px';
+                            lineGrid.style.marginBottom = '10px';
 
-        // Define sort order: Port, Starboard, DQM
-        const sortOrder = ['port', 'stbd', 'dqm'];
-        const sortFn = (a, b) => {
-            const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
-            const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
-            return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-        };
+                            const sortOrder = ['depth', 'reading', 'diff'];
+                            const sortFn = (a, b) => {
+                                const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                                const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                                return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+                            };
 
-        // Render Fwd row
-        if (fwdKeys.length > 0) {
-            const fwdWrap = document.createElement('div');
-            fwdWrap.style.marginBottom = '15px';
-            fwdWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Forward</h5>`;
-            const fwdGrid = document.createElement('div');
-            fwdGrid.style.display = 'grid';
-            fwdGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-            fwdGrid.style.gap = '15px';
-
-            fwdKeys.sort(sortFn).forEach(k => {
-                buildSingleInput(k, dataObj[k], overrideObj[k], fwdGrid, checkType, k, getShortLabel(k));
+                            lineKeys.sort(sortFn).forEach(k => {
+                                buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k));
+                            });
+                            posWrap.appendChild(lineGrid);
+                        }
+                    });
+                    wrap.appendChild(posWrap);
+                }
             });
-            fwdWrap.appendChild(fwdGrid);
-            wrap.appendChild(fwdWrap);
+
+            parentDom.appendChild(wrap);
         }
+    } else {
+        // Render Light or Loaded Draft/Ullage
+        const condKeys = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('sim-') && !k.toLowerCase().includes('remarks'));
+        if (condKeys.length > 0) {
+            const wrap = document.createElement('div');
+            wrap.style.marginBottom = '20px';
+            wrap.style.padding = '15px';
+            wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
+            wrap.style.borderRadius = '8px';
+            wrap.style.border = '1px solid rgba(255,255,255,0.1)';
 
-        // Render Aft row
-        if (aftKeys.length > 0) {
-            const aftWrap = document.createElement('div');
-            aftWrap.style.marginBottom = '15px';
-            aftWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Aft</h5>`;
-            const aftGrid = document.createElement('div');
-            aftGrid.style.display = 'grid';
-            aftGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-            aftGrid.style.gap = '15px';
+            const fwdKeys = condKeys.filter(k => k.toLowerCase().includes('fwd'));
+            const aftKeys = condKeys.filter(k => k.toLowerCase().includes('aft'));
+            const otherKeys = condKeys.filter(k => !k.toLowerCase().includes('fwd') && !k.toLowerCase().includes('aft'));
 
-            aftKeys.sort(sortFn).forEach(k => {
-                buildSingleInput(k, dataObj[k], overrideObj[k], aftGrid, checkType, k, getShortLabel(k));
-            });
-            aftWrap.appendChild(aftGrid);
-            wrap.appendChild(aftWrap);
-        }
+            // Define sort order: Port, Starboard, DQM
+            const sortOrder = ['port', 'stbd', 'dqm'];
+            const sortFn = (a, b) => {
+                const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+            };
 
-        // Render Other
-        if (otherKeys.length > 0) {
-            const otherGrid = document.createElement('div');
-            otherGrid.className = 'form-grid';
-            otherKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], otherGrid, checkType, k));
-            wrap.appendChild(otherGrid);
-        }
+            // Render Fwd row
+            if (fwdKeys.length > 0) {
+                const fwdWrap = document.createElement('div');
+                fwdWrap.style.marginBottom = '15px';
+                fwdWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Forward</h5>`;
+                const fwdGrid = document.createElement('div');
+                fwdGrid.style.display = 'grid';
+                fwdGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                fwdGrid.style.gap = '15px';
 
-        parentDom.appendChild(wrap);
-    });
-
-    // Render Sim Keys (for Draft Sensor)
-    const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-'));
-    if (simKeys.length > 0) {
-        const wrap = document.createElement('div');
-        wrap.style.marginBottom = '20px';
-        wrap.style.padding = '15px';
-        wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
-        wrap.style.borderRadius = '8px';
-        wrap.style.border = '1px solid rgba(255,255,255,0.1)';
-        wrap.innerHTML = `<h4 style="margin-bottom:15px; color:var(--primary); font-size: 1.1em;">Simulated Readings</h4>`;
-
-        ['fwd', 'aft'].forEach(pos => {
-            const posKeys = simKeys.filter(k => k.toLowerCase().includes(pos));
-            if (posKeys.length > 0) {
-                const posWrap = document.createElement('div');
-                posWrap.style.marginBottom = '15px';
-                posWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">${pos === 'fwd' ? 'Forward' : 'Aft'}</h5>`;
-
-                [1, 2, 3].forEach(num => {
-                    const lineKeys = posKeys.filter(k => k.includes(`-${num}`));
-                    if (lineKeys.length > 0) {
-                        const lineGrid = document.createElement('div');
-                        lineGrid.style.display = 'grid';
-                        lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-                        lineGrid.style.gap = '15px';
-                        lineGrid.style.marginBottom = '10px';
-
-                        const sortOrder = ['depth', 'reading', 'diff'];
-                        const sortFn = (a, b) => {
-                            const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
-                            const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
-                            return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-                        };
-
-                        lineKeys.sort(sortFn).forEach(k => {
-                            buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k));
-                        });
-                        posWrap.appendChild(lineGrid);
-                    }
+                fwdKeys.sort(sortFn).forEach(k => {
+                    buildSingleInput(k, dataObj[k], overrideObj[k], fwdGrid, checkType, k, getShortLabel(k));
                 });
-                wrap.appendChild(posWrap);
+                fwdWrap.appendChild(fwdGrid);
+                wrap.appendChild(fwdWrap);
             }
-        });
 
-        parentDom.appendChild(wrap);
+            // Render Aft row
+            if (aftKeys.length > 0) {
+                const aftWrap = document.createElement('div');
+                aftWrap.style.marginBottom = '15px';
+                aftWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">Aft</h5>`;
+                const aftGrid = document.createElement('div');
+                aftGrid.style.display = 'grid';
+                aftGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                aftGrid.style.gap = '15px';
+
+                aftKeys.sort(sortFn).forEach(k => {
+                    buildSingleInput(k, dataObj[k], overrideObj[k], aftGrid, checkType, k, getShortLabel(k));
+                });
+                aftWrap.appendChild(aftGrid);
+                wrap.appendChild(aftWrap);
+            }
+
+            // Render Other
+            if (otherKeys.length > 0) {
+                const otherGrid = document.createElement('div');
+                otherGrid.className = 'form-grid';
+                otherKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], otherGrid, checkType, k));
+                wrap.appendChild(otherGrid);
+            }
+
+            parentDom.appendChild(wrap);
+        }
     }
 
-    // Render any keys that aren't Light, Loaded, or Sim (e.g. remarks, conditions, pipe details)
-    const remainingKeys = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('light') && !k.toLowerCase().includes('loaded') && !k.toLowerCase().includes('sim-'));
+    // Render any keys that aren't specific to the layout above (like remarks, strings)
+    const remainingKeys = Object.keys(dataObj).filter(k =>
+        !k.toLowerCase().includes('fwd') &&
+        !k.toLowerCase().includes('aft') &&
+        !k.toLowerCase().includes('port') &&
+        !k.toLowerCase().includes('stbd') &&
+        !k.toLowerCase().includes('dqm') &&
+        !k.toLowerCase().includes('sim-')
+    );
     if (remainingKeys.length > 0) {
         const wrap = document.createElement('div');
         const grid = document.createElement('div');
@@ -218,34 +232,117 @@ function getDragheadShortLabel(prop) {
     return null;
 }
 
-// Custom layout for array-like table data (Draghead 1, 2, 3)
+// Custom layout for array-like table data (Draghead Port, Center, Stbd)
 function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title) {
     const wrap = document.createElement('div');
 
-    [1, 2, 3].forEach(num => {
-        const numKeys = Object.keys(dataObj).filter(k => k.includes(`-${num}`));
-        if (numKeys.length > 0) {
-            const lineGrid = document.createElement('div');
-            lineGrid.style.display = 'grid';
-            lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
-            lineGrid.style.gap = '15px';
-            lineGrid.style.marginBottom = '15px';
+    const dragheads = [
+        { key: 'port', label: 'Port Draghead' },
+        { key: 'center', label: 'Center Draghead' },
+        { key: 'stbd', label: 'Starboard Draghead' }
+    ];
 
-            const sortOrder = ['manual', 'dqm', 'diff'];
-            const sortFn = (a, b) => {
-                const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
-                const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
-                return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
-            };
+    dragheads.forEach(dh => {
+        const dhKeys = Object.keys(dataObj).filter(k => k.includes(`-${dh.key}-`));
+        if (dhKeys.length > 0) {
+            const dhWrap = document.createElement('div');
+            dhWrap.style.marginBottom = '20px';
+            dhWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa; font-size:13px; text-transform:uppercase; letter-spacing:0.5px;">${dh.label}</h5>`;
 
-            numKeys.sort(sortFn).forEach(k => {
-                buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getDragheadShortLabel(k));
+            [1, 2, 3].forEach(num => {
+                const numKeys = dhKeys.filter(k => k.includes(`-${num}`));
+                if (numKeys.length > 0) {
+                    const lineGrid = document.createElement('div');
+                    lineGrid.style.display = 'grid';
+                    lineGrid.style.gridTemplateColumns = 'repeat(3, 1fr)';
+                    lineGrid.style.gap = '15px';
+                    lineGrid.style.marginBottom = '10px';
+
+                    const sortOrder = ['manual', 'dqm', 'diff'];
+                    const sortFn = (a, b) => {
+                        const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                        const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                        return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+                    };
+
+                    numKeys.sort(sortFn).forEach(k => {
+                        buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getDragheadShortLabel(k) + ` ${num}`);
+                    });
+                    dhWrap.appendChild(lineGrid);
+                }
             });
-            wrap.appendChild(lineGrid);
+            wrap.appendChild(dhWrap);
         }
     });
 
-    const remainingKeys = Object.keys(dataObj).filter(k => !k.includes('-1') && !k.includes('-2') && !k.includes('-3'));
+    const remainingKeys = Object.keys(dataObj).filter(k => !k.includes('-port-') && !k.includes('-center-') && !k.includes('-stbd-'));
+    if (remainingKeys.length > 0) {
+        const grid = document.createElement('div');
+        grid.className = 'form-grid';
+        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
+        wrap.appendChild(grid);
+    }
+
+    parentDom.appendChild(wrap);
+}
+
+function getVelocityShortLabel(prop) {
+    const low = prop.toLowerCase();
+    if (low.includes('time')) return 'Travel Time';
+    if (low.includes('calc')) return 'Calc Velocity';
+    if (low.includes('dqm')) return 'DQM Velocity';
+    if (low.includes('diff')) return 'Difference';
+    if (low.includes('manual')) return 'Meter Velocity';
+    return null;
+}
+
+function renderVelocityData(dataObj, overrideObj, parentDom, checkType) {
+    const wrap = document.createElement('div');
+
+    // Top level info
+    const topKeys = ['velocity-pipe-length', 'velocity-method', 'velocity-cal-date'];
+    const topGrid = document.createElement('div');
+    topGrid.className = 'form-grid';
+    topGrid.style.marginBottom = '20px';
+    topKeys.forEach(k => {
+        if (dataObj[k] !== undefined) buildSingleInput(k, dataObj[k], overrideObj[k], topGrid, checkType, k);
+    });
+    if (topGrid.children.length > 0) wrap.appendChild(topGrid);
+
+    // Tests (Dye or Meter)
+    ['dye', 'meter'].forEach(method => {
+        [1, 2, 3].forEach(num => {
+            const numKeys = Object.keys(dataObj).filter(k => k.includes(`-${method}-`) && k.includes(`-${num}`));
+            if (numKeys.length > 0) {
+                const header = document.createElement('h5');
+                header.style.marginBottom = '8px';
+                header.style.color = '#aaa';
+                header.style.fontSize = '12px';
+                header.textContent = `${method === 'dye' ? 'Dye' : 'Meter'} Test ${num}`;
+                wrap.appendChild(header);
+
+                const lineGrid = document.createElement('div');
+                lineGrid.style.display = 'grid';
+                lineGrid.style.gridTemplateColumns = method === 'dye' ? 'repeat(4, 1fr)' : 'repeat(3, 1fr)';
+                lineGrid.style.gap = '15px';
+                lineGrid.style.marginBottom = '15px';
+
+                const sortOrder = method === 'dye' ? ['time', 'calc', 'dqm', 'diff'] : ['manual', 'dqm', 'diff'];
+                const sortFn = (a, b) => {
+                    const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
+                    const bIdx = sortOrder.findIndex(o => b.toLowerCase().includes(o));
+                    return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
+                };
+
+                numKeys.sort(sortFn).forEach(k => {
+                    buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getVelocityShortLabel(k));
+                });
+                wrap.appendChild(lineGrid);
+            }
+        });
+    });
+
+    const remainingKeys = Object.keys(dataObj).filter(k => !topKeys.includes(k) && !k.includes('-dye-') && !k.includes('-meter-'));
     if (remainingKeys.length > 0) {
         const grid = document.createElement('div');
         grid.className = 'form-grid';
@@ -415,4 +512,109 @@ function saveOverride(checkType, pathStr, value) {
 
     current[parts[parts.length - 1]] = value;
     window.saveDraft();
+}
+
+function renderTimelineEditor(parentDom) {
+    if (!window.appState.timeline || window.appState.timeline.length === 0) return;
+
+    const section = document.createElement('div');
+    section.className = 'editor-section';
+
+    const header = document.createElement('div');
+    header.className = 'editor-section-header';
+    header.style.backgroundColor = '#2c3e50';
+    header.textContent = 'Trip Timeline';
+
+    const body = document.createElement('div');
+    body.className = 'editor-section-body';
+    body.style.display = 'none';
+
+    header.addEventListener('click', () => {
+        const isHidden = body.style.display === 'none';
+        body.style.display = isHidden ? 'block' : 'none';
+        header.classList.toggle('active', isHidden);
+    });
+
+    const wrap = document.createElement('div');
+    wrap.style.display = 'flex';
+    wrap.style.flexDirection = 'column';
+    wrap.style.gap = '15px';
+
+    window.appState.timeline.forEach((item, index) => {
+        const row = document.createElement('div');
+        row.style.display = 'grid';
+        row.style.gridTemplateColumns = '100px 1fr 2fr';
+        row.style.gap = '10px';
+        row.style.alignItems = 'start';
+        row.style.padding = '10px';
+        row.style.backgroundColor = 'rgba(255,255,255,0.02)';
+        row.style.border = '1px solid rgba(255,255,255,0.05)';
+        row.style.borderRadius = '4px';
+
+        const timeWrap = document.createElement('div');
+        timeWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:#aaa;">Time</label>`;
+        const timeInput = document.createElement('input');
+        timeInput.type = 'time';
+
+        // Convert "5:12 PM" -> "17:12" for <input type="time">
+        function parseTimeToInputFormat(timeStr) {
+            if (!timeStr) return '';
+            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
+            if (!match) return timeStr; // Fallback if already HH:MM or unknown format
+            let [, h, m, modifier] = match;
+            let hours = parseInt(h, 10);
+            if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
+            if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
+            return `${hours.toString().padStart(2, '0')}:${m}`;
+        }
+
+        function formatTimeFromInput(val24) {
+            if (!val24) return '';
+            const [h, m] = val24.split(':');
+            let hours = parseInt(h, 10);
+            const modifier = hours >= 12 ? 'PM' : 'AM';
+            if (hours > 12) hours -= 12;
+            if (hours === 0) hours = 12;
+            return `${hours}:${m} ${modifier}`;
+        }
+
+        timeInput.value = parseTimeToInputFormat(item.time);
+        timeInput.addEventListener('input', (e) => {
+            window.appState.timeline[index].time = formatTimeFromInput(e.target.value);
+            window.updatePreview();
+        });
+        timeWrap.appendChild(timeInput);
+
+        const actWrap = document.createElement('div');
+        actWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:#aaa;">Activity</label>`;
+        const actInput = document.createElement('input');
+        actInput.type = 'text';
+        actInput.value = item.activity || '';
+        actInput.addEventListener('input', (e) => {
+            window.appState.timeline[index].activity = e.target.value;
+            window.updatePreview();
+        });
+        actWrap.appendChild(actInput);
+
+        const notesWrap = document.createElement('div');
+        notesWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:#aaa;">Notes</label>`;
+        const notesInput = document.createElement('textarea');
+        notesInput.rows = 2;
+        notesInput.value = item.notes || '';
+        notesInput.addEventListener('input', (e) => {
+            window.appState.timeline[index].notes = e.target.value;
+            window.updatePreview();
+        });
+        notesWrap.appendChild(notesInput);
+
+        row.appendChild(timeWrap);
+        row.appendChild(actWrap);
+        row.appendChild(notesWrap);
+        wrap.appendChild(row);
+    });
+
+    body.appendChild(wrap);
+    section.appendChild(header);
+    section.appendChild(body);
+    parentDom.appendChild(section);
 }

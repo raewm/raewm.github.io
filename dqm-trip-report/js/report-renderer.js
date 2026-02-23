@@ -83,8 +83,11 @@ function renderChecks(state) {
 
     const order = [
         'positionCheck',
-        'draftSensor',
-        'ullage',
+        'draftSensorLight',
+        'draftSensorLoaded',
+        'draftSensorSimulated',
+        'ullageLight',
+        'ullageLoaded',
         'hullStatus',
         'dragheadDepth',
         'suctionMouthDepth',
@@ -95,8 +98,11 @@ function renderChecks(state) {
 
     const labels = {
         'positionCheck': 'GPS Position Check',
-        'draftSensor': 'Draft Sensor Check',
-        'ullage': 'Ullage Check',
+        'draftSensorLight': 'Draft Sensor Check (Light)',
+        'draftSensorLoaded': 'Draft Sensor Check (Loaded)',
+        'draftSensorSimulated': 'Draft Sensor Check (Simulated)',
+        'ullageLight': 'Ullage Check (Light)',
+        'ullageLoaded': 'Ullage Check (Loaded)',
         'hullStatus': 'Hull Status Check',
         'dragheadDepth': 'Draghead Depth Check',
         'suctionMouthDepth': 'Suction Mouth Depth Check',
@@ -105,17 +111,27 @@ function renderChecks(state) {
         'bucketPosition': 'Bucket Position Check'
     };
 
+    // Only render a check if at least one of its values is non-empty
+    function hasAnyValue(obj) {
+        if (!obj) return false;
+        return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
+    }
+
     order.forEach(type => {
-        if (checks[type] && Object.keys(checks[type]).length > 0) {
+        if (checks[type] && hasAnyValue(checks[type])) {
             html += `<h3>${labels[type]}</h3>`;
 
             const data = checks[type];
             const override = overrides[type] || {};
 
-            if (type === 'draftSensor' || type === 'ullage') {
+            if (type === 'draftSensorSimulated') {
+                html += renderSimulatedDraft(data, override);
+            } else if (type.startsWith('draftSensor') || type.startsWith('ullage')) {
                 html += renderShipData(data, override, type);
             } else if (type === 'dragheadDepth') {
                 html += renderDragheadTable(data, override);
+            } else if (type === 'velocity') {
+                html += renderVelocityTable(data, override);
             } else {
                 html += renderGenericTable(data, override);
             }
@@ -125,62 +141,108 @@ function renderChecks(state) {
     return html;
 }
 
-// Renders the complex 1-line tables for Draft and Ullage Light/Loaded
+// Renders the complex 1-line tables for Draft and Ullage variants
 function renderShipData(data, override, typeName) {
     let html = '';
-    ['light', 'loaded'].forEach(condition => {
-        // Find if we have properties for this condition
-        const conditionKeys = Object.keys(data).filter(k => k.toLowerCase().includes(condition));
-        if (conditionKeys.length === 0) return;
 
-        html += `<h4 style="margin: 15px 0 5px;">${condition.charAt(0).toUpperCase() + condition.slice(1)} ${typeName === 'ullage' ? 'Ullage' : 'Draft'}</h4>`;
+    // Map check type to the exact key prefix used by the QA app
+    const prefixMap = {
+        'draftSensorLight': 'light-',
+        'draftSensorLoaded': 'loaded-',
+        'ullageLight': 'ullage-light-',
+        'ullageLoaded': 'ullage-loaded-'
+    };
+    const prefix = prefixMap[typeName] || '';
 
-        let fwdPort = getVal(data, override, `${condition}-fwd-port`) || getVal(data, override, `${condition}FwdPort`) || getVal(data, override, `${condition}-ullage-fwd-port`) || getVal(data, override, `ullage-${condition}-fwd-port`);
-        let fwdStbd = getVal(data, override, `${condition}-fwd-stbd`) || getVal(data, override, `${condition}FwdStbd`) || getVal(data, override, `${condition}-ullage-fwd-stbd`) || getVal(data, override, `ullage-${condition}-fwd-stbd`);
-        let aftPort = getVal(data, override, `${condition}-aft-port`) || getVal(data, override, `${condition}AftPort`) || getVal(data, override, `${condition}-ullage-aft-port`) || getVal(data, override, `ullage-${condition}-aft-port`);
-        let aftStbd = getVal(data, override, `${condition}-aft-stbd`) || getVal(data, override, `${condition}AftStbd`) || getVal(data, override, `${condition}-ullage-aft-stbd`) || getVal(data, override, `ullage-${condition}-aft-stbd`);
+    let fwdPort = getVal(data, override, `${prefix}fwd-port`);
+    let fwdStbd = getVal(data, override, `${prefix}fwd-stbd`);
+    let aftPort = getVal(data, override, `${prefix}aft-port`);
+    let aftStbd = getVal(data, override, `${prefix}aft-stbd`);
+    let dqmFwd = getVal(data, override, `${prefix}dqm-fwd`);
+    let dqmAft = getVal(data, override, `${prefix}dqm-aft`);
 
-        let dqmFwd = getVal(data, override, `${condition}-dqm-fwd`) || getVal(data, override, `${condition}DqmFwd`) || getVal(data, override, `${condition}-ullage-dqm-fwd`) || getVal(data, override, `ullage-${condition}-dqm-fwd`);
-        let dqmAft = getVal(data, override, `${condition}-dqm-aft`) || getVal(data, override, `${condition}DqmAft`) || getVal(data, override, `${condition}-ullage-dqm-aft`) || getVal(data, override, `ullage-${condition}-dqm-aft`);
+    // Compute averages
+    let fwdAvg = avg(fwdPort, fwdStbd);
+    let aftAvg = avg(aftPort, aftStbd);
+    let fwdDiff = diff(fwdAvg, dqmFwd);
+    let aftDiff = diff(aftAvg, dqmAft);
 
-        // Compute averages natively if possible
-        let fwdAvg = avg(fwdPort, fwdStbd);
-        let aftAvg = avg(aftPort, aftStbd);
+    html += `
+        <table class="report-table">
+        <tr>
+            <th>Location</th>
+            <th class="text-center">Port</th>
+            <th class="text-center">Starboard</th>
+            <th class="text-center">Average</th>
+            <th class="text-center">DQM System</th>
+            <th class="text-center">Difference</th>
+        </tr>
+        <tr>
+            <td><strong>Forward</strong></td>
+            <td class="text-center">${formatNum(fwdPort)}</td>
+            <td class="text-center">${formatNum(fwdStbd)}</td>
+            <td class="text-center">${formatNum(fwdAvg)}</td>
+            <td class="text-center">${formatNum(dqmFwd)}</td>
+            <td class="text-center">${formatNum(fwdDiff)}</td>
+        </tr>
+        <tr>
+            <td><strong>Aft</strong></td>
+            <td class="text-center">${formatNum(aftPort)}</td>
+            <td class="text-center">${formatNum(aftStbd)}</td>
+            <td class="text-center">${formatNum(aftAvg)}</td>
+            <td class="text-center">${formatNum(dqmAft)}</td>
+            <td class="text-center">${formatNum(aftDiff)}</td>
+        </tr>
+    </table>`;
 
-        let fwdDiff = diff(fwdAvg, dqmFwd);
-        let aftDiff = diff(aftAvg, dqmAft);
+    // Remarks: try type-specific key first, then generic
+    let remarks = getVal(data, override, `${prefix}remarks`)
+        || getVal(data, override, `remarks`)
+        || getVal(data, override, `draft-${typeName.includes('light') ? 'light' : 'loaded'}-remarks`)
+        || getVal(data, override, `draft-light-remarks`)
+        || getVal(data, override, `draft-loaded-remarks`);
+    if (remarks) {
+        html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+    }
 
-        html += `
+    return html;
+}
+
+function renderSimulatedDraft(data, override) {
+    let html = '';
+    ['fwd', 'aft'].forEach(pos => {
+        let rows = '';
+        [1, 2, 3].forEach(num => {
+            let depth = getVal(data, override, `sim-${pos}-depth-${num}`) || getVal(data, override, `sim-${pos}-depth${num}`);
+            let reading = getVal(data, override, `sim-${pos}-reading-${num}`) || getVal(data, override, `sim-${pos}-reading${num}`);
+            let diffVal = diff(depth, reading);
+
+            if (depth !== undefined || reading !== undefined) {
+                rows += `
+                <tr>
+                    <td class="text-center">Position ${num}</td>
+                    <td class="text-center">${formatNum(depth)}</td>
+                    <td class="text-center">${formatNum(reading)}</td>
+                    <td class="text-center">${formatNum(diffVal)}</td>
+                </tr>`;
+            }
+        });
+
+        if (rows) {
+            html += `<h4 style="margin: 15px 0 5px;">${pos === 'fwd' ? 'Forward' : 'Aft'} Sensors</h4>
             <table class="report-table">
-            <tr>
-                <th>Location</th>
-                <th class="text-center">Port</th>
-                <th class="text-center">Starboard</th>
-                <th class="text-center">Average</th>
-                <th class="text-center">DQM System</th>
-                <th class="text-center">Difference</th>
-            </tr>
-            <tr>
-                <td><strong>Forward</strong></td>
-                <td class="text-center">${formatNum(fwdPort)}</td>
-                <td class="text-center">${formatNum(fwdStbd)}</td>
-                <td class="text-center">${formatNum(fwdAvg)}</td>
-                <td class="text-center">${formatNum(dqmFwd)}</td>
-                <td class="text-center">${formatNum(fwdDiff)}</td>
-            </tr>
-            <tr>
-                <td><strong>Aft</strong></td>
-                <td class="text-center">${formatNum(aftPort)}</td>
-                <td class="text-center">${formatNum(aftStbd)}</td>
-                <td class="text-center">${formatNum(aftAvg)}</td>
-                <td class="text-center">${formatNum(dqmAft)}</td>
-                <td class="text-center">${formatNum(aftDiff)}</td>
-            </tr>
-        </table>`;
+                <tr>
+                    <th width="40%">Measurement</th>
+                    <th width="20%" class="text-center">Physical Depth (ft)</th>
+                    <th width="20%" class="text-center">System Reading (ft)</th>
+                    <th width="20%" class="text-center">Difference</th>
+                </tr>
+                ${rows}
+            </table>`;
+        }
     });
 
-    // Append any remarks found specifically for this block
-    let remarks = getVal(data, override, `${typeName === 'ullage' ? 'ullage' : 'draft'}-remarks`);
+    let remarks = getVal(data, override, `remarks`);
     if (remarks) {
         html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
     }
@@ -190,40 +252,142 @@ function renderShipData(data, override, typeName) {
 
 // Special Draghead rendering
 function renderDragheadTable(data, override) {
-    let rows = '';
-    [1, 2, 3].forEach(num => {
-        let manual = getVal(data, override, `draghead-manual-${num}`);
-        let dqm = getVal(data, override, `draghead-dqm-${num}`);
-        let diff = getVal(data, override, `draghead-diff-${num}`);
+    let html = '';
+    let dragheads = [
+        { key: 'port', label: 'Port Draghead' },
+        { key: 'center', label: 'Center Draghead' },
+        { key: 'stbd', label: 'Starboard Draghead' }
+    ];
 
-        if (manual !== undefined || dqm !== undefined) {
-            rows += `
-            <tr>
-                <td class="text-center">Depth Measurement ${num}</td>
-                <td class="text-center">${formatNum(manual)}</td>
-                <td class="text-center">${formatNum(dqm)}</td>
-                <td class="text-center">${formatNum(diff)}</td>
-            </tr>`;
+    dragheads.forEach(dh => {
+        let rows = '';
+        [1, 2, 3].forEach(num => {
+            let manual = getVal(data, override, `draghead-${dh.key}-manual-${num}`);
+            let dqm = getVal(data, override, `draghead-${dh.key}-dqm-${num}`);
+            let diff = getVal(data, override, `draghead-${dh.key}-diff-${num}`);
+
+            if (manual !== undefined || dqm !== undefined) {
+                rows += `
+                <tr>
+                    <td class="text-center">Depth Measurement ${num}</td>
+                    <td class="text-center">${formatNum(manual)}</td>
+                    <td class="text-center">${formatNum(dqm)}</td>
+                    <td class="text-center">${formatNum(diff)}</td>
+                </tr>`;
+            }
+        });
+
+        if (rows !== '') {
+            html += `
+            <div style="margin-bottom: 10px;">
+                <h4 style="margin:0 0 5px 0; font-size:11pt; color:#333;">${dh.label}</h4>
+                <table class="report-table">
+                    <tr>
+                        <th width="40%">Measurement</th>
+                        <th width="20%" class="text-center">Manual QA (ft)</th>
+                        <th width="20%" class="text-center">DQM System (ft)</th>
+                        <th width="20%" class="text-center">Difference</th>
+                    </tr>
+                    ${rows}
+                </table>
+            </div>`;
         }
     });
 
-    let html = `
-    <table class="report-table">
-        <tr>
-            <th width="40%">Measurement</th>
-            <th width="20%" class="text-center">Manual QA (ft)</th>
-            <th width="20%" class="text-center">DQM System (ft)</th>
-            <th width="20%" class="text-center">Difference</th>
-        </tr>
-        ${rows}
-    </table>`;
-
     let remarks = getVal(data, override, 'draghead-remarks');
+
     if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
 
-    return html;
+    return html || '<p>No draghead data recorded.</p>';
 }
 
+
+// Special Draghead rendering
+function renderVelocityTable(data, override) {
+    let method = getVal(data, override, 'velocity-method');
+    let html = '';
+
+    if (method === 'dye') {
+        let pipeLength = getVal(data, override, 'velocity-pipe-length');
+        if (pipeLength) {
+            html += `<p style="margin-bottom: 5px; font-size: 10pt;"><strong>Pipeline Length:</strong> ${escapeHtml(pipeLength.toString())} ft</p>`;
+        }
+
+        let rows = '';
+        [1, 2, 3].forEach(num => {
+            let time = getVal(data, override, `velocity-dye-time-${num}`);
+            let calc = getVal(data, override, `velocity-dye-calc-${num}`);
+            let dqm = getVal(data, override, `velocity-dye-dqm-${num}`);
+            let diff = getVal(data, override, `velocity-dye-diff-${num}`);
+
+            if (time !== undefined || dqm !== undefined) {
+                rows += `
+                <tr>
+                    <td class="text-center">Test ${num}</td>
+                    <td class="text-center">${formatNum(time)}</td>
+                    <td class="text-center">${formatNum(calc)}</td>
+                    <td class="text-center">${formatNum(dqm)}</td>
+                    <td class="text-center">${formatNum(diff)}</td>
+                </tr>`;
+            }
+        });
+
+        if (rows !== '') {
+            html += `
+            <table class="report-table">
+                <tr>
+                    <th width="20%">Test</th>
+                    <th width="20%" class="text-center">Travel Time (sec)</th>
+                    <th width="20%" class="text-center">Calc Velocity (ft/s)</th>
+                    <th width="20%" class="text-center">DQM Velocity (ft/s)</th>
+                    <th width="20%" class="text-center">Difference</th>
+                </tr>
+                ${rows}
+            </table>`;
+        }
+    } else if (method === 'meter') {
+        let calDate = getVal(data, override, 'velocity-cal-date');
+        if (calDate) {
+            html += `<p style="margin-bottom: 5px; font-size: 10pt;"><strong>Meter Calibration Date:</strong> ${escapeHtml(calDate)}</p>`;
+        }
+
+        let rows = '';
+        [1, 2, 3].forEach(num => {
+            let manual = getVal(data, override, `velocity-meter-manual-${num}`);
+            let dqm = getVal(data, override, `velocity-meter-dqm-${num}`);
+            let diff = getVal(data, override, `velocity-meter-diff-${num}`);
+
+            if (manual !== undefined || dqm !== undefined) {
+                rows += `
+                <tr>
+                    <td class="text-center">Test ${num}</td>
+                    <td class="text-center">${formatNum(manual)}</td>
+                    <td class="text-center">${formatNum(dqm)}</td>
+                    <td class="text-center">${formatNum(diff)}</td>
+                </tr>`;
+            }
+        });
+
+        if (rows !== '') {
+            html += `
+            <table class="report-table">
+                <tr>
+                    <th width="40%">Test</th>
+                    <th width="20%" class="text-center">Meter Velocity (ft/s)</th>
+                    <th width="20%" class="text-center">DQM Velocity (ft/s)</th>
+                    <th width="20%" class="text-center">Difference</th>
+                </tr>
+                ${rows}
+            </table>`;
+        }
+    }
+
+    let remarks = getVal(data, override, 'velocity-remarks');
+
+    if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+
+    return html || '<p>No velocity data recorded.</p>';
+}
 
 function renderGenericTable(originalData, overrideData) {
     let rows = '';
