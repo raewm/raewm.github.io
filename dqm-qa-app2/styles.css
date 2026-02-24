@@ -377,9 +377,9 @@ textarea {
 }
 
 .hidden {
-    display: none;
-    opacity: 0;
-    pointer-events: none;
+    display: none !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
 }
 
 .modal-window {

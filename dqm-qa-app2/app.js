@@ -295,9 +295,19 @@ function logActiveCheckToTimeline() {
     // Dynamic naming for Draghead
     if (type === 'dragheadDepth') {
         const sides = [];
+        // Check DOM first
         if (document.getElementById('dh-port-chk')?.checked) sides.push('Port');
         if (document.getElementById('dh-center-chk')?.checked) sides.push('Center');
         if (document.getElementById('dh-stbd-chk')?.checked) sides.push('Stbd');
+
+        // Fallback to appState if DOM check failed (e.g. if called during modal close)
+        if (sides.length === 0 && appState.qaChecks[type]) {
+            const data = appState.qaChecks[type];
+            if (data['dh-port-chk']) sides.push('Port');
+            if (data['dh-center-chk']) sides.push('Center');
+            if (data['dh-stbd-chk']) sides.push('Stbd');
+        }
+
         if (sides.length > 0) {
             activityText = `Draghead Depth Check (${sides.join(', ')}) Completed`;
         }
