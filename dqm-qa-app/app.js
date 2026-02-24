@@ -420,6 +420,9 @@ function createDraftSensorLightForm() {
             <h3>Simulated Draft Check — Forward Sensor (Light)</h3>
             <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
             <div class="input-row-3">
+                <div class="form-group"><label>Fwd Offset (ft)</label><input type="number" id="sim-light-fwd-offset" step="0.1" placeholder="e.g., 2.0"></div>
+            </div>
+            <div class="input-row-3">
                 <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
                 <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-fwd-reading-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
@@ -441,6 +444,9 @@ function createDraftSensorLightForm() {
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
 
             <h3>Simulated Draft Check — Aft Sensor (Light)</h3>
+            <div class="input-row-3">
+                <div class="form-group"><label>Aft Offset (ft)</label><input type="number" id="sim-light-aft-offset" step="0.1" placeholder="e.g., 2.0"></div>
+            </div>
             <div class="input-row-3">
                 <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
                 <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-aft-reading-1" step="0.1" placeholder="0.0"></div>
@@ -552,6 +558,9 @@ function createDraftSensorLoadedForm() {
             <h3>Simulated Draft Check — Forward Sensor (Loaded)</h3>
             <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
             <div class="input-row-3">
+                <div class="form-group"><label>Fwd Offset (ft)</label><input type="number" id="sim-loaded-fwd-offset" step="0.1" placeholder="e.g., 2.0"></div>
+            </div>
+            <div class="input-row-3">
                 <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
                 <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-loaded-fwd-reading-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
@@ -573,6 +582,9 @@ function createDraftSensorLoadedForm() {
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
 
             <h3>Simulated Draft Check — Aft Sensor (Loaded)</h3>
+            <div class="input-row-3">
+                <div class="form-group"><label>Aft Offset (ft)</label><input type="number" id="sim-loaded-aft-offset" step="0.1" placeholder="e.g., 2.0"></div>
+            </div>
             <div class="input-row-3">
                 <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
                 <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-loaded-aft-reading-1" step="0.1" placeholder="0.0"></div>
@@ -625,6 +637,9 @@ function createDraftSensorSimulatedForm() {
 
         <h3>Forward Sensor</h3>
         <div class="input-row-3">
+            <div class="form-group"><label>Fwd Offset (ft)</label><input type="number" id="sim-fwd-offset" step="0.1" placeholder="e.g., 2.0"></div>
+        </div>
+        <div class="input-row-3">
             <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
             <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-fwd-reading-1" step="0.1" placeholder="0.0"></div>
             <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
@@ -641,6 +656,9 @@ function createDraftSensorSimulatedForm() {
         </div>
 
         <h3>Aft Sensor</h3>
+        <div class="input-row-3">
+            <div class="form-group"><label>Aft Offset (ft)</label><input type="number" id="sim-aft-offset" step="0.1" placeholder="e.g., 2.0"></div>
+        </div>
         <div class="input-row-3">
             <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
             <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-aft-reading-1" step="0.1" placeholder="0.0"></div>
@@ -1510,6 +1528,9 @@ function calculateDifferences(checkType) {
             calculatePhysicalDraftDifferences('loaded');
             calculateSimulatedDraftDifferences('loaded');
             break;
+        case 'draftSensorSimulated':
+            calculateStandaloneSimulatedDraftDifferences();
+            break;
         case 'dragheadDepth':
             calculateDragheadDifferences();
             break;
@@ -1585,33 +1606,29 @@ function calculatePhysicalDraftDifferences(condition) {
 
 function calculateSimulatedDraftDifferences(condition) {
     // condition is 'light' or 'loaded'
-    for (let i = 1; i <= 3; i++) {
-        const depth = parseFloat(document.getElementById(`sim-${condition}-fwd-depth-${i}`)?.value);
-        const reading = parseFloat(document.getElementById(`sim-${condition}-fwd-reading-${i}`)?.value);
-        const diffInput = document.getElementById(`sim-${condition}-fwd-diff-${i}`);
-        if (!isNaN(depth) && !isNaN(reading) && diffInput) {
-            diffInput.value = Math.abs(depth - reading).toFixed(1);
+    ['fwd', 'aft'].forEach(pos => {
+        const offset = parseFloat(document.getElementById(`sim-${condition}-${pos}-offset`)?.value) || 0;
+        for (let i = 1; i <= 3; i++) {
+            const depth = parseFloat(document.getElementById(`sim-${condition}-${pos}-depth-${i}`)?.value);
+            const reading = parseFloat(document.getElementById(`sim-${condition}-${pos}-reading-${i}`)?.value);
+            const diffInput = document.getElementById(`sim-${condition}-${pos}-diff-${i}`);
+            if (!isNaN(depth) && !isNaN(reading) && diffInput) {
+                diffInput.value = Math.abs((depth + offset) - reading).toFixed(1);
+            }
         }
-    }
-    for (let i = 1; i <= 3; i++) {
-        const depth = parseFloat(document.getElementById(`sim-${condition}-aft-depth-${i}`)?.value);
-        const reading = parseFloat(document.getElementById(`sim-${condition}-aft-reading-${i}`)?.value);
-        const diffInput = document.getElementById(`sim-${condition}-aft-diff-${i}`);
-        if (!isNaN(depth) && !isNaN(reading) && diffInput) {
-            diffInput.value = Math.abs(depth - reading).toFixed(1);
-        }
-    }
+    });
 }
 
 // Auto-calculations for the standalone Simulated Draft card
 function calculateStandaloneSimulatedDraftDifferences() {
     ['fwd', 'aft'].forEach(pos => {
+        const offset = parseFloat(document.getElementById(`sim-${pos}-offset`)?.value) || 0;
         for (let i = 1; i <= 3; i++) {
             const depth = parseFloat(document.getElementById(`sim-${pos}-depth-${i}`)?.value);
             const reading = parseFloat(document.getElementById(`sim-${pos}-reading-${i}`)?.value);
             const diffInput = document.getElementById(`sim-${pos}-diff-${i}`);
             if (!isNaN(depth) && !isNaN(reading) && diffInput) {
-                diffInput.value = Math.abs(depth - reading).toFixed(1);
+                diffInput.value = Math.abs((depth + offset) - reading).toFixed(1);
             }
         }
     });
