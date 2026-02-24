@@ -1,0 +1,284 @@
+{
+  "metadata": {
+    "plants": [
+      {
+        "name": "Test 1",
+        "vesselType": "Scow",
+        "profile": "Monitoring",
+        "checks": {
+          "positionCheck": {
+            "handheld-lat": "32.728452",
+            "handheld-lon": "-80.058761",
+            "dqm-lat": "32.728452",
+            "dqm-lon": "-80.058761",
+            "position-diff": "0.0",
+            "position-remarks": ""
+          },
+          "hullStatus": {
+            "hull-opened": "yes",
+            "hull-remarks": ""
+          },
+          "draftSensorLightFwd": {
+            "draft-light-fwd-method": "physical",
+            "light-fwd-port": "3.2",
+            "light-fwd-stbd": "3.3",
+            "light-dqm-fwd": "3.22",
+            "light-fwd-diff": "0.03",
+            "sim-light-fwd-offset": "",
+            "sim-light-fwd-depth-1": "",
+            "sim-light-fwd-reading-1": "",
+            "sim-light-fwd-diff-1": "",
+            "sim-light-fwd-depth-2": "",
+            "sim-light-fwd-reading-2": "",
+            "sim-light-fwd-diff-2": "",
+            "sim-light-fwd-depth-3": "",
+            "sim-light-fwd-reading-3": "",
+            "sim-light-fwd-diff-3": "",
+            "sim-light-fwd-pipe-details": "",
+            "light-fwd-remarks": ""
+          },
+          "draftSensorLightAft": {
+            "draft-light-aft-method": "physical",
+            "light-aft-port": "3.5",
+            "light-aft-stbd": "3.7",
+            "light-dqm-aft": "3.52",
+            "light-aft-diff": "0.08",
+            "sim-light-aft-offset": "",
+            "sim-light-aft-depth-1": "",
+            "sim-light-aft-reading-1": "",
+            "sim-light-aft-diff-1": "",
+            "sim-light-aft-depth-2": "",
+            "sim-light-aft-reading-2": "",
+            "sim-light-aft-diff-2": "",
+            "sim-light-aft-depth-3": "",
+            "sim-light-aft-reading-3": "",
+            "sim-light-aft-diff-3": "",
+            "sim-light-aft-pipe-details": "",
+            "light-aft-remarks": ""
+          },
+          "draftSensorLoadedFwd": {
+            "draft-loaded-fwd-method": "simulated",
+            "loaded-fwd-port": "",
+            "loaded-fwd-stbd": "",
+            "loaded-dqm-fwd": "",
+            "loaded-fwd-diff": "",
+            "sim-loaded-fwd-offset": "2",
+            "sim-loaded-fwd-depth-1": "3",
+            "sim-loaded-fwd-reading-1": "4.8",
+            "sim-loaded-fwd-diff-1": "0.2",
+            "sim-loaded-fwd-depth-2": "6",
+            "sim-loaded-fwd-reading-2": "8.7",
+            "sim-loaded-fwd-diff-2": "0.7",
+            "sim-loaded-fwd-depth-3": "9",
+            "sim-loaded-fwd-reading-3": "11.1",
+            "sim-loaded-fwd-diff-3": "0.1",
+            "sim-loaded-fwd-pipe-details": "",
+            "loaded-fwd-remarks": ""
+          },
+          "draftSensorLoadedAft": {
+            "draft-loaded-aft-method": "simulated",
+            "loaded-aft-port": "",
+            "loaded-aft-stbd": "",
+            "loaded-dqm-aft": "",
+            "loaded-aft-diff": "",
+            "sim-loaded-aft-offset": "1",
+            "sim-loaded-aft-depth-1": "3",
+            "sim-loaded-aft-reading-1": "4",
+            "sim-loaded-aft-diff-1": "0.0",
+            "sim-loaded-aft-depth-2": "5",
+            "sim-loaded-aft-reading-2": "7",
+            "sim-loaded-aft-diff-2": "1.0",
+            "sim-loaded-aft-depth-3": "8",
+            "sim-loaded-aft-reading-3": "9",
+            "sim-loaded-aft-diff-3": "0.0",
+            "sim-loaded-aft-pipe-details": "",
+            "loaded-aft-remarks": ""
+          }
+        }
+      },
+      {
+        "name": "Test 2",
+        "vesselType": "Scow",
+        "profile": "Monitoring",
+        "checks": {
+          "positionCheck": {
+            "handheld-lat": "32.728111",
+            "handheld-lon": "-80.059190",
+            "dqm-lat": "32.728111",
+            "dqm-lon": "-80.058761",
+            "position-diff": "131.8",
+            "position-remarks": ""
+          },
+          "hullStatus": {
+            "hull-opened": "yes",
+            "hull-remarks": ""
+          },
+          "draftSensorLightFwd": {
+            "draft-light-fwd-method": "physical",
+            "light-fwd-port": "3.3",
+            "light-fwd-stbd": "3.5",
+            "light-dqm-fwd": "3.42",
+            "light-fwd-diff": "0.02",
+            "sim-light-fwd-offset": "",
+            "sim-light-fwd-depth-1": "",
+            "sim-light-fwd-reading-1": "",
+            "sim-light-fwd-diff-1": "",
+            "sim-light-fwd-depth-2": "",
+            "sim-light-fwd-reading-2": "",
+            "sim-light-fwd-diff-2": "",
+            "sim-light-fwd-depth-3": "",
+            "sim-light-fwd-reading-3": "",
+            "sim-light-fwd-diff-3": "",
+            "sim-light-fwd-pipe-details": "",
+            "light-fwd-remarks": ""
+          },
+          "draftSensorLightAft": {
+            "draft-light-aft-method": "physical",
+            "light-aft-port": "4.2",
+            "light-aft-stbd": "4.6",
+            "light-dqm-aft": "4.44",
+            "light-aft-diff": "0.04",
+            "sim-light-aft-offset": "",
+            "sim-light-aft-depth-1": "",
+            "sim-light-aft-reading-1": "",
+            "sim-light-aft-diff-1": "",
+            "sim-light-aft-depth-2": "",
+            "sim-light-aft-reading-2": "",
+            "sim-light-aft-diff-2": "",
+            "sim-light-aft-depth-3": "",
+            "sim-light-aft-reading-3": "",
+            "sim-light-aft-diff-3": "",
+            "sim-light-aft-pipe-details": "",
+            "light-aft-remarks": ""
+          },
+          "draftSensorLoadedFwd": {
+            "draft-loaded-fwd-method": "simulated",
+            "loaded-fwd-port": "",
+            "loaded-fwd-stbd": "",
+            "loaded-dqm-fwd": "",
+            "loaded-fwd-diff": "",
+            "sim-loaded-fwd-offset": "5",
+            "sim-loaded-fwd-depth-1": "2",
+            "sim-loaded-fwd-reading-1": "8",
+            "sim-loaded-fwd-diff-1": "1.0",
+            "sim-loaded-fwd-depth-2": "4",
+            "sim-loaded-fwd-reading-2": "7",
+            "sim-loaded-fwd-diff-2": "2.0",
+            "sim-loaded-fwd-depth-3": "5",
+            "sim-loaded-fwd-reading-3": "9",
+            "sim-loaded-fwd-diff-3": "1.0",
+            "sim-loaded-fwd-pipe-details": "",
+            "loaded-fwd-remarks": ""
+          },
+          "draftSensorLoadedAft": {
+            "draft-loaded-aft-method": "simulated",
+            "loaded-aft-port": "",
+            "loaded-aft-stbd": "",
+            "loaded-dqm-aft": "",
+            "loaded-aft-diff": "",
+            "sim-loaded-aft-offset": "2",
+            "sim-loaded-aft-depth-1": "5",
+            "sim-loaded-aft-reading-1": "8",
+            "sim-loaded-aft-diff-1": "1.0",
+            "sim-loaded-aft-depth-2": "6",
+            "sim-loaded-aft-reading-2": "9",
+            "sim-loaded-aft-diff-2": "1.0",
+            "sim-loaded-aft-depth-3": "7",
+            "sim-loaded-aft-reading-3": "9",
+            "sim-loaded-aft-diff-3": "0.0",
+            "sim-loaded-aft-pipe-details": "",
+            "loaded-aft-remarks": ""
+          }
+        }
+      }
+    ],
+    "checkDate": "2026-02-24",
+    "weather": "Calm",
+    "qaTeamMembers": [
+      "Will"
+    ],
+    "systemProvider": "Marc",
+    "timeline": [
+      {
+        "time": "05:18 PM",
+        "activity": "Comment",
+        "notes": "Onsite",
+        "timestamp": "2026-02-24T22:18:30.234Z"
+      },
+      {
+        "time": "05:18 PM",
+        "activity": "[Test 1] Position Check Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:18:49.463Z"
+      },
+      {
+        "time": "05:19 PM",
+        "activity": "[Test 1] Hull Status Check Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:19:19.875Z"
+      },
+      {
+        "time": "05:19 PM",
+        "activity": "[Test 1] Draft Sensor Check (Light - Forward) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:19:36.110Z"
+      },
+      {
+        "time": "05:19 PM",
+        "activity": "[Test 1] Draft Sensor Check (Light - Aft) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:19:53.390Z"
+      },
+      {
+        "time": "05:20 PM",
+        "activity": "[Test 1] Draft Sensor Check (Loaded - Forward) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:20:32.998Z"
+      },
+      {
+        "time": "05:20 PM",
+        "activity": "[Test 1] Draft Sensor Check (Loaded - Aft) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:20:58.417Z"
+      },
+      {
+        "time": "05:21 PM",
+        "activity": "[Test 2] Position Check Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:21:19.204Z"
+      },
+      {
+        "time": "05:21 PM",
+        "activity": "[Test 2] Hull Status Check Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:21:48.880Z"
+      },
+      {
+        "time": "05:22 PM",
+        "activity": "[Test 2] Draft Sensor Check (Light - Forward) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:22:01.787Z"
+      },
+      {
+        "time": "05:22 PM",
+        "activity": "[Test 2] Draft Sensor Check (Light - Aft) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:22:33.885Z"
+      },
+      {
+        "time": "05:22 PM",
+        "activity": "[Test 2] Draft Sensor Check (Loaded - Forward) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:22:50.237Z"
+      },
+      {
+        "time": "05:23 PM",
+        "activity": "[Test 2] Draft Sensor Check (Loaded - Aft) Completed",
+        "notes": "",
+        "timestamp": "2026-02-24T22:23:09.148Z"
+      }
+    ],
+    "generalComments": "",
+    "exportedAt": "2026-02-24T22:23:13.162Z"
+  }
+}

@@ -80,7 +80,28 @@ function setSourceData(jsonData) {
     const meta = jsonData.metadata || jsonData;
 
     window.appState.plants = meta.plants || [];
-    window.appState.qaChecks = jsonData.checks || jsonData.qaChecks || {};
+
+    // Multi-Vessel Schema: Checks are now inside each plant
+    // Legacy Schema: Checks are top-level or in 'qaChecks'
+    const legacyChecks = jsonData.checks || jsonData.qaChecks || {};
+
+    if (window.appState.plants.length > 0) {
+        window.appState.plants.forEach(plant => {
+            if (!plant.checks) {
+                // If it's a legacy file with only one plant, we can map the top-level checks here
+                // Otherwise, it remains as is
+                if (window.appState.plants.length === 1) {
+                    plant.checks = legacyChecks;
+                } else {
+                    plant.checks = {};
+                }
+            }
+        });
+    }
+
+    // Still keep a reference at top level if needed, but primary source is now plants
+    window.appState.qaChecks = legacyChecks;
+
     window.appState.timeline = meta.timeline || [];
     window.appState.originalGeneralComments = meta.generalComments || '';
 

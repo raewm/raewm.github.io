@@ -79,16 +79,24 @@ function renderVesselList(plants) {
 
 function renderChecks(state) {
     let html = '';
-    const checks = state.qaChecks || {};
+    const plants = state.plants || [];
     const overrides = state.overrides || {};
 
     const order = [
         'positionCheck',
         'draftSensorLight',
+        'draftSensorLightFwd',
+        'draftSensorLightAft',
         'draftSensorLoaded',
+        'draftSensorLoadedFwd',
+        'draftSensorLoadedAft',
         'draftSensorSimulated',
         'ullageLight',
+        'ullageLightFwd',
+        'ullageLightAft',
         'ullageLoaded',
+        'ullageLoadedFwd',
+        'ullageLoadedAft',
         'hullStatus',
         'dragheadDepth',
         'suctionMouthDepth',
@@ -100,10 +108,18 @@ function renderChecks(state) {
     const labels = {
         'positionCheck': 'GPS Position Check',
         'draftSensorLight': 'Draft Sensor Check (Light)',
+        'draftSensorLightFwd': 'Draft Sensor Check (Light - Forward)',
+        'draftSensorLightAft': 'Draft Sensor Check (Light - Aft)',
         'draftSensorLoaded': 'Draft Sensor Check (Loaded)',
+        'draftSensorLoadedFwd': 'Draft Sensor Check (Loaded - Forward)',
+        'draftSensorLoadedAft': 'Draft Sensor Check (Loaded - Aft)',
         'draftSensorSimulated': 'Draft Sensor Check (Simulated)',
         'ullageLight': 'Ullage Check (Light)',
+        'ullageLightFwd': 'Ullage Check (Light - Forward)',
+        'ullageLightAft': 'Ullage Check (Light - Aft)',
         'ullageLoaded': 'Ullage Check (Loaded)',
+        'ullageLoadedFwd': 'Ullage Check (Loaded - Forward)',
+        'ullageLoadedAft': 'Ullage Check (Loaded - Aft)',
         'hullStatus': 'Hull Status Check',
         'dragheadDepth': 'Draghead Depth Check',
         'suctionMouthDepth': 'Suction Mouth Depth Check',
@@ -112,32 +128,73 @@ function renderChecks(state) {
         'bucketPosition': 'Bucket Position Check'
     };
 
-    // Only render a check if at least one of its values is non-empty
     function hasAnyValue(obj) {
         if (!obj) return false;
         return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
     }
 
-    order.forEach(type => {
-        if (checks[type] && hasAnyValue(checks[type])) {
-            html += `<h3>${labels[type]}</h3>`;
+    if (plants.length > 0) {
+        plants.forEach((plant, pIdx) => {
+            const plantChecks = plant.checks || {};
+            let plantHtml = '';
 
-            const data = checks[type];
-            const override = overrides[type] || {};
+            order.forEach(type => {
+                if (plantChecks[type] && hasAnyValue(plantChecks[type])) {
+                    plantHtml += `<h4 style="margin-top: 20px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 5px;">${labels[type]}</h4>`;
 
-            if (type === 'draftSensorSimulated') {
-                html += renderSimulatedDraft(data, override);
-            } else if (type.startsWith('draftSensor') || type.startsWith('ullage')) {
-                html += renderShipData(data, override, type);
-            } else if (type === 'dragheadDepth') {
-                html += renderDragheadTable(data, override);
-            } else if (type === 'velocity') {
-                html += renderVelocityTable(data, override);
-            } else {
-                html += renderGenericTable(data, override);
+                    const data = plantChecks[type];
+                    // Overrides are currently flat, but we might want to index them by plant in the future
+                    // For now, let's keep it simple or try to find a plant-specific override if we implement it
+                    const override = (overrides[pIdx] && overrides[pIdx][type]) || overrides[type] || {};
+
+                    if (type === 'draftSensorSimulated') {
+                        plantHtml += renderSimulatedDraft(data, override, null, type);
+                    } else if (type.startsWith('draftSensor') || type.startsWith('ullage')) {
+                        plantHtml += renderShipData(data, override, type);
+                    } else if (type === 'hullStatus') {
+                        plantHtml += renderHullStatus(data, override);
+                    } else if (type === 'dragheadDepth') {
+                        plantHtml += renderDragheadTable(data, override);
+                    } else if (type === 'velocity') {
+                        plantHtml += renderVelocityTable(data, override);
+                    } else {
+                        plantHtml += renderGenericTable(data, override);
+                    }
+                }
+            });
+
+            if (plantHtml) {
+                html += `
+                    <div class="vessel-checks-section" style="margin-top: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; background: #fafafa;">
+                        <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #2c3e50;">${escapeHtml(plant.name || `Vessel #${pIdx + 1}`)} (${escapeHtml(plant.vesselType)})</h3>
+                        ${plantHtml}
+                    </div>
+                `;
             }
-        }
-    });
+        });
+    } else {
+        // Fallback for files with no plants array but top-level checks
+        const checks = state.qaChecks || {};
+        order.forEach(type => {
+            if (checks[type] && hasAnyValue(checks[type])) {
+                html += `<h3>${labels[type]}</h3>`;
+                const data = checks[type];
+                const override = overrides[type] || {};
+
+                if (type === 'draftSensorSimulated') {
+                    html += renderSimulatedDraft(data, override);
+                } else if (type.startsWith('draftSensor') || type.startsWith('ullage')) {
+                    html += renderShipData(data, override, type);
+                } else if (type === 'dragheadDepth') {
+                    html += renderDragheadTable(data, override);
+                } else if (type === 'velocity') {
+                    html += renderVelocityTable(data, override);
+                } else {
+                    html += renderGenericTable(data, override);
+                }
+            }
+        });
+    }
 
     return html;
 }
@@ -149,11 +206,22 @@ function renderShipData(data, override, typeName) {
     // Map check type to the exact key prefix used by the QA app
     const prefixMap = {
         'draftSensorLight': 'light-',
+        'draftSensorLightFwd': 'light-',
+        'draftSensorLightAft': 'light-',
         'draftSensorLoaded': 'loaded-',
+        'draftSensorLoadedFwd': 'loaded-',
+        'draftSensorLoadedAft': 'loaded-',
         'ullageLight': 'ullage-light-',
-        'ullageLoaded': 'ullage-loaded-'
+        'ullageLightFwd': 'ullage-light-',
+        'ullageLightAft': 'ullage-light-',
+        'ullageLoaded': 'ullage-loaded-',
+        'ullageLoadedFwd': 'ullage-loaded-',
+        'ullageLoadedAft': 'ullage-loaded-'
     };
     const prefix = prefixMap[typeName] || '';
+
+    const isFwdOnly = typeName.endsWith('Fwd');
+    const isAftOnly = typeName.endsWith('Aft');
 
     let fwdPort = getVal(data, override, `${prefix}fwd-port`);
     let fwdStbd = getVal(data, override, `${prefix}fwd-stbd`);
@@ -180,6 +248,7 @@ function renderShipData(data, override, typeName) {
             <th class="text-center">DQM System</th>
             <th class="text-center">Difference</th>
         </tr>
+        ${!isAftOnly ? `
         <tr>
             <td><strong>Forward</strong></td>
             <td class="text-center">${formatNum(fwdPort)}</td>
@@ -187,7 +256,8 @@ function renderShipData(data, override, typeName) {
             <td class="text-center">${formatNum(fwdAvg)}</td>
             <td class="text-center">${formatNum(dqmFwd)}</td>
             <td class="text-center">${formatNum(fwdDiff)}</td>
-        </tr>
+        </tr>` : ''}
+        ${!isFwdOnly ? `
         <tr>
             <td><strong>Aft</strong></td>
             <td class="text-center">${formatNum(aftPort)}</td>
@@ -195,16 +265,16 @@ function renderShipData(data, override, typeName) {
             <td class="text-center">${formatNum(aftAvg)}</td>
             <td class="text-center">${formatNum(dqmAft)}</td>
             <td class="text-center">${formatNum(aftDiff)}</td>
-        </tr>
+        </tr>` : ''}
         </table>`;
     }
 
     // Now check for nested simulated data
-    if (typeName === 'draftSensorLight' || typeName === 'draftSensorLoaded') {
+    if (typeName.startsWith('draftSensor')) {
         const simPrefix = `sim-${prefix}`;
         const hasSim = Object.keys(data).some(k => k.startsWith(simPrefix));
         if (hasSim) {
-            html += renderSimulatedDraft(data, override, simPrefix);
+            html += renderSimulatedDraft(data, override, simPrefix, typeName);
         }
     }
 
@@ -221,11 +291,17 @@ function renderShipData(data, override, typeName) {
     return html;
 }
 
-function renderSimulatedDraft(data, override, prefixOverride) {
+function renderSimulatedDraft(data, override, prefixOverride, typeName) {
     let html = '';
     const prefix = prefixOverride || 'sim-';
 
+    const isFwdOnly = typeName && typeName.endsWith('Fwd');
+    const isAftOnly = typeName && typeName.endsWith('Aft');
+
     ['fwd', 'aft'].forEach(pos => {
+        if (pos === 'fwd' && isAftOnly) return;
+        if (pos === 'aft' && isFwdOnly) return;
+
         let rows = '';
         [1, 2, 3].forEach(num => {
             let depth = getVal(data, override, `${prefix}${pos}-depth-${num}`) || getVal(data, override, `${prefix}${pos}-depth${num}`);
@@ -318,6 +394,52 @@ function renderDragheadTable(data, override) {
     return html || '<p>No draghead data recorded.</p>';
 }
 
+
+// Renders images for Hull Status
+function renderHullStatus(data, override) {
+    let html = '<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 10px;">';
+
+    // Original photo keys in SOP + App 2 keys
+    const sections = [
+        { key: 'photo-fwd', label: 'Forward Marks' },
+        { key: 'photo-aft', label: 'Aft Marks' },
+        { key: 'photo-draft-sensor', label: 'Draft Sensor' },
+        { key: 'photo-additional', label: 'Additional' },
+        { key: 'hull-open-photo', label: 'Closed to Open' },
+        { key: 'hull-close-photo', label: 'Open to Closed' }
+    ];
+
+    let hasAnyPhoto = false;
+
+    // Display hull-opened status if present
+    const hullOpened = getVal(data, override, 'hull-opened');
+    if (hullOpened) {
+        html += `<p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Hull Opened:</strong> ${hullOpened.toUpperCase()}</p>`;
+    }
+
+    sections.forEach(s => {
+        let val = getVal(data, override, s.key);
+        if (val && val.length > 10) { // Basic check for base64 or URL
+            hasAnyPhoto = true;
+            html += `
+                <div style="flex: 1; min-width: 200px; max-width: 45%; border: 1px solid #eee; padding: 10px; border-radius: 4px;">
+                    <p style="margin: 0 0 5px 0; font-weight: bold; font-size: 10pt;">${s.label}</p>
+                    <img src="${val}" style="width: 100%; height: auto; border-radius: 2px;" alt="${s.label}">
+                </div>
+            `;
+        }
+    });
+
+    html += '</div>';
+
+    let remarks = getVal(data, override, 'remarks') || getVal(data, override, 'hull-remarks');
+    if (remarks) {
+        html += `<p style="font-size: 10pt; font-style: italic; margin-top: 10px;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+    }
+
+    const hasAnyContent = hasAnyPhoto || remarks || hullOpened;
+    return hasAnyContent ? html : '<p>No hull status data recorded.</p>';
+}
 
 // Special Draghead rendering
 function renderVelocityTable(data, override) {

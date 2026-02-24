@@ -7,8 +7,8 @@ const appState = {
     systemProvider: '',
     timeline: [],
     generalComments: '',
-    qaChecks: {},
-    activeCheckType: null // Tracks which check is currently open in the modal
+    activeCheckType: null, // Tracks which check is currently open in the modal
+    activePlantIndex: null // Tracks which plant the active check belongs to
 };
 
 // ===== Constants & Profiles (Reused from dqm-qa-app) =====
@@ -176,13 +176,23 @@ function updateProfileOptions(select) {
 }
 
 function updatePlants() {
-    appState.plants = [];
-    document.querySelectorAll('.plant-entry').forEach(entry => {
+    const newPlants = [];
+    document.querySelectorAll('.plant-entry').forEach((entry, idx) => {
         const name = entry.querySelector('.plant-name').value;
         const type = entry.querySelector('.vessel-type').value;
         const profile = entry.querySelector('.vessel-profile').value;
-        if (name || type || profile) appState.plants.push({ name, vesselType: type, profile });
+
+        // Preserve existing checks if this plant already existed in state
+        let checks = {};
+        if (appState.plants[idx]) {
+            checks = appState.plants[idx].checks || {};
+        }
+
+        if (name || type || profile) {
+            newPlants.push({ name, vesselType: type, profile, checks });
+        }
     });
+    appState.plants = newPlants;
     saveDraft();
 }
 
@@ -191,19 +201,44 @@ function openPicker() {
     const grid = document.getElementById('picker-grid');
     grid.innerHTML = '';
 
-    // Determine which checks are relevant based on plants
-    const relevantChecks = new Set();
-    appState.plants.forEach(p => {
-        const key = `${p.vesselType}-${p.profile}`;
-        (requiredChecks[key] || []).forEach(c => relevantChecks.add(c));
-    });
+    if (appState.plants.length > 1) {
+        // Step 1: Select Vessel
+        const title = document.querySelector('#picker-overlay h3');
+        const originalTitle = title.textContent;
+        title.textContent = 'Select Vessel';
 
-    // If no plants or patterns found, show all
-    const checksToShow = relevantChecks.size > 0 ? Array.from(relevantChecks) : Object.keys(checkNames);
+        appState.plants.forEach((p, idx) => {
+            const btn = document.createElement('button');
+            const isComplete = isPlantComplete(idx);
+            btn.className = `picker-btn vessel-select-btn ${isComplete ? 'check-logged' : ''}`;
+            btn.innerHTML = `<strong>${p.name || `Plant #${idx + 1}`}</strong><br><small>${p.vesselType}${isComplete ? ' (Complete)' : ''}</small>`;
+            btn.onclick = () => {
+                appState.activePlantIndex = idx;
+                title.textContent = originalTitle;
+                renderCheckPickerForPlant(idx);
+            };
+            grid.appendChild(btn);
+        });
+    } else {
+        // Only one plant, default to it
+        appState.activePlantIndex = 0;
+        renderCheckPickerForPlant(0);
+    }
+
+    document.getElementById('picker-overlay').classList.remove('hidden');
+}
+
+function renderCheckPickerForPlant(plantIdx) {
+    const grid = document.getElementById('picker-grid');
+    grid.innerHTML = '';
+    const p = appState.plants[plantIdx];
+    const key = `${p.vesselType}-${p.profile}`;
+    const checksToShow = requiredChecks[key] || Object.keys(checkNames);
 
     checksToShow.forEach(type => {
         const btn = document.createElement('button');
-        btn.className = 'picker-btn';
+        const isLogged = isCheckLogged(plantIdx, type);
+        btn.className = `picker-btn ${isLogged ? 'check-logged' : ''}`;
         btn.textContent = checkNames[type];
         btn.onclick = () => {
             closePicker();
@@ -211,8 +246,6 @@ function openPicker() {
         };
         grid.appendChild(btn);
     });
-
-    document.getElementById('picker-overlay').classList.remove('hidden');
 }
 
 function closePicker() {
@@ -225,11 +258,12 @@ function openModal(checkType) {
     const title = document.getElementById('modal-title');
     const content = document.getElementById('modal-content');
 
-    title.textContent = checkNames[checkType];
+    const plant = appState.plants[appState.activePlantIndex];
+    title.textContent = `${plant.name || `Plant #${appState.activePlantIndex + 1}`} - ${checkNames[checkType]}`;
     content.innerHTML = getCheckContent(checkType);
 
-    // Restore data if exists
-    const existingData = appState.qaChecks[checkType];
+    // Restore data if exists for this specific plant
+    const existingData = plant.checks[checkType];
     if (existingData) {
         setTimeout(() => restoreCheckData(checkType, existingData), 0);
     }
@@ -257,14 +291,16 @@ function closeModal() {
 
 function saveCheckData(checkType) {
     const content = document.getElementById('modal-content');
-    const data = { ...(appState.qaChecks[checkType] || {}) };
+    const plant = appState.plants[appState.activePlantIndex];
+    if (!plant.checks[checkType]) plant.checks[checkType] = {};
+
+    const data = plant.checks[checkType];
     content.querySelectorAll('input, select, textarea').forEach(input => {
         if (input.id) {
             if (input.type === 'file') return;
             data[input.id] = input.type === 'checkbox' ? input.checked : input.value;
         }
     });
-    appState.qaChecks[checkType] = data;
     saveDraft();
 }
 
@@ -276,6 +312,27 @@ function restoreCheckData(checkType, data) {
             else el.value = data[id];
         }
     });
+
+    // Restore photo previews for hullStatus
+    if (checkType === 'hullStatus') {
+        const openPhoto = data['hull-open-photo'];
+        const closePhoto = data['hull-close-photo'];
+        if (openPhoto) {
+            const preview = document.getElementById('hull-open-preview');
+            if (preview) {
+                preview.src = openPhoto;
+                preview.style.display = 'block';
+            }
+        }
+        if (closePhoto) {
+            const preview = document.getElementById('hull-close-preview');
+            if (preview) {
+                preview.src = closePhoto;
+                preview.style.display = 'block';
+            }
+        }
+    }
+
     // Trigger toggles
     if (checkType === 'velocity') toggleVelocityMethod();
     if (checkType === 'dragheadDepth') toggleDragheadSections();
@@ -290,26 +347,29 @@ function logActiveCheckToTimeline() {
 
     saveCheckData(type);
 
-    let activityText = `${checkNames[type]} Completed`;
+    const plant = appState.plants[appState.activePlantIndex];
+    let activityText = `[${plant.name || `Plant #${appState.activePlantIndex + 1}`}] ${checkNames[type]} Completed`;
 
     // Dynamic naming for Draghead
     if (type === 'dragheadDepth') {
         const sides = [];
-        // Check DOM first
-        if (document.getElementById('dh-port-chk')?.checked) sides.push('Port');
-        if (document.getElementById('dh-center-chk')?.checked) sides.push('Center');
-        if (document.getElementById('dh-stbd-chk')?.checked) sides.push('Stbd');
+        const portChk = document.getElementById('dh-port-chk');
+        const centerChk = document.getElementById('dh-center-chk');
+        const stbdChk = document.getElementById('dh-stbd-chk');
 
-        // Fallback to appState if DOM check failed (e.g. if called during modal close)
-        if (sides.length === 0 && appState.qaChecks[type]) {
-            const data = appState.qaChecks[type];
+        if (portChk && portChk.checked) sides.push('Port');
+        if (centerChk && centerChk.checked) sides.push('Center');
+        if (stbdChk && stbdChk.checked) sides.push('Stbd');
+
+        if (sides.length === 0 && plant.checks[type]) {
+            const data = plant.checks[type];
             if (data['dh-port-chk']) sides.push('Port');
             if (data['dh-center-chk']) sides.push('Center');
             if (data['dh-stbd-chk']) sides.push('Stbd');
         }
 
         if (sides.length > 0) {
-            activityText = `Draghead Depth Check (${sides.join(', ')}) Completed`;
+            activityText = `[${plant.name || `Plant #${appState.activePlantIndex + 1}`}] Draghead Depth Check (${sides.join(', ')}) Completed`;
         }
     }
 
@@ -317,13 +377,30 @@ function logActiveCheckToTimeline() {
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
         activity: activityText,
         notes: '',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        plantIdx: appState.activePlantIndex,
+        checkType: type
     };
 
     appState.timeline.push(entry);
     renderTimeline();
     saveDraft();
     closeModal();
+}
+
+// Helper to check if a specific check is logged in the timeline for a plant
+function isCheckLogged(plantIdx, checkType) {
+    return appState.timeline.some(entry => entry.plantIdx === plantIdx && entry.checkType === checkType);
+}
+
+// Helper to check if all required checks for a plant are logged
+function isPlantComplete(plantIdx) {
+    const p = appState.plants[plantIdx];
+    if (!p) return false;
+    const key = `${p.vesselType}-${p.profile}`;
+    const required = requiredChecks[key] || [];
+    if (required.length === 0) return false;
+    return required.every(type => isCheckLogged(plantIdx, type));
 }
 
 function renderTimeline() {
@@ -356,7 +433,11 @@ window.deleteTimelineEntry = (idx) => {
 
 // ===== Data Persistence & Export =====
 function saveDraft() {
-    localStorage.setItem('dqm-window-qa-draft', JSON.stringify(appState));
+    try {
+        localStorage.setItem('dqm-window-qa-draft', JSON.stringify(appState));
+    } catch (e) {
+        console.warn('Failed to save draft to localStorage (possibly quota exceeded):', e);
+    }
 }
 
 function loadDraft() {
@@ -400,14 +481,13 @@ function exportJSON() {
             timeline: appState.timeline,
             generalComments: appState.generalComments,
             exportedAt: new Date().toISOString()
-        },
-        checks: appState.qaChecks
+        }
     };
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DQM_QA_WINDOW_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = `DQM_QA_CHECK_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
 }
 
@@ -705,9 +785,18 @@ window.handleHullPhoto = (input, previewId) => {
     if (file) {
         const reader = new FileReader();
         reader.onload = (e) => {
+            const dataUrl = e.target.result;
             const preview = document.getElementById(previewId);
-            preview.src = e.target.result;
+            preview.src = dataUrl;
             preview.style.display = 'block';
+
+            // Persist to state
+            const plant = appState.plants[appState.activePlantIndex];
+            if (!plant.checks.hullStatus) plant.checks.hullStatus = {};
+            // Map preview ID to state key
+            const stateKey = previewId === 'hull-open-preview' ? 'hull-open-photo' : 'hull-close-photo';
+            plant.checks.hullStatus[stateKey] = dataUrl;
+
             saveDraft();
         };
         reader.readAsDataURL(file);

@@ -5,10 +5,18 @@ const checkLabels = {
     'positionCheck': 'Position Check',
     'hullStatus': 'Hull Status',
     'draftSensorLight': 'Draft Sensor (Light)',
+    'draftSensorLightFwd': 'Draft Sensor (Light - Fwd)',
+    'draftSensorLightAft': 'Draft Sensor (Light - Aft)',
     'draftSensorLoaded': 'Draft Sensor (Loaded)',
+    'draftSensorLoadedFwd': 'Draft Sensor (Loaded - Fwd)',
+    'draftSensorLoadedAft': 'Draft Sensor (Loaded - Aft)',
     'draftSensorSimulated': 'Draft Sensor (Simulated)',
     'ullageLight': 'Ullage (Light)',
+    'ullageLightFwd': 'Ullage (Light - Fwd)',
+    'ullageLightAft': 'Ullage (Light - Aft)',
     'ullageLoaded': 'Ullage (Loaded)',
+    'ullageLoadedFwd': 'Ullage (Loaded - Fwd)',
+    'ullageLoadedAft': 'Ullage (Loaded - Aft)',
     'dragheadDepth': 'Draghead Depth',
     'suctionMouthDepth': 'Suction Mouth Depth',
     'velocity': 'Velocity',
@@ -18,10 +26,11 @@ const checkLabels = {
 
 function renderEditor() {
     const container = document.getElementById('editor-container');
-    const qaChecks = window.appState.qaChecks || {};
+    const plants = window.appState.plants || [];
+    const legacyChecks = window.appState.qaChecks || {};
     const overrides = window.appState.overrides || {};
 
-    if (Object.keys(qaChecks).length === 0) {
+    if (plants.length === 0 && Object.keys(legacyChecks).length === 0) {
         container.innerHTML = '<div class="text-center text-muted p-4">No QA checks found in the loaded data.</div>';
         return;
     }
@@ -31,51 +40,77 @@ function renderEditor() {
     // Render Timeline Editor First
     renderTimelineEditor(container);
 
-    for (const [checkType, data] of Object.entries(qaChecks)) {
-        if (!data || Object.keys(data).length === 0) continue;
+    if (plants.length > 0) {
+        plants.forEach((plant, pIdx) => {
+            const plantChecks = plant.checks || {};
+            if (Object.keys(plantChecks).length === 0) return;
 
-        const section = document.createElement('div');
-        section.className = 'editor-section';
+            const plantHeader = document.createElement('h3');
+            plantHeader.style.margin = '30px 0 15px 0';
+            plantHeader.style.padding = '10px';
+            plantHeader.style.backgroundColor = 'rgba(255,255,255,0.05)';
+            plantHeader.style.borderRadius = '4px';
+            plantHeader.style.color = 'var(--accent-primary)';
+            plantHeader.textContent = `${plant.name || `Vessel #${pIdx + 1}`} (${plant.vesselType})`;
+            container.appendChild(plantHeader);
 
-        const header = document.createElement('div');
-        header.className = 'editor-section-header';
-        header.textContent = checkLabels[checkType] || formatLabel(checkType);
-
-        const body = document.createElement('div');
-        body.className = 'editor-section-body';
-
-        // Provide custom layout for specific complex checks
-        if (checkType.startsWith('draftSensor') || checkType.startsWith('ullage')) {
-            renderCustomShipData(data, overrides[checkType] || {}, body, checkType);
-        } else if (checkType === 'dragheadDepth') {
-            renderCustomTableData(data, overrides[checkType] || {}, body, checkType, 'Draghead Depth');
-        } else if (checkType === 'velocity') {
-            renderVelocityData(data, overrides[checkType] || {}, body, checkType);
-        } else {
-            // Fallback generic grid
-            const grid = document.createElement('div');
-            grid.className = 'form-grid';
-            buildInputs(data, overrides[checkType] || {}, grid, checkType, '');
-            body.appendChild(grid);
-        }
-
-        section.appendChild(header);
-        section.appendChild(body);
-
-        header.addEventListener('click', () => {
-            section.classList.toggle('open');
+            for (const [checkType, data] of Object.entries(plantChecks)) {
+                if (!data || Object.keys(data).length === 0) continue;
+                renderSection(checkType, data, (overrides[pIdx] && overrides[pIdx][checkType]) || {}, container, pIdx);
+            }
         });
-
-        container.appendChild(section);
+    } else {
+        // Fallback for legacy top-level checks
+        for (const [checkType, data] of Object.entries(legacyChecks)) {
+            if (!data || Object.keys(data).length === 0) continue;
+            renderSection(checkType, data, overrides[checkType] || {}, container, null);
+        }
     }
 }
 
+function renderSection(checkType, data, overrideObj, container, plantIdx) {
+    const section = document.createElement('div');
+    section.className = 'editor-section';
+
+    const header = document.createElement('div');
+    header.className = 'editor-section-header';
+    header.textContent = checkLabels[checkType] || formatLabel(checkType);
+
+    const body = document.createElement('div');
+    body.className = 'editor-section-body';
+
+    // Provide custom layout for specific complex checks
+    if (checkType.startsWith('draftSensor') || checkType.startsWith('ullage')) {
+        renderCustomShipData(data, overrideObj, body, checkType, plantIdx);
+    } else if (checkType === 'dragheadDepth') {
+        renderCustomTableData(data, overrideObj, body, checkType, 'Draghead Depth', plantIdx);
+    } else if (checkType === 'velocity') {
+        renderVelocityData(data, overrideObj, body, checkType, plantIdx);
+    } else {
+        // Fallback generic grid
+        const grid = document.createElement('div');
+        grid.className = 'form-grid';
+        buildInputs(data, overrideObj, grid, checkType, '', plantIdx);
+        body.appendChild(grid);
+    }
+
+    section.appendChild(header);
+    section.appendChild(body);
+
+    header.addEventListener('click', () => {
+        section.classList.toggle('open');
+    });
+
+    container.appendChild(section);
+}
+
 // Custom layout for Draft/Ullage (Light/Loaded/Simulated)
-function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
+function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantIdx) {
     // Render Simulated Draft
     const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-') || k.toLowerCase().includes('simulated'));
     if (simKeys.length > 0) {
         const wrap = document.createElement('div');
+        // ... (styling omitted for brevity, but I should keep it)
         wrap.style.marginBottom = '20px';
         wrap.style.padding = '15px';
         wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
@@ -106,7 +141,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
                         };
 
                         lineKeys.sort(sortFn).forEach(k => {
-                            buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k));
+                            buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getSimShortLabel(k), plantIdx);
                         });
                         posWrap.appendChild(lineGrid);
                     }
@@ -151,7 +186,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
             fwdGrid.style.gap = '15px';
 
             fwdKeys.sort(sortFn).forEach(k => {
-                buildSingleInput(k, dataObj[k], overrideObj[k], fwdGrid, checkType, k, getShortLabel(k));
+                buildSingleInput(k, dataObj[k], overrideObj[k], fwdGrid, checkType, k, getShortLabel(k), plantIdx);
             });
             fwdWrap.appendChild(fwdGrid);
             wrap.appendChild(fwdWrap);
@@ -168,7 +203,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
             aftGrid.style.gap = '15px';
 
             aftKeys.sort(sortFn).forEach(k => {
-                buildSingleInput(k, dataObj[k], overrideObj[k], aftGrid, checkType, k, getShortLabel(k));
+                buildSingleInput(k, dataObj[k], overrideObj[k], aftGrid, checkType, k, getShortLabel(k), plantIdx);
             });
             aftWrap.appendChild(aftGrid);
             wrap.appendChild(aftWrap);
@@ -178,7 +213,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
         if (otherKeys.length > 0) {
             const otherGrid = document.createElement('div');
             otherGrid.className = 'form-grid';
-            otherKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], otherGrid, checkType, k));
+            otherKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], otherGrid, checkType, k, null, plantIdx));
             wrap.appendChild(otherGrid);
         }
 
@@ -200,7 +235,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType) {
         const wrap = document.createElement('div');
         const grid = document.createElement('div');
         grid.className = 'form-grid';
-        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
+        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k, null, plantIdx));
         wrap.appendChild(grid);
         parentDom.appendChild(wrap);
     }
@@ -233,7 +268,7 @@ function getDragheadShortLabel(prop) {
 }
 
 // Custom layout for array-like table data (Draghead Port, Center, Stbd)
-function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title) {
+function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title, plantIdx) {
     const wrap = document.createElement('div');
 
     const dragheads = [
@@ -266,7 +301,7 @@ function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title
                     };
 
                     numKeys.sort(sortFn).forEach(k => {
-                        buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getDragheadShortLabel(k) + ` ${num}`);
+                        buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getDragheadShortLabel(k) + ` ${num}`, plantIdx);
                     });
                     dhWrap.appendChild(lineGrid);
                 }
@@ -279,7 +314,7 @@ function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title
     if (remainingKeys.length > 0) {
         const grid = document.createElement('div');
         grid.className = 'form-grid';
-        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
+        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k, null, plantIdx));
         wrap.appendChild(grid);
     }
 
@@ -296,7 +331,7 @@ function getVelocityShortLabel(prop) {
     return null;
 }
 
-function renderVelocityData(dataObj, overrideObj, parentDom, checkType) {
+function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx) {
     const wrap = document.createElement('div');
 
     // Top level info
@@ -305,7 +340,7 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType) {
     topGrid.className = 'form-grid';
     topGrid.style.marginBottom = '20px';
     topKeys.forEach(k => {
-        if (dataObj[k] !== undefined) buildSingleInput(k, dataObj[k], overrideObj[k], topGrid, checkType, k);
+        if (dataObj[k] !== undefined) buildSingleInput(k, dataObj[k], overrideObj[k], topGrid, checkType, k, null, plantIdx);
     });
     if (topGrid.children.length > 0) wrap.appendChild(topGrid);
 
@@ -335,7 +370,7 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType) {
                 };
 
                 numKeys.sort(sortFn).forEach(k => {
-                    buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getVelocityShortLabel(k));
+                    buildSingleInput(k, dataObj[k], overrideObj[k], lineGrid, checkType, k, getVelocityShortLabel(k), plantIdx);
                 });
                 wrap.appendChild(lineGrid);
             }
@@ -346,7 +381,7 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType) {
     if (remainingKeys.length > 0) {
         const grid = document.createElement('div');
         grid.className = 'form-grid';
-        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k));
+        remainingKeys.forEach(k => buildSingleInput(k, dataObj[k], overrideObj[k], grid, checkType, k, null, plantIdx));
         wrap.appendChild(grid);
     }
 
@@ -354,12 +389,13 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType) {
 }
 
 // Generic recursive builder
-function buildInputs(dataObj, overrideObj, parentGrid, checkType, path) {
+function buildInputs(dataObj, overrideObj, parentGrid, checkType, path, plantIdx) {
     for (const [key, value] of Object.entries(dataObj)) {
         const currentPath = path ? `${path}.${key}` : key;
 
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
             const sectionWrap = document.createElement('div');
+            // ... (styling)
             sectionWrap.style.gridColumn = '1 / -1';
             sectionWrap.style.marginTop = '10px';
             sectionWrap.style.paddingLeft = '10px';
@@ -374,17 +410,17 @@ function buildInputs(dataObj, overrideObj, parentGrid, checkType, path) {
             const nestedGrid = document.createElement('div');
             nestedGrid.className = 'form-grid';
 
-            buildInputs(value, overrideObj[key] || {}, nestedGrid, checkType, currentPath);
+            buildInputs(value, overrideObj[key] || {}, nestedGrid, checkType, currentPath, plantIdx);
             sectionWrap.appendChild(nestedGrid);
             parentGrid.appendChild(sectionWrap);
         } else {
-            buildSingleInput(currentPath, value, overrideObj[key], parentGrid, checkType, currentPath);
+            buildSingleInput(currentPath, value, overrideObj[key], parentGrid, checkType, currentPath, null, plantIdx);
         }
     }
 }
 
 // Builds one input group
-function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid, checkType, savePath, customLabel = null) {
+function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid, checkType, savePath, customLabel, plantIdx) {
     const displayLabel = customLabel || formatLabel(displayPath.split('.').pop());
 
     const group = document.createElement('div');
@@ -401,6 +437,7 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
     // Feature: If the field is a photo, render a file input and image preview
     if (savePath.toLowerCase().includes('photo')) {
         const photoContainer = document.createElement('div');
+        // ... (as before, but update saveOverride call)
         photoContainer.style.display = 'flex';
         photoContainer.style.flexDirection = 'column';
         photoContainer.style.gap = '10px';
@@ -441,7 +478,7 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
                     preview.src = dataUrl;
                     preview.style.display = 'block';
                     clearBtn.style.display = 'block';
-                    saveOverride(checkType, savePath, dataUrl);
+                    saveOverride(checkType, savePath, dataUrl, plantIdx);
                 };
                 reader.readAsDataURL(file);
             }
@@ -452,7 +489,7 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
             preview.src = '';
             preview.style.display = 'none';
             clearBtn.style.display = 'none';
-            saveOverride(checkType, savePath, '');
+            saveOverride(checkType, savePath, '', plantIdx);
         };
 
         photoContainer.appendChild(fileInput);
@@ -478,7 +515,7 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
             if (input.type === 'number') {
                 newVal = newVal === '' ? '' : Number(newVal);
             }
-            saveOverride(checkType, savePath, newVal);
+            saveOverride(checkType, savePath, newVal, plantIdx);
         });
 
         group.appendChild(label);
@@ -493,16 +530,23 @@ function formatLabel(prop) {
     return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
-function saveOverride(checkType, pathStr, value) {
+function saveOverride(checkType, pathStr, value, plantIdx = null) {
     if (!window.appState.overrides) {
         window.appState.overrides = {};
     }
-    if (!window.appState.overrides[checkType]) {
-        window.appState.overrides[checkType] = {};
+
+    let root = window.appState.overrides;
+    if (plantIdx !== null) {
+        if (!root[plantIdx]) root[plantIdx] = {};
+        root = root[plantIdx];
+    }
+
+    if (!root[checkType]) {
+        root[checkType] = {};
     }
 
     const parts = pathStr.split('.');
-    let current = window.appState.overrides[checkType];
+    let current = root[checkType];
 
     for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
@@ -523,141 +567,186 @@ function renderTimelineEditor(parentDom) {
     if (!section) {
         section = document.createElement('div');
         section.id = 'timeline-editor-section';
-        section.className = 'editor-section';
+        section.className = 'editor-section mb-4';
         parentDom.appendChild(section);
     }
 
-    // Clear out existing content to allow clean re-rendering
     section.innerHTML = '';
 
     const header = document.createElement('div');
     header.className = 'editor-section-header';
     header.style.backgroundColor = '#2c3e50';
-    header.textContent = 'Trip Timeline';
+    header.style.display = 'flex';
+    header.style.justifyContent = 'space-between';
+    header.style.alignItems = 'center';
+    header.style.padding = '10px 15px';
+    header.innerHTML = `<span style="font-weight: 600; letter-spacing: 0.5px;">TRIP TIMELINE</span>`;
+
+    const btnGroup = document.createElement('div');
+    btnGroup.style.display = 'flex';
+    btnGroup.style.gap = '8px';
+
+    const sortBtn = document.createElement('button');
+    sortBtn.className = 'btn-secondary';
+    sortBtn.style.padding = '5px 12px';
+    sortBtn.style.fontSize = '12px';
+    sortBtn.style.borderRadius = '4px';
+    sortBtn.textContent = '⇅ SORT';
+    sortBtn.title = 'Sort entries chronologically';
+    sortBtn.onclick = (e) => {
+        e.stopPropagation();
+        window.appState.timeline.sort((a, b) => {
+            const timeA = (a.time || '').trim();
+            const timeB = (b.time || '').trim();
+            return timeA.localeCompare(timeB);
+        });
+        renderTimelineEditor(parentDom);
+        if (typeof window.updatePreview === 'function') window.updatePreview();
+    };
+
+    const addBtn = document.createElement('button');
+    addBtn.className = 'btn-primary';
+    addBtn.style.padding = '5px 12px';
+    addBtn.style.fontSize = '12px';
+    addBtn.style.borderRadius = '4px';
+    addBtn.textContent = '+ ADD ENTRY';
+    addBtn.onclick = (e) => {
+        e.stopPropagation();
+        const now = new Date();
+        const hours = now.getHours().toString().padStart(2, '0');
+        const minutes = now.getMinutes().toString().padStart(2, '0');
+        const timeStr = `${hours}:${minutes}`;
+        window.appState.timeline.push({ time: timeStr, activity: '', details: '' });
+        renderTimelineEditor(parentDom);
+        if (typeof window.updatePreview === 'function') window.updatePreview();
+    };
+
+    btnGroup.appendChild(sortBtn);
+    btnGroup.appendChild(addBtn);
+    header.appendChild(btnGroup);
 
     const body = document.createElement('div');
     body.className = 'editor-section-body';
-    // If the section already existed, it should default to open to prevent jarring UX during active editing
+    body.style.padding = '0'; // Clean table look
     body.style.display = 'block';
 
-    header.addEventListener('click', () => {
-        const isHidden = body.style.display === 'none';
-        body.style.display = isHidden ? 'block' : 'none';
-        header.classList.toggle('active', isHidden);
-    });
+    const table = document.createElement('table');
+    table.style.width = '100%';
+    table.style.borderCollapse = 'collapse';
+    table.style.fontSize = '13px';
 
-    const wrap = document.createElement('div');
-    wrap.style.display = 'flex';
-    wrap.style.flexDirection = 'column';
-    wrap.style.gap = '15px';
+    // Table Header
+    const thead = document.createElement('thead');
+    thead.style.backgroundColor = 'rgba(255,255,255,0.05)';
+    thead.innerHTML = `
+        <tr>
+            <th id="timeline-time-header" style="padding: 10px; text-align: left; width: 100px; border-bottom: 1px solid var(--border); cursor: pointer;" title="Click to sort chronologically">TIME ⇅</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">ACTIVITY</th>
+            <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">DETAILS</th>
+            <th style="padding: 10px; text-align: center; width: 50px; border-bottom: 1px solid var(--border);"></th>
+        </tr>
+    `;
+    table.appendChild(thead);
 
+    thead.querySelector('#timeline-time-header').onclick = () => {
+        window.appState.timeline.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
+        renderTimelineEditor(parentDom);
+        if (typeof window.updatePreview === 'function') window.updatePreview();
+    };
+
+    const tbody = document.createElement('tbody');
     window.appState.timeline.forEach((item, index) => {
-        const row = document.createElement('div');
-        row.style.display = 'grid';
-        row.style.gridTemplateColumns = '100px 1fr 2fr 40px';
-        row.style.gap = '10px';
-        row.style.alignItems = 'start';
-        row.style.padding = '10px';
-        row.style.backgroundColor = 'rgba(255,255,255,0.02)';
-        row.style.border = '1px solid rgba(255,255,255,0.05)';
-        row.style.borderRadius = '4px';
+        const tr = document.createElement('tr');
+        tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
 
-        const timeWrap = document.createElement('div');
-        timeWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:#aaa;">Time</label>`;
-        const timeInput = document.createElement('input');
-        timeInput.type = 'time';
+        // Time Cell
+        const tdTime = document.createElement('td');
+        tdTime.style.padding = '8px 10px';
+        const invTime = document.createElement('input');
+        invTime.type = 'text';
+        invTime.value = item.time || '';
+        invTime.style.width = '100%';
+        invTime.style.background = 'transparent';
+        invTime.style.border = 'none';
+        invTime.style.color = 'var(--text-main)';
+        invTime.style.fontSize = 'inherit';
+        invTime.oninput = (e) => {
+            window.appState.timeline[index].time = e.target.value;
+            if (typeof window.updatePreview === 'function') window.updatePreview();
+        };
+        tdTime.appendChild(invTime);
 
-        // Convert "5:12 PM" -> "17:12" for <input type="time">
-        function parseTimeToInputFormat(timeStr) {
-            if (!timeStr) return '';
-            const match = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
-            if (!match) return timeStr; // Fallback if already HH:MM or unknown format
-            let [, h, m, modifier] = match;
-            let hours = parseInt(h, 10);
-            if (modifier.toUpperCase() === 'PM' && hours < 12) hours += 12;
-            if (modifier.toUpperCase() === 'AM' && hours === 12) hours = 0;
-            return `${hours.toString().padStart(2, '0')}:${m}`;
-        }
-
-        function formatTimeFromInput(val24) {
-            if (!val24) return '';
-            const [h, m] = val24.split(':');
-            let hours = parseInt(h, 10);
-            const modifier = hours >= 12 ? 'PM' : 'AM';
-            if (hours > 12) hours -= 12;
-            if (hours === 0) hours = 12;
-            return `${hours}:${m} ${modifier}`;
-        }
-
-        timeInput.value = parseTimeToInputFormat(item.time);
-        timeInput.addEventListener('input', (e) => {
-            window.appState.timeline[index].time = formatTimeFromInput(e.target.value);
-            window.updatePreview();
-        });
-        timeWrap.appendChild(timeInput);
-
-        const actWrap = document.createElement('div');
-        actWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:#aaa;">Activity</label>`;
-        const actInput = document.createElement('input');
-        actInput.type = 'text';
-        actInput.value = item.activity || '';
-        actInput.addEventListener('input', (e) => {
+        // Activity Cell
+        const tdAct = document.createElement('td');
+        tdAct.style.padding = '8px 10px';
+        const invAct = document.createElement('input');
+        invAct.type = 'text';
+        invAct.value = item.activity || '';
+        invAct.style.width = '100%';
+        invAct.style.background = 'transparent';
+        invAct.style.border = 'none';
+        invAct.style.color = 'var(--text-main)';
+        invAct.style.fontSize = 'inherit';
+        invAct.oninput = (e) => {
             window.appState.timeline[index].activity = e.target.value;
-            window.updatePreview();
-        });
-        actWrap.appendChild(actInput);
+            if (typeof window.updatePreview === 'function') window.updatePreview();
+        };
+        tdAct.appendChild(invAct);
 
-        const notesWrap = document.createElement('div');
-        notesWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:#aaa;">Notes</label>`;
-        const notesInput = document.createElement('textarea');
-        notesInput.rows = 2;
-        notesInput.value = item.notes || '';
-        notesInput.addEventListener('input', (e) => {
-            window.appState.timeline[index].notes = e.target.value;
-            window.updatePreview();
-        });
-        notesWrap.appendChild(notesInput);
+        // Details Cell
+        const tdDet = document.createElement('td');
+        tdDet.style.padding = '8px 10px';
+        const invDet = document.createElement('input');
+        invDet.type = 'text';
+        invDet.value = item.details || item.notes || '';
+        invDet.style.width = '100%';
+        invDet.style.background = 'transparent';
+        invDet.style.border = 'none';
+        invDet.style.color = 'var(--text-main)';
+        invDet.style.fontSize = 'inherit';
+        invDet.oninput = (e) => {
+            window.appState.timeline[index].details = e.target.value;
+            if (typeof window.updatePreview === 'function') window.updatePreview();
+        };
+        tdDet.appendChild(invDet);
 
-        const delBtnWrap = document.createElement('div');
-        delBtnWrap.innerHTML = `<label style="display:block;margin-bottom:5px;font-size:11px;color:transparent;">Del</label>`;
+        // Action Cell
+        const tdAction = document.createElement('td');
+        tdAction.style.padding = '8px 10px';
+        tdAction.style.textAlign = 'center';
         const delBtn = document.createElement('button');
-        delBtn.type = 'button';
         delBtn.innerHTML = '🗑️';
-        delBtn.className = 'btn btn-danger';
-        delBtn.style.padding = '8px';
-        delBtn.style.width = '100%';
+        delBtn.style.background = 'transparent';
+        delBtn.style.border = 'none';
+        delBtn.style.cursor = 'pointer';
+        delBtn.style.opacity = '0.5';
+        delBtn.style.transition = 'opacity 0.2s';
+        delBtn.onmouseover = () => delBtn.style.opacity = '1';
+        delBtn.onmouseout = () => delBtn.style.opacity = '0.5';
         delBtn.onclick = () => {
             if (confirm('Remove this timeline entry?')) {
                 window.appState.timeline.splice(index, 1);
-                window.updatePreview();
                 renderTimelineEditor(parentDom);
+                if (typeof window.updatePreview === 'function') window.updatePreview();
             }
         };
-        delBtnWrap.appendChild(delBtn);
+        tdAction.appendChild(delBtn);
 
-        row.appendChild(timeWrap);
-        row.appendChild(actWrap);
-        row.appendChild(notesWrap);
-        row.appendChild(delBtnWrap);
-        wrap.appendChild(row);
+        tr.appendChild(tdTime);
+        tr.appendChild(tdAct);
+        tr.appendChild(tdDet);
+        tr.appendChild(tdAction);
+        tbody.appendChild(tr);
     });
 
-    const addBtnWrap = document.createElement('div');
-    addBtnWrap.style.marginTop = '15px';
-    addBtnWrap.style.textAlign = 'center';
-    const addBtn = document.createElement('button');
-    addBtn.type = 'button';
-    addBtn.className = 'btn btn-secondary';
-    addBtn.textContent = '+ Add Timeline Entry';
-    addBtn.onclick = () => {
-        window.appState.timeline.push({ time: '', activity: '', notes: '' });
-        window.updatePreview();
-        renderTimelineEditor(parentDom);
-    };
-    addBtnWrap.appendChild(addBtn);
-    wrap.appendChild(addBtnWrap);
+    if (window.appState.timeline.length === 0) {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td colspan="4" style="padding: 30px; text-align: center; color: var(--text-muted); font-style: italic;">No timeline entries recorded.</td>`;
+        tbody.appendChild(tr);
+    }
 
-    body.appendChild(wrap);
+    table.appendChild(tbody);
+    body.appendChild(table);
     section.appendChild(header);
     section.appendChild(body);
 }

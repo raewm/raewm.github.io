@@ -6,7 +6,7 @@ const appState = {
     systemProvider: '',
     timeline: [],
     generalComments: '',
-    qaChecks: {}
+    activePlantIndex: null // New: tracks which plant is being checked
 };
 
 // ===== Vessel Profiles Configuration =====
@@ -98,9 +98,10 @@ function addPlant() {
     container.appendChild(plantEntry);
 
     // Add event listeners
-    plantEntry.querySelector('.plant-name').addEventListener('input', updatePlants);
-    plantEntry.querySelector('.vessel-type').addEventListener('change', updatePlants);
-    plantEntry.querySelector('.vessel-profile').addEventListener('change', updatePlants);
+    plantEntry.querySelectorAll('input, select').forEach(el => {
+        el.addEventListener('input', updatePlants);
+        el.addEventListener('change', updatePlants);
+    });
 
     updatePlants();
 }
@@ -144,71 +145,131 @@ function updateProfileOptions(selectElement) {
 
 function updatePlants() {
     const plantEntries = document.querySelectorAll('.plant-entry');
-    appState.plants = [];
+    const newPlants = [];
 
-    plantEntries.forEach(entry => {
+    plantEntries.forEach((entry, idx) => {
         const name = entry.querySelector('.plant-name').value;
         const vesselType = entry.querySelector('.vessel-type').value;
         const profile = entry.querySelector('.vessel-profile').value;
 
-        if (name && vesselType && profile) {
-            appState.plants.push({ name, vesselType, profile });
+        let checks = {};
+        if (appState.plants[idx]) {
+            checks = appState.plants[idx].checks || {};
         }
+
+        // Always push to appState so the index exists, but use placeholders if empty
+        newPlants.push({
+            name: name || `Plant #${idx + 1}`,
+            vesselType: vesselType || 'Unknown',
+            profile: profile || 'None',
+            checks
+        });
     });
 
+    appState.plants = newPlants;
     updateQAChecks();
     saveDraft();
 }
 
 // ===== QA Checks Management =====
 function updateQAChecks() {
-    const checksNeeded = new Set();
-
-    appState.plants.forEach(plant => {
-        const key = `${plant.vesselType}-${plant.profile}`;
-        const checks = requiredChecks[key] || [];
-        checks.forEach(check => checksNeeded.add(check));
-    });
-
-    renderQAChecks(Array.from(checksNeeded));
-}
-
-function renderQAChecks(checks) {
     const container = document.getElementById('qa-checks-container');
     container.innerHTML = '';
 
-    checks.forEach(checkType => {
-        const checkCard = createCheckCard(checkType);
-        container.appendChild(checkCard);
+    console.log(`Updating QA Checks for ${appState.plants.length} plants`);
+
+    appState.plants.forEach((plant, pIdx) => {
+        const key = `${plant.vesselType}-${plant.profile}`;
+        const checks = requiredChecks[key] || [];
+
+        console.log(`Processing plant ${pIdx}: ${plant.name}, Key: ${key}, Checks found: ${checks.length}`);
+
+        const vesselHeader = document.createElement('h2');
+        vesselHeader.style.margin = '40px 0 20px 0';
+        vesselHeader.style.padding = '12px 20px';
+        vesselHeader.style.backgroundColor = 'rgba(255, 255, 255, 0.08)';
+        vesselHeader.style.color = '#ffffff';
+        vesselHeader.style.borderRadius = '8px';
+        vesselHeader.style.borderLeft = '4px solid #4a90e2';
+        vesselHeader.textContent = `QA Checks: ${plant.name} (${plant.vesselType})`;
+        container.appendChild(vesselHeader);
+
+        if (checks.length > 0) {
+            checks.forEach(checkType => {
+                try {
+                    const checkCard = createCheckCard(checkType, pIdx, plant.name);
+                    container.appendChild(checkCard);
+                } catch (err) {
+                    console.error(`Error creating card for ${checkType} (Plant ${pIdx}):`, err);
+                }
+            });
+        } else {
+            const placeholder = document.createElement('p');
+            placeholder.style.padding = '20px';
+            placeholder.style.color = '#666';
+            placeholder.style.fontStyle = 'italic';
+            placeholder.textContent = 'Please select a valid Vessel Type and Profile to see required QA checks.';
+            container.appendChild(placeholder);
+        }
     });
 }
 
-function createCheckCard(checkType) {
+function createCheckCard(checkType, plantIdx, plantName) {
     const card = document.createElement('section');
     card.className = 'card';
-    card.id = `${checkType}-card`;
+    card.id = `${checkType}-card-${plantIdx}`;
     card.dataset.checkType = checkType;
+    card.dataset.plantIndex = plantIdx;
 
-    const content = getCheckContent(checkType);
+    const content = getCheckContent(checkType, plantIdx);
     card.innerHTML = content;
+
+    // Update title to include plant name
+    const h2 = card.querySelector('h2');
+    if (h2) h2.textContent = `${plantName} - ${h2.textContent}`;
+
+    // Update all IDs and names in the content to be unique per plant
+    card.querySelectorAll('[id], [name]').forEach(el => {
+        if (el.id) el.id = `${el.id}-${plantIdx}`;
+        if (el.name) el.name = `${el.name}-${plantIdx}`;
+    });
+
+    // Update onchange/onclick handlers if they reference QA calculation/preview functions
+    const validFunctions = ['calculate', 'preview', 'toggle', 'log', 'captureGPS'];
+    card.querySelectorAll('[onchange], [onclick]').forEach(el => {
+        ['onchange', 'onclick'].forEach(attr => {
+            const val = el.getAttribute(attr);
+            if (val && validFunctions.some(f => val.includes(f)) && val.includes('(')) {
+                // Only inject pIdx if it's one of our known functions and doesn't already have it
+                const newVal = val.replace(/\(([^)]*)\)/, `($1${val.match(/\(\s*\)/) ? '' : ', '}${plantIdx})`);
+                el.setAttribute(attr, newVal);
+            }
+        });
+    });
 
     // Add event listeners to all inputs
     setTimeout(() => {
         card.querySelectorAll('input, textarea, select').forEach(input => {
             input.addEventListener('input', () => {
-                saveCheckData(checkType);
-                calculateDifferences(checkType);
+                saveCheckData(checkType, plantIdx);
+                calculateDifferences(checkType, plantIdx);
             });
             input.addEventListener('change', () => {
-                saveCheckData(checkType);
-                calculateDifferences(checkType);
+                saveCheckData(checkType, plantIdx);
+                calculateDifferences(checkType, plantIdx);
             });
         });
+
+        // Restore existing data
+        const existingData = appState.plants[plantIdx].checks[checkType];
+        if (existingData) {
+            restoreCheckData(checkType, plantIdx, existingData);
+        }
 
         // Add log to timeline button handler
         const logBtn = card.querySelector('.log-timeline-btn');
         if (logBtn) {
-            logBtn.addEventListener('click', () => logCheckToTimeline(checkType));
+            logBtn.addEventListener('click', () => logCheckToTimeline(checkType, plantIdx));
         }
     }, 0);
 
@@ -216,30 +277,30 @@ function createCheckCard(checkType) {
 }
 
 // ===== Check Content Generators =====
-function getCheckContent(checkType) {
+function getCheckContent(checkType, plantIdx) {
     switch (checkType) {
         case 'positionCheck':
-            return createPositionCheckForm();
+            return createPositionCheckForm(plantIdx);
         case 'hullStatus':
-            return createHullStatusForm();
+            return createHullStatusForm(plantIdx);
         case 'draftSensorLight':
-            return createDraftSensorLightForm();
+            return createDraftSensorLightForm(plantIdx);
         case 'draftSensorLoaded':
-            return createDraftSensorLoadedForm();
+            return createDraftSensorLoadedForm(plantIdx);
         case 'ullageLight':
-            return createUllageLightForm();
+            return createUllageLightForm(plantIdx);
         case 'ullageLoaded':
-            return createUllageLoadedForm();
+            return createUllageLoadedForm(plantIdx);
         case 'dragheadDepth':
-            return createDragheadDepthForm();
+            return createDragheadDepthForm(plantIdx);
         case 'suctionMouthDepth':
-            return createSuctionMouthDepthForm();
+            return createSuctionMouthDepthForm(plantIdx);
         case 'velocity':
-            return createVelocityForm();
+            return createVelocityForm(plantIdx);
         case 'bucketDepth':
-            return createBucketDepthForm();
+            return createBucketDepthForm(plantIdx);
         case 'bucketPosition':
-            return createBucketPositionForm();
+            return createBucketPositionForm(plantIdx);
         default:
             return '<p>Unknown check type</p>';
     }
@@ -307,8 +368,8 @@ function createPositionCheckForm() {
     `;
 }
 
-function createHullStatusForm() {
-    const data = appState.qaChecks.hullStatus || {};
+function createHullStatusForm(plantIdx) {
+    const data = appState.plants[plantIdx]?.checks.hullStatus || {};
     const openPhoto = data['hull-open-photo'] || '';
     const closePhoto = data['hull-close-photo'] || '';
 
@@ -327,8 +388,8 @@ function createHullStatusForm() {
         <div class="form-group">
             <label>Photo Reference (Closed to Open)</label>
             <div class="photo-actions">
-                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-open-capture').click()">📷 Take Photo</button>
-                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-open-upload').click()">📁 Upload Image</button>
+                <button type="button" class="btn-secondary" onclick="this.closest('.form-group').querySelectorAll('input')[0].click()">📷 Take Photo</button>
+                <button type="button" class="btn-secondary" onclick="this.closest('.form-group').querySelectorAll('input')[1].click()">📁 Upload Image</button>
             </div>
             <input type="file" id="hull-open-capture" accept="image/*" capture="environment" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-open-photo-preview', 'hull-open-photo')">
             <input type="file" id="hull-open-upload" accept="image/*" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-open-photo-preview', 'hull-open-photo')">
@@ -338,8 +399,8 @@ function createHullStatusForm() {
         <div class="form-group">
             <label>Photo Reference (Open to Closed)</label>
             <div class="photo-actions">
-                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-close-capture').click()">📷 Take Photo</button>
-                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-close-upload').click()">📁 Upload Image</button>
+                <button type="button" class="btn-secondary" onclick="this.closest('.form-group').querySelectorAll('input')[0].click()">📷 Take Photo</button>
+                <button type="button" class="btn-secondary" onclick="this.closest('.form-group').querySelectorAll('input')[1].click()">📁 Upload Image</button>
             </div>
             <input type="file" id="hull-close-capture" accept="image/*" capture="environment" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-close-photo-preview', 'hull-close-photo')">
             <input type="file" id="hull-close-upload" accept="image/*" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-close-photo-preview', 'hull-close-photo')">
@@ -632,16 +693,16 @@ function createDraftSensorLoadedForm() {
 }
 
 // Toggle functions for split draft check methods
-function toggleDraftLightMethod() {
-    const method = document.getElementById('draft-light-check-method')?.value;
-    document.getElementById('physical-draft-light-section')?.classList.toggle('hidden', method === 'simulated');
-    document.getElementById('simulated-draft-light-section')?.classList.toggle('hidden', method !== 'simulated');
+function toggleDraftLightMethod(plantIdx) {
+    const method = document.getElementById(`draft-light-check-method-${plantIdx}`)?.value;
+    document.getElementById(`physical-draft-light-section-${plantIdx}`)?.classList.toggle('hidden', method === 'simulated');
+    document.getElementById(`simulated-draft-light-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'simulated');
 }
 
-function toggleDraftLoadedMethod() {
-    const method = document.getElementById('draft-loaded-check-method')?.value;
-    document.getElementById('physical-draft-loaded-section')?.classList.toggle('hidden', method === 'simulated');
-    document.getElementById('simulated-draft-loaded-section')?.classList.toggle('hidden', method !== 'simulated');
+function toggleDraftLoadedMethod(plantIdx) {
+    const method = document.getElementById(`draft-loaded-check-method-${plantIdx}`)?.value;
+    document.getElementById(`physical-draft-loaded-section-${plantIdx}`)?.classList.toggle('hidden', method === 'simulated');
+    document.getElementById(`simulated-draft-loaded-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'simulated');
 }
 
 function createDraftSensorSimulatedForm() {
@@ -937,14 +998,14 @@ function createDragheadDepthForm() {
     `;
 }
 
-function toggleDragheadSections() {
-    const port = document.getElementById('draghead-check-port')?.checked;
-    const center = document.getElementById('draghead-check-center')?.checked;
-    const stbd = document.getElementById('draghead-check-stbd')?.checked;
+function toggleDragheadSections(plantIdx) {
+    const port = document.getElementById(`draghead-check-port-${plantIdx}`)?.checked;
+    const center = document.getElementById(`draghead-check-center-${plantIdx}`)?.checked;
+    const stbd = document.getElementById(`draghead-check-stbd-${plantIdx}`)?.checked;
 
-    document.getElementById('draghead-port-section')?.classList.toggle('hidden', !port);
-    document.getElementById('draghead-center-section')?.classList.toggle('hidden', !center);
-    document.getElementById('draghead-stbd-section')?.classList.toggle('hidden', !stbd);
+    document.getElementById(`draghead-port-section-${plantIdx}`)?.classList.toggle('hidden', !port);
+    document.getElementById(`draghead-center-section-${plantIdx}`)?.classList.toggle('hidden', !center);
+    document.getElementById(`draghead-stbd-section-${plantIdx}`)?.classList.toggle('hidden', !stbd);
 }
 
 function createSuctionMouthDepthForm() {
@@ -1084,10 +1145,10 @@ function createVelocityForm() {
     `;
 }
 
-function toggleVelocityMethod() {
-    const method = document.getElementById('velocity-method')?.value;
-    document.getElementById('velocity-dye-section')?.classList.toggle('hidden', method !== 'dye');
-    document.getElementById('velocity-meter-section')?.classList.toggle('hidden', method !== 'meter');
+function toggleVelocityMethod(plantIdx) {
+    const method = document.getElementById(`velocity-method-${plantIdx}`)?.value;
+    document.getElementById(`velocity-dye-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'dye');
+    document.getElementById(`velocity-meter-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'meter');
 }
 
 function createBucketDepthForm() {
@@ -1178,7 +1239,7 @@ function createBucketPositionForm() {
         <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
     `;
 }
-function captureGPS(type) {
+function captureGPS(type, plantIdx) {
     const button = event.target;
 
     if (!navigator.geolocation) {
@@ -1194,8 +1255,10 @@ function captureGPS(type) {
             const lat = position.coords.latitude;
             const lon = position.coords.longitude;
 
-            document.getElementById('handheld-lat').value = lat.toFixed(6);
-            document.getElementById('handheld-lon').value = lon.toFixed(6);
+            const latEl = document.getElementById(`handheld-lat-${plantIdx}`);
+            const lonEl = document.getElementById(`handheld-lon-${plantIdx}`);
+            if (latEl) latEl.value = lat.toFixed(6);
+            if (lonEl) lonEl.value = lon.toFixed(6);
 
             button.disabled = false;
             button.textContent = '✅ GPS Captured';
@@ -1204,7 +1267,7 @@ function captureGPS(type) {
                 button.textContent = '📡 Capture Device GPS';
             }, 2000);
 
-            saveCheckData('positionCheck');
+            saveCheckData('positionCheck', plantIdx);
         },
         (error) => {
             alert(`GPS Error: ${error.message}`);
@@ -1224,19 +1287,28 @@ function captureGPS(type) {
 }
 
 // Shows a photo preview for hull status file inputs and persists the data URL to state
-function previewHullPhoto(inputEl, previewId, stateKey) {
-    const preview = document.getElementById(previewId);
+// Shows a photo preview for hull status file inputs and persists the data URL to state
+function previewHullPhoto(inputEl, previewId, stateKey, plantIdx) {
+    // Try to find the preview image via DOM traversal first, fallback to ID
+    const preview = inputEl.closest('.form-group')?.querySelector('img') || document.getElementById(`${previewId}-${plantIdx}`) || document.getElementById(previewId);
     const file = inputEl.files && inputEl.files[0];
     if (!file || !preview) return;
+
     const reader = new FileReader();
     reader.onload = (e) => {
         const dataUrl = e.target.result;
         preview.src = dataUrl;
         preview.style.display = 'block';
-        // Persist photo data directly since file inputs don't serialize via .value
-        if (!appState.qaChecks.hullStatus) appState.qaChecks.hullStatus = {};
-        appState.qaChecks.hullStatus[stateKey || inputEl.id] = dataUrl;
-        saveDraft();
+
+        // Persist photo data directly
+        const plant = appState.plants[plantIdx];
+        if (plant) {
+            if (!plant.checks.hullStatus) plant.checks.hullStatus = {};
+            // If stateKey is not provided, derive from ID but strip the plant index
+            const key = stateKey || inputEl.id.replace(new RegExp(`-${plantIdx}$`), '');
+            plant.checks.hullStatus[key] = dataUrl;
+            saveDraft();
+        }
     };
     reader.readAsDataURL(file);
 }
@@ -1251,12 +1323,15 @@ function updateAppState() {
     saveDraft();
 }
 
-function saveCheckData(checkType) {
-    const card = document.getElementById(`${checkType}-card`);
+function saveCheckData(checkType, plantIdx) {
+    const card = document.getElementById(`${checkType}-card-${plantIdx}`);
     if (!card) return;
 
+    const plant = appState.plants[plantIdx];
+    if (!plant.checks[checkType]) plant.checks[checkType] = {};
+
     // Initialize with existing data to preserve asynchronously loaded Base64 URLs (e.g., from Hull Status photos)
-    const data = { ...(appState.qaChecks[checkType] || {}) };
+    const data = plant.checks[checkType];
 
     card.querySelectorAll('input, textarea, select').forEach(input => {
         if (input.id) {
@@ -1271,7 +1346,6 @@ function saveCheckData(checkType) {
         }
     });
 
-    appState.qaChecks[checkType] = data;
     saveDraft();
 }
 
@@ -1324,22 +1398,28 @@ function loadDraft() {
             // Restore QA check data
             Object.assign(appState, data);
 
+            // Trigger a re-render of QA checks now that appState is fully populated
+            updateQAChecks();
+
+            // Run toggles for all plants after rendering
             setTimeout(() => {
-                Object.keys(data.qaChecks || {}).forEach(checkType => {
-                    const checkData = data.qaChecks[checkType];
-                    Object.keys(checkData).forEach(inputId => {
-                        const input = document.getElementById(inputId);
-                        if (input) {
-                            if (input.type === 'checkbox') {
-                                input.checked = checkData[inputId] === true || checkData[inputId] === 'true';
-                            } else {
-                                input.value = checkData[inputId];
-                            }
-                        }
-                    });
+                appState.plants.forEach((plant, pIdx) => {
+                    const key = `${plant.vesselType}-${plant.profile}`;
+                    const checks = requiredChecks[key] || [];
+
+                    if (checks.includes('velocity')) {
+                        if (typeof toggleVelocityMethod === 'function') toggleVelocityMethod(pIdx);
+                    }
+                    if (checks.includes('dragheadDepth')) {
+                        if (typeof toggleDragheadSections === 'function') toggleDragheadSections(pIdx);
+                    }
+                    if (checks.includes('draftSensorLight')) {
+                        if (typeof toggleDraftLightMethod === 'function') toggleDraftLightMethod(pIdx);
+                    }
+                    if (checks.includes('draftSensorLoaded')) {
+                        if (typeof toggleDraftLoadedMethod === 'function') toggleDraftLoadedMethod(pIdx);
+                    }
                 });
-                if (typeof toggleVelocityMethod === 'function') toggleVelocityMethod();
-                if (typeof toggleDragheadSections === 'function') toggleDragheadSections();
             }, 500);
         }
     } catch (e) {
@@ -1365,16 +1445,22 @@ function exportJSON() {
     }
 
     // Strip check entries where every value is empty/undefined
-    // so the trip-report only sees checks that were actually performed
     function hasAnyValue(obj) {
         if (!obj) return false;
         return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
     }
-    const filteredChecks = {};
-    Object.entries(appState.qaChecks).forEach(([type, data]) => {
-        if (hasAnyValue(data)) {
-            filteredChecks[type] = data;
+
+    // Filter checks for each plant
+    appState.plants.forEach(plant => {
+        const filtered = {};
+        if (plant.checks) {
+            Object.entries(plant.checks).forEach(([type, data]) => {
+                if (hasAnyValue(data)) {
+                    filtered[type] = data;
+                }
+            });
         }
+        plant.checks = filtered;
     });
 
     // Build export object
@@ -1385,12 +1471,10 @@ function exportJSON() {
             weather: appState.weatherConditions,
             qaTeamMembers: appState.qaTeam.split(',').map(s => s.trim()).filter(s => s),
             systemProvider: appState.systemProvider,
-            draftCombo: appState.draftCombo,
             timeline: appState.timeline,
             generalComments: appState.generalComments,
             exportedAt: new Date().toISOString()
-        },
-        checks: filteredChecks
+        }
     };
 
     // Generate filename
@@ -1428,7 +1512,10 @@ function addTimelineComment() {
     }
 }
 
-function logCheckToTimeline(checkType) {
+function logCheckToTimeline(checkType, plantIdx) {
+    saveCheckData(checkType, plantIdx);
+
+    const plant = appState.plants[plantIdx];
     const checkNames = {
         'positionCheck': 'Position Check',
         'hullStatus': 'Hull Status Check',
@@ -1444,14 +1531,14 @@ function logCheckToTimeline(checkType) {
         'bucketPosition': 'Bucket Position Check'
     };
 
-    const card = document.getElementById(`${checkType}-card`);
+    const card = document.getElementById(`${checkType}-card-${plantIdx}`);
     if (card) {
         card.classList.add('check-logged');
     }
 
     const entry = {
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-        activity: `${checkNames[checkType]} Completed`,
+        activity: `[${plant.name}] ${checkNames[checkType]} Completed`,
         notes: '',
         timestamp: new Date().toISOString()
     };
@@ -1461,15 +1548,17 @@ function logCheckToTimeline(checkType) {
     saveDraft();
 
     // Show confirmation
-    const logBtn = card.querySelector('.log-timeline-btn');
-    if (logBtn) {
-        const originalText = logBtn.textContent;
-        logBtn.textContent = '✓ Logged to Timeline';
-        logBtn.disabled = true;
-        setTimeout(() => {
-            logBtn.textContent = originalText;
-            logBtn.disabled = false;
-        }, 2000);
+    if (card) {
+        const logBtn = card.querySelector('.log-timeline-btn');
+        if (logBtn) {
+            const originalText = logBtn.textContent;
+            logBtn.textContent = '✓ Logged to Timeline';
+            logBtn.disabled = true;
+            setTimeout(() => {
+                logBtn.textContent = originalText;
+                logBtn.disabled = false;
+            }, 2000);
+        }
     }
 }
 
@@ -1528,52 +1617,80 @@ function deleteTimelineEntry(index) {
     }
 }
 
+function restoreCheckData(checkType, plantIdx, data) {
+    const card = document.getElementById(`${checkType}-card-${plantIdx}`);
+    if (!card) return;
+
+    for (const [key, value] of Object.entries(data)) {
+        const input = card.querySelector(`[id="${key}-${plantIdx}"], [name="${key}-${plantIdx}"]`);
+        if (input) {
+            if (input.type === 'checkbox') {
+                input.checked = value;
+            } else {
+                input.value = value;
+            }
+        }
+    }
+
+    // Special restoration for photos (previews)
+    if (checkType === 'hullStatus') {
+        const openPreview = document.getElementById(`hull-open-photo-preview-${plantIdx}`);
+        const closePreview = document.getElementById(`hull-close-photo-preview-${plantIdx}`);
+
+        if (openPreview && data['hull-open-photo']) {
+            openPreview.src = data['hull-open-photo'];
+            openPreview.style.display = 'block';
+        }
+        if (closePreview && data['hull-close-photo']) {
+            closePreview.src = data['hull-close-photo'];
+            closePreview.style.display = 'block';
+        }
+    }
+}
+
 // ===== Auto-Calculation Functions =====
-function calculateDifferences(checkType) {
+function calculateDifferences(checkType, plantIdx) {
     switch (checkType) {
         case 'positionCheck':
-            calculatePositionDifference();
+            calculatePositionDifference(plantIdx);
             break;
         case 'draftSensorLight':
-            calculatePhysicalDraftDifferences('light');
-            calculateSimulatedDraftDifferences('light');
+            calculatePhysicalDraftDifferences('light', plantIdx);
+            calculateSimulatedDraftDifferences('light', plantIdx);
             break;
         case 'draftSensorLoaded':
-            calculatePhysicalDraftDifferences('loaded');
-            calculateSimulatedDraftDifferences('loaded');
-            break;
-        case 'draftSensorSimulated':
-            calculateStandaloneSimulatedDraftDifferences();
+            calculatePhysicalDraftDifferences('loaded', plantIdx);
+            calculateSimulatedDraftDifferences('loaded', plantIdx);
             break;
         case 'dragheadDepth':
-            calculateDragheadDifferences();
+            calculateDragheadDifferences(plantIdx);
             break;
         case 'suctionMouthDepth':
-            calculateSuctionDifferences();
+            calculateSuctionDifferences(plantIdx);
             break;
         case 'velocity':
-            calculateVelocity();
+            calculateVelocity(plantIdx);
             break;
         case 'ullageLight':
-            calculateUllageDifferences('light');
+            calculateUllageDifferences('light', plantIdx);
             break;
         case 'ullageLoaded':
-            calculateUllageDifferences('loaded');
+            calculateUllageDifferences('loaded', plantIdx);
             break;
         case 'bucketDepth':
-            calculateBucketDepthDifferences();
+            calculateBucketDepthDifferences(plantIdx);
             break;
         case 'bucketPosition':
-            calculateBucketPositionDifferences();
+            calculateBucketPositionDifferences(plantIdx);
             break;
     }
 }
 
-function calculatePositionDifference() {
-    const lat1 = parseFloat(document.getElementById('handheld-lat')?.value);
-    const lon1 = parseFloat(document.getElementById('handheld-lon')?.value);
-    const lat2 = parseFloat(document.getElementById('dqm-lat')?.value);
-    const lon2 = parseFloat(document.getElementById('dqm-lon')?.value);
+function calculatePositionDifference(plantIdx) {
+    const lat1 = parseFloat(document.getElementById(`handheld-lat-${plantIdx}`)?.value);
+    const lon1 = parseFloat(document.getElementById(`handheld-lon-${plantIdx}`)?.value);
+    const lat2 = parseFloat(document.getElementById(`dqm-lat-${plantIdx}`)?.value);
+    const lon2 = parseFloat(document.getElementById(`dqm-lon-${plantIdx}`)?.value);
 
     if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return;
 
@@ -1587,20 +1704,20 @@ function calculatePositionDifference() {
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const distance = R * c;
 
-    const diffInput = document.getElementById('position-diff');
+    const diffInput = document.getElementById(`position-diff-${plantIdx}`);
     if (diffInput) {
         diffInput.value = distance.toFixed(1);
     }
 }
 
-function calculatePhysicalDraftDifferences(condition) {
+function calculatePhysicalDraftDifferences(condition, plantIdx) {
     ['fwd', 'aft'].forEach(pos => {
-        const port = parseFloat(document.getElementById(`${condition}-${pos}-port`)?.value);
-        const stbd = parseFloat(document.getElementById(`${condition}-${pos}-stbd`)?.value);
-        const dqm = parseFloat(document.getElementById(`${condition}-dqm-${pos}`)?.value);
+        const port = parseFloat(document.getElementById(`${condition}-${pos}-port-${plantIdx}`)?.value);
+        const stbd = parseFloat(document.getElementById(`${condition}-${pos}-stbd-${plantIdx}`)?.value);
+        const dqm = parseFloat(document.getElementById(`${condition}-dqm-${pos}-${plantIdx}`)?.value);
 
-        const avgInput = document.getElementById(`${condition}-${pos}-avg`);
-        const diffInput = document.getElementById(`${condition}-${pos}-diff`);
+        const avgInput = document.getElementById(`${condition}-${pos}-avg-${plantIdx}`);
+        const diffInput = document.getElementById(`${condition}-${pos}-diff-${plantIdx}`);
 
         if (!isNaN(port) && !isNaN(stbd) && avgInput) {
             const avg = (port + stbd) / 2;
@@ -1618,14 +1735,14 @@ function calculatePhysicalDraftDifferences(condition) {
     });
 }
 
-function calculateSimulatedDraftDifferences(condition) {
+function calculateSimulatedDraftDifferences(condition, plantIdx) {
     // condition is 'light' or 'loaded'
     ['fwd', 'aft'].forEach(pos => {
-        const offset = parseFloat(document.getElementById(`sim-${condition}-${pos}-offset`)?.value) || 0;
+        const offset = parseFloat(document.getElementById(`sim-${condition}-${pos}-offset-${plantIdx}`)?.value) || 0;
         for (let i = 1; i <= 3; i++) {
-            const depth = parseFloat(document.getElementById(`sim-${condition}-${pos}-depth-${i}`)?.value);
-            const reading = parseFloat(document.getElementById(`sim-${condition}-${pos}-reading-${i}`)?.value);
-            const diffInput = document.getElementById(`sim-${condition}-${pos}-diff-${i}`);
+            const depth = parseFloat(document.getElementById(`sim-${condition}-${pos}-depth-${i}-${plantIdx}`)?.value);
+            const reading = parseFloat(document.getElementById(`sim-${condition}-${pos}-reading-${i}-${plantIdx}`)?.value);
+            const diffInput = document.getElementById(`sim-${condition}-${pos}-diff-${i}-${plantIdx}`);
             if (!isNaN(depth) && !isNaN(reading) && diffInput) {
                 diffInput.value = Math.abs((depth + offset) - reading).toFixed(1);
             }
@@ -1634,13 +1751,13 @@ function calculateSimulatedDraftDifferences(condition) {
 }
 
 // Auto-calculations for the standalone Simulated Draft card
-function calculateStandaloneSimulatedDraftDifferences() {
+function calculateStandaloneSimulatedDraftDifferences(plantIdx) {
     ['fwd', 'aft'].forEach(pos => {
-        const offset = parseFloat(document.getElementById(`sim-${pos}-offset`)?.value) || 0;
+        const offset = parseFloat(document.getElementById(`sim-${pos}-offset-${plantIdx}`)?.value) || 0;
         for (let i = 1; i <= 3; i++) {
-            const depth = parseFloat(document.getElementById(`sim-${pos}-depth-${i}`)?.value);
-            const reading = parseFloat(document.getElementById(`sim-${pos}-reading-${i}`)?.value);
-            const diffInput = document.getElementById(`sim-${pos}-diff-${i}`);
+            const depth = parseFloat(document.getElementById(`sim-${pos}-depth-${i}-${plantIdx}`)?.value);
+            const reading = parseFloat(document.getElementById(`sim-${pos}-reading-${i}-${plantIdx}`)?.value);
+            const diffInput = document.getElementById(`sim-${pos}-diff-${i}-${plantIdx}`);
             if (!isNaN(depth) && !isNaN(reading) && diffInput) {
                 diffInput.value = Math.abs((depth + offset) - reading).toFixed(1);
             }
@@ -1648,13 +1765,13 @@ function calculateStandaloneSimulatedDraftDifferences() {
     });
 }
 
-function calculateDragheadDifferences() {
+function calculateDragheadDifferences(plantIdx) {
     ['port', 'center', 'stbd'].forEach(side => {
-        const offset = parseFloat(document.getElementById(`draghead-${side}-offset`)?.value) || 0;
+        const offset = parseFloat(document.getElementById(`draghead-${side}-offset-${plantIdx}`)?.value) || 0;
         for (let i = 1; i <= 3; i++) {
-            const manual = parseFloat(document.getElementById(`draghead-${side}-manual-${i}`)?.value);
-            const dqm = parseFloat(document.getElementById(`draghead-${side}-dqm-${i}`)?.value);
-            const diffInput = document.getElementById(`draghead-${side}-diff-${i}`);
+            const manual = parseFloat(document.getElementById(`draghead-${side}-manual-${i}-${plantIdx}`)?.value);
+            const dqm = parseFloat(document.getElementById(`draghead-${side}-dqm-${i}-${plantIdx}`)?.value);
+            const diffInput = document.getElementById(`draghead-${side}-diff-${i}-${plantIdx}`);
 
             if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
                 diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
@@ -1663,13 +1780,13 @@ function calculateDragheadDifferences() {
     });
 }
 
-function calculateSuctionDifferences() {
-    const offset = parseFloat(document.getElementById('suction-offset')?.value) || 0;
+function calculateSuctionDifferences(plantIdx) {
+    const offset = parseFloat(document.getElementById(`suction-offset-${plantIdx}`)?.value) || 0;
 
     for (let i = 1; i <= 3; i++) {
-        const manual = parseFloat(document.getElementById(`suction-manual-${i}`)?.value);
-        const dqm = parseFloat(document.getElementById(`suction-dqm-${i}`)?.value);
-        const diffInput = document.getElementById(`suction-diff-${i}`);
+        const manual = parseFloat(document.getElementById(`suction-manual-${i}-${plantIdx}`)?.value);
+        const dqm = parseFloat(document.getElementById(`suction-dqm-${i}-${plantIdx}`)?.value);
+        const diffInput = document.getElementById(`suction-diff-${i}-${plantIdx}`);
 
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
             diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
@@ -1677,21 +1794,21 @@ function calculateSuctionDifferences() {
     }
 }
 
-function calculateVelocity() {
-    const method = document.getElementById('velocity-method')?.value;
+function calculateVelocity(plantIdx) {
+    const method = document.getElementById(`velocity-method-${plantIdx}`)?.value;
 
     if (method === 'dye') {
-        const pipeLength = parseFloat(document.getElementById('velocity-pipe-length')?.value);
+        const pipeLength = parseFloat(document.getElementById(`velocity-pipe-length-${plantIdx}`)?.value);
         if (!isNaN(pipeLength) && pipeLength > 0) {
             [1, 2, 3].forEach(i => {
-                const time = parseFloat(document.getElementById(`velocity-dye-time-${i}`)?.value);
-                const calcInput = document.getElementById(`velocity-dye-calc-${i}`);
+                const time = parseFloat(document.getElementById(`velocity-dye-time-${i}-${plantIdx}`)?.value);
+                const calcInput = document.getElementById(`velocity-dye-calc-${i}-${plantIdx}`);
                 if (!isNaN(time) && time > 0 && calcInput) {
                     const calculated = pipeLength / time;
                     calcInput.value = calculated.toFixed(2);
 
-                    const dqm = parseFloat(document.getElementById(`velocity-dye-dqm-${i}`)?.value);
-                    const diffInput = document.getElementById(`velocity-dye-diff-${i}`);
+                    const dqm = parseFloat(document.getElementById(`velocity-dye-dqm-${i}-${plantIdx}`)?.value);
+                    const diffInput = document.getElementById(`velocity-dye-diff-${i}-${plantIdx}`);
                     if (!isNaN(dqm) && diffInput) {
                         diffInput.value = Math.abs(calculated - dqm).toFixed(2);
                     }
@@ -1700,9 +1817,9 @@ function calculateVelocity() {
         }
     } else if (method === 'meter') {
         [1, 2, 3].forEach(i => {
-            const manual = parseFloat(document.getElementById(`velocity-meter-manual-${i}`)?.value);
-            const dqm = parseFloat(document.getElementById(`velocity-meter-dqm-${i}`)?.value);
-            const diffInput = document.getElementById(`velocity-meter-diff-${i}`);
+            const manual = parseFloat(document.getElementById(`velocity-meter-manual-${i}-${plantIdx}`)?.value);
+            const dqm = parseFloat(document.getElementById(`velocity-meter-dqm-${i}-${plantIdx}`)?.value);
+            const diffInput = document.getElementById(`velocity-meter-diff-${i}-${plantIdx}`);
 
             if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
                 diffInput.value = Math.abs(manual - dqm).toFixed(2);
@@ -1711,12 +1828,12 @@ function calculateVelocity() {
     }
 }
 
-function calculateUllageDifferences(condition) {
+function calculateUllageDifferences(condition, plantIdx) {
     // Forward: average port+stbd manual soundings vs DQM forward reading
-    const fwdPort = parseFloat(document.getElementById(`ullage-${condition}-fwd-port`)?.value);
-    const fwdStbd = parseFloat(document.getElementById(`ullage-${condition}-fwd-stbd`)?.value);
-    const dqmFwd = parseFloat(document.getElementById(`ullage-${condition}-dqm-fwd`)?.value);
-    const fwdDiff = document.getElementById(`ullage-${condition}-diff-fwd`);
+    const fwdPort = parseFloat(document.getElementById(`ullage-${condition}-fwd-port-${plantIdx}`)?.value);
+    const fwdStbd = parseFloat(document.getElementById(`ullage-${condition}-fwd-stbd-${plantIdx}`)?.value);
+    const dqmFwd = parseFloat(document.getElementById(`ullage-${condition}-dqm-fwd-${plantIdx}`)?.value);
+    const fwdDiff = document.getElementById(`ullage-${condition}-diff-fwd-${plantIdx}`);
 
     if (fwdDiff) {
         let manualFwd;
@@ -1733,10 +1850,10 @@ function calculateUllageDifferences(condition) {
     }
 
     // Aft: average port+stbd manual soundings vs DQM aft reading
-    const aftPort = parseFloat(document.getElementById(`ullage-${condition}-aft-port`)?.value);
-    const aftStbd = parseFloat(document.getElementById(`ullage-${condition}-aft-stbd`)?.value);
-    const dqmAft = parseFloat(document.getElementById(`ullage-${condition}-dqm-aft`)?.value);
-    const aftDiff = document.getElementById(`ullage-${condition}-diff-aft`);
+    const aftPort = parseFloat(document.getElementById(`ullage-${condition}-aft-port-${plantIdx}`)?.value);
+    const aftStbd = parseFloat(document.getElementById(`ullage-${condition}-aft-stbd-${plantIdx}`)?.value);
+    const dqmAft = parseFloat(document.getElementById(`ullage-${condition}-dqm-aft-${plantIdx}`)?.value);
+    const aftDiff = document.getElementById(`ullage-${condition}-diff-aft-${plantIdx}`);
 
     if (aftDiff) {
         let manualAft;
@@ -1753,24 +1870,24 @@ function calculateUllageDifferences(condition) {
     }
 }
 
-function calculateBucketDepthDifferences() {
-    const offset = parseFloat(document.getElementById('bucket-offset')?.value) || 0;
+function calculateBucketDepthDifferences(plantIdx) {
+    const offset = parseFloat(document.getElementById(`bucket-offset-${plantIdx}`)?.value) || 0;
 
     for (let i = 1; i <= 3; i++) {
-        const manual = parseFloat(document.getElementById(`bucket-manual-${i}`)?.value);
-        const dqm = parseFloat(document.getElementById(`bucket-dqm-${i}`)?.value);
-        const diffInput = document.getElementById(`bucket-diff-${i}`);
+        const manual = parseFloat(document.getElementById(`bucket-manual-${i}-${plantIdx}`)?.value);
+        const dqm = parseFloat(document.getElementById(`bucket-dqm-${i}-${plantIdx}`)?.value);
+        const diffInput = document.getElementById(`bucket-diff-${i}-${plantIdx}`);
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
             diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
         }
     }
 }
 
-function calculateBucketPositionDifferences() {
+function calculateBucketPositionDifferences(plantIdx) {
     for (let i = 1; i <= 3; i++) {
-        const manual = parseFloat(document.getElementById(`bucket-pos-manual-${i}`)?.value);
-        const dqm = parseFloat(document.getElementById(`bucket-pos-dqm-${i}`)?.value);
-        const diffInput = document.getElementById(`bucket-pos-diff-${i}`);
+        const manual = parseFloat(document.getElementById(`bucket-pos-manual-${i}-${plantIdx}`)?.value);
+        const dqm = parseFloat(document.getElementById(`bucket-pos-dqm-${i}-${plantIdx}`)?.value);
+        const diffInput = document.getElementById(`bucket-pos-diff-${i}-${plantIdx}`);
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
             diffInput.value = Math.abs(manual - dqm).toFixed(1);
         }
