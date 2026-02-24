@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="USACE Dredging Quality Management Window-Based QA Check Application">
+    <title>DQM QA Window</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="header-content">
+                <img src="assets/logo.png" alt="DQM Logo" class="logo">
+                <div class="title-group">
+                    <h1>DQM QA Window</h1>
+                    <p class="subtitle">National Dredging Quality Management Program</p>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button type="button" class="btn-primary" id="export-btn">📥 Export JSON</button>
+                <button type="button" class="btn-secondary" id="save-draft-btn">💾 Save Draft</button>
+                <button type="button" class="btn-danger" id="clear-btn">🗑️ Clear All</button>
+            </div>
+        </header>
+
+        <main id="app">
+            <div class="grid-layout">
+                <!-- Left Column: Trip Info -->
+                <aside class="sidebar">
+                    <section class="card" id="metadata-section">
+                        <h2>Trip Information</h2>
+                        
+                        <div class="form-group">
+                            <label for="check-date">Check Date</label>
+                            <input type="date" id="check-date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="weather-conditions">Weather & Sea Conditions</label>
+                            <input type="text" id="weather-conditions" placeholder="e.g., 2ft seas, 15kt wind">
+                        </div>
+
+                        <div class="form-group">
+                            <label>Plants/Vessels</label>
+                            <div id="plants-container"></div>
+                            <button type="button" class="btn-outline" id="add-plant-btn">+ Add Plant</button>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="qa-team">QA Team Member(s)</label>
+                            <input type="text" id="qa-team" placeholder="Name(s)">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="system-provider">System Provider</label>
+                            <input type="text" id="system-provider" placeholder="Dredge Representative">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="general-comments">General Comments</label>
+                            <textarea id="general-comments" rows="3" placeholder="Overall observations..."></textarea>
+                        </div>
+                    </section>
+                </aside>
+
+                <!-- Right Column: Timeline & Integration -->
+                <section class="main-content">
+                    <section class="card timeline-card">
+                        <div class="card-header">
+                            <h2>QA Timeline</h2>
+                            <div class="card-actions">
+                                <button type="button" class="btn-primary btn-add-qa" id="add-qa-btn">⚡ Add QA Element</button>
+                                <button type="button" class="btn-outline" id="add-comment-btn">+ Comment</button>
+                            </div>
+                        </div>
+
+                        <div class="timeline-table-container">
+                            <table class="timeline-table" id="timeline-table">
+                                <thead>
+                                    <tr>
+                                        <th>Time</th>
+                                        <th>Activity</th>
+                                        <th>Notes</th>
+                                        <th class="col-action"></th>
+                                    </tr>
+                                </thead>
+                                <tbody id="timeline-body">
+                                    <!-- Timeline entries will be added here -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </section>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <p>USACE National Dredging Quality Management Program</p>
+        </footer>
+    </div>
+
+    <!-- Modal System -->
+    <div id="modal-overlay" class="modal-overlay hidden">
+        <div class="modal-window">
+            <div class="modal-header">
+                <h2 id="modal-title">QA Check</h2>
+                <button type="button" class="modal-close" id="modal-close-btn">&times;</button>
+            </div>
+            <div class="modal-body" id="modal-content">
+                <!-- Check content will be injected here -->
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn-primary" id="modal-log-btn">📋 Log to Timeline</button>
+                <button type="button" class="btn-secondary" id="modal-cancel-btn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- QA Element Picker Modal -->
+    <div id="picker-overlay" class="picker-overlay hidden">
+        <div class="picker-window">
+            <h3>Select QA Element</h3>
+            <div class="picker-grid" id="picker-grid">
+                <!-- Buttons will be injected here -->
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
