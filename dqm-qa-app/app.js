@@ -308,6 +308,10 @@ function createPositionCheckForm() {
 }
 
 function createHullStatusForm() {
+    const data = appState.qaChecks.hullStatus || {};
+    const openPhoto = data['hull-open-photo'] || '';
+    const closePhoto = data['hull-close-photo'] || '';
+
     return `
         <h2>Hull Status Check</h2>
 
@@ -322,14 +326,24 @@ function createHullStatusForm() {
 
         <div class="form-group">
             <label>Photo Reference (Closed to Open)</label>
-            <input type="file" id="hull-open-photo" accept="image/*" onchange="previewHullPhoto(this, 'hull-open-photo-preview')">
-            <img id="hull-open-photo-preview" style="display:none; max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Closed to Open photo">
+            <div class="photo-actions">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-open-capture').click()">📷 Take Photo</button>
+                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-open-upload').click()">📁 Upload Image</button>
+            </div>
+            <input type="file" id="hull-open-capture" accept="image/*" capture="environment" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-open-photo-preview', 'hull-open-photo')">
+            <input type="file" id="hull-open-upload" accept="image/*" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-open-photo-preview', 'hull-open-photo')">
+            <img id="hull-open-photo-preview" src="${openPhoto}" style="${openPhoto ? 'display:block;' : 'display:none;'} max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Closed to Open photo">
         </div>
 
         <div class="form-group">
             <label>Photo Reference (Open to Closed)</label>
-            <input type="file" id="hull-close-photo" accept="image/*" onchange="previewHullPhoto(this, 'hull-close-photo-preview')">
-            <img id="hull-close-photo-preview" style="display:none; max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Open to Closed photo">
+            <div class="photo-actions">
+                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-close-capture').click()">📷 Take Photo</button>
+                <button type="button" class="btn-secondary" onclick="document.getElementById('hull-close-upload').click()">📁 Upload Image</button>
+            </div>
+            <input type="file" id="hull-close-capture" accept="image/*" capture="environment" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-close-photo-preview', 'hull-close-photo')">
+            <input type="file" id="hull-close-upload" accept="image/*" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-close-photo-preview', 'hull-close-photo')">
+            <img id="hull-close-photo-preview" src="${closePhoto}" style="${closePhoto ? 'display:block;' : 'display:none;'} max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Open to Closed photo">
         </div>
 
         <div class="form-group">
@@ -1210,7 +1224,7 @@ function captureGPS(type) {
 }
 
 // Shows a photo preview for hull status file inputs and persists the data URL to state
-function previewHullPhoto(inputEl, previewId) {
+function previewHullPhoto(inputEl, previewId, stateKey) {
     const preview = document.getElementById(previewId);
     const file = inputEl.files && inputEl.files[0];
     if (!file || !preview) return;
@@ -1221,7 +1235,7 @@ function previewHullPhoto(inputEl, previewId) {
         preview.style.display = 'block';
         // Persist photo data directly since file inputs don't serialize via .value
         if (!appState.qaChecks.hullStatus) appState.qaChecks.hullStatus = {};
-        appState.qaChecks.hullStatus[inputEl.id] = dataUrl;
+        appState.qaChecks.hullStatus[stateKey || inputEl.id] = dataUrl;
         saveDraft();
     };
     reader.readAsDataURL(file);
