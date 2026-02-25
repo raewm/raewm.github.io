@@ -1,3 +1,21 @@
+/**
+ * @file app.js (Original DQM QA App)
+ * @description Core logic for the original USACE DQM QA Check application.
+ * Supports multi-vessel tracking, automated calculations, photo capture, and timeline logging.
+ */
+
+/**
+ * Global application state.
+ * @type {Object}
+ * @property {Array} plants - Array of plant objects, each containing checks.
+ * @property {string} checkDate - The current inspection date.
+ * @property {string} weatherConditions - Current weather/sea metadata.
+ * @property {string} qaTeam - String listing QA team members.
+ * @property {string} systemProvider - String listing system provider reps.
+ * @property {Array} timeline - Chronological log of events and checks.
+ * @property {string} generalComments - Overall inspection observations.
+ * @property {number|null} activePlantIndex - Tracks which plant is currently being edited.
+ */
 const appState = {
     plants: [],
     checkDate: '',
@@ -10,6 +28,7 @@ const appState = {
 };
 
 // ===== Vessel Profiles Configuration =====
+// Defines available profiles for each vessel type.
 const vesselProfiles = {
     'Scow': ['Monitoring', 'Ullage'],
     'Hopper Dredge': ['Standard'],
@@ -18,6 +37,7 @@ const vesselProfiles = {
 };
 
 // ===== Required Checks by Profile =====
+// Maps VesselType-Profile combinations to specific QA check IDs.
 const requiredChecks = {
     'Scow-Monitoring': ['positionCheck', 'hullStatus', 'draftSensorLight', 'draftSensorLoaded'],
     'Scow-Ullage': ['positionCheck', 'hullStatus', 'draftSensorLight', 'draftSensorLoaded', 'ullageLight', 'ullageLoaded'],
@@ -27,37 +47,51 @@ const requiredChecks = {
     'Mechanical Dredge-Standard': ['positionCheck', 'bucketDepth', 'bucketPosition']
 };
 
-// ===== Initialization =====
+/**
+ * Initialization on DOM Load.
+ * Sets up default values, adds initial plant, and attaches global listeners.
+ */
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
-    loadDraft();
+    loadDraft(); // Attempt to restore work from LocalStorage
 });
 
+/**
+ * Performs core app initialization.
+ */
 function initializeApp() {
-    // Set default date to today
+    // Set default date to today for convenience
     document.getElementById('check-date').valueAsDate = new Date();
 
-    // Add first plant entry
+    // Start with one plant entry by default
     addPlant();
 
-    // Event listeners
+    // Global Action Button Listeners
     document.getElementById('add-plant-btn').addEventListener('click', addPlant);
     document.getElementById('save-draft-btn').addEventListener('click', saveDraft);
     document.getElementById('export-btn').addEventListener('click', exportJSON);
     document.getElementById('clear-btn').addEventListener('click', clearAll);
+    // Metadata Input Syncing
     document.getElementById('check-date').addEventListener('change', updateAppState);
     document.getElementById('qa-team').addEventListener('input', updateAppState);
     document.getElementById('system-provider').addEventListener('input', updateAppState);
     document.getElementById('general-comments').addEventListener('input', updateAppState);
+    // Timeline Action
     document.getElementById('add-timeline-comment-btn').addEventListener('click', addTimelineComment);
 
-    // Render timeline table
+    // Initial timeline render
     renderTimeline();
 }
 
 // ===== Plant Management =====
+// Logic for adding, removing, and renumbering plants/vessels.
+
 let plantCounter = 0;
 
+/**
+ * Adds a new Plant UI entry and updates the internal state.
+ * Dynamically creates the form block for Vessel Name, Type, and Profile.
+ */
 function addPlant() {
     plantCounter++;
     const container = document.getElementById('plants-container');
@@ -97,23 +131,30 @@ function addPlant() {
 
     container.appendChild(plantEntry);
 
-    // Add event listeners
+    // Attach local input/change listeners to track state modifications
     plantEntry.querySelectorAll('input, select').forEach(el => {
         el.addEventListener('input', updatePlants);
         el.addEventListener('change', updatePlants);
     });
 
-    updatePlants();
+    updatePlants(); // Sync state immediately
 }
 
+/**
+ * Removes a plant entry after user confirmation.
+ * @param {HTMLElement} btn - The remove button element.
+ */
 function removePlant(btn) {
     if (confirm('Remove this plant entry?')) {
         btn.closest('.plant-entry').remove();
-        renumberPlants();
-        updatePlants();
+        renumberPlants(); // Keep the numbers (Plant #1, #2...) sequential
+        updatePlants();   // Sync state
     }
 }
 
+/**
+ * Renumbers plant headers to maintain sequential order after deletions.
+ */
 function renumberPlants() {
     const plants = document.querySelectorAll('.plant-entry');
     plants.forEach((plant, index) => {
@@ -121,6 +162,10 @@ function renumberPlants() {
     });
 }
 
+/**
+ * Updates the Profile dropdown based on the selected Vessel Type.
+ * @param {HTMLSelectElement} selectElement - The Vessel Type select element.
+ */
 function updateProfileOptions(selectElement) {
     const vesselType = selectElement.value;
     const plantEntry = selectElement.closest('.plant-entry');
@@ -143,6 +188,10 @@ function updateProfileOptions(selectElement) {
     updatePlants();
 }
 
+/**
+ * Syncs the DOM plant entries to the global `appState.plants` object.
+ * Preserves existing check data during the sync.
+ */
 function updatePlants() {
     const plantEntries = document.querySelectorAll('.plant-entry');
     const newPlants = [];
@@ -152,6 +201,7 @@ function updatePlants() {
         const vesselType = entry.querySelector('.vessel-type').value;
         const profile = entry.querySelector('.vessel-profile').value;
 
+        // Carry over existing check data if the index matches
         let checks = {};
         if (appState.plants[idx]) {
             checks = appState.plants[idx].checks || {};
@@ -167,11 +217,17 @@ function updatePlants() {
     });
 
     appState.plants = newPlants;
-    updateQAChecks();
+    updateQAChecks(); // Re-render the QA Check forms based on profile selections
     saveDraft();
 }
 
 // ===== QA Checks Management =====
+// Logic for rendering and coordinating the individual QA check cards.
+
+/**
+ * Renders the QA Check section by iterating through all defined plants.
+ * Creates headers and calls createCheckCard for each required check.
+ */
 function updateQAChecks() {
     const container = document.getElementById('qa-checks-container');
     container.innerHTML = '';
@@ -184,6 +240,7 @@ function updateQAChecks() {
 
         console.log(`Processing plant ${pIdx}: ${plant.name}, Key: ${key}, Checks found: ${checks.length}`);
 
+        // Create Vessel Section Header
         const vesselHeader = document.createElement('h2');
         vesselHeader.style.margin = '40px 0 20px 0';
         vesselHeader.style.padding = '12px 20px';
@@ -204,6 +261,7 @@ function updateQAChecks() {
                 }
             });
         } else {
+            // Friendly fallback if no profile is selected
             const placeholder = document.createElement('p');
             placeholder.style.padding = '20px';
             placeholder.style.color = '#666';
@@ -214,6 +272,14 @@ function updateQAChecks() {
     });
 }
 
+/**
+ * Creates an individual QA Check card element.
+ * Handles ID suffixing, event delegation, and data restoration.
+ * @param {string} checkType - The ID of the check (e.g., 'hullStatus').
+ * @param {number} plantIdx - The index of the plant in appState.
+ * @param {string} plantName - The name of the vessel for labelling.
+ * @returns {HTMLElement} The populated card element.
+ */
 function createCheckCard(checkType, plantIdx, plantName) {
     const card = document.createElement('section');
     card.className = 'card';
@@ -221,20 +287,24 @@ function createCheckCard(checkType, plantIdx, plantName) {
     card.dataset.checkType = checkType;
     card.dataset.plantIndex = plantIdx;
 
+    // Generate HTML content based on check type
     const content = getCheckContent(checkType, plantIdx);
     card.innerHTML = content;
 
-    // Update title to include plant name
+    // Label the card with the specific vessel name
     const h2 = card.querySelector('h2');
     if (h2) h2.textContent = `${plantName} - ${h2.textContent}`;
 
-    // Update all IDs and names in the content to be unique per plant
+    // Suffix all element IDs with the plant index to ensure DOM uniqueness
     card.querySelectorAll('[id], [name]').forEach(el => {
         if (el.id) el.id = `${el.id}-${plantIdx}`;
         if (el.name) el.name = `${el.name}-${plantIdx}`;
     });
 
-    // Update onchange/onclick handlers if they reference QA calculation/preview functions
+    /**
+     * Update onchange/onclick handlers.
+     * Injects the plantIdx into function calls (e.g., calculate() -> calculate(0)).
+     */
     const validFunctions = ['calculate', 'preview', 'toggle', 'log', 'captureGPS'];
     card.querySelectorAll('[onchange], [onclick]').forEach(el => {
         ['onchange', 'onclick'].forEach(attr => {
@@ -247,7 +317,7 @@ function createCheckCard(checkType, plantIdx, plantName) {
         });
     });
 
-    // Add event listeners to all inputs
+    // Attach data-sync listeners with a slight delay to ensure DOM is ready
     setTimeout(() => {
         card.querySelectorAll('input, textarea, select').forEach(input => {
             input.addEventListener('input', () => {
@@ -260,13 +330,13 @@ function createCheckCard(checkType, plantIdx, plantName) {
             });
         });
 
-        // Restore existing data
+        // Restore check-specific data from state
         const existingData = appState.plants[plantIdx].checks[checkType];
         if (existingData) {
             restoreCheckData(checkType, plantIdx, existingData);
         }
 
-        // Add log to timeline button handler
+        // Attach the "Log to Timeline" button logic
         const logBtn = card.querySelector('.log-timeline-btn');
         if (logBtn) {
             logBtn.addEventListener('click', () => logCheckToTimeline(checkType, plantIdx));
@@ -277,6 +347,14 @@ function createCheckCard(checkType, plantIdx, plantName) {
 }
 
 // ===== Check Content Generators =====
+// Returns the HTML templates for various QA check forms.
+
+/**
+ * Router function for check form generation.
+ * @param {string} checkType - Key for the check type.
+ * @param {number} plantIdx - Index for ID suffixing.
+ * @returns {string} HTML string.
+ */
 function getCheckContent(checkType, plantIdx) {
     switch (checkType) {
         case 'positionCheck':
@@ -302,10 +380,15 @@ function getCheckContent(checkType, plantIdx) {
         case 'bucketPosition':
             return createBucketPositionForm(plantIdx);
         default:
-            return '<p>Unknown check type</p>';
+            return `<p>No template for ${checkType}</p>`;
     }
 }
 
+/**
+ * Position Check Form Template.
+ * Includes Static GPS check and Dynamic comparison for Scows.
+ * @returns {string} HTML Template.
+ */
 function createPositionCheckForm() {
     const isScow = appState.plants.some(p => p.vesselType === 'Scow');
 
@@ -368,6 +451,12 @@ function createPositionCheckForm() {
     `;
 }
 
+/**
+ * Hull Status Form Template.
+ * Includes Photo capture/upload for both "Closed to Open" and "Open to Closed" transitions.
+ * @param {number} plantIdx - Index for persisting/restoring data.
+ * @returns {string} HTML Template.
+ */
 function createHullStatusForm(plantIdx) {
     const data = appState.plants[plantIdx]?.checks.hullStatus || {};
     const openPhoto = data['hull-open-photo'] || '';
@@ -391,7 +480,9 @@ function createHullStatusForm(plantIdx) {
                 <button type="button" class="btn-secondary" onclick="this.closest('.form-group').querySelectorAll('input')[0].click()">📷 Take Photo</button>
                 <button type="button" class="btn-secondary" onclick="this.closest('.form-group').querySelectorAll('input')[1].click()">📁 Upload Image</button>
             </div>
+            <!-- Standard camera capture -->
             <input type="file" id="hull-open-capture" accept="image/*" capture="environment" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-open-photo-preview', 'hull-open-photo')">
+            <!-- Local file upload -->
             <input type="file" id="hull-open-upload" accept="image/*" class="visually-hidden" onchange="previewHullPhoto(this, 'hull-open-photo-preview', 'hull-open-photo')">
             <img id="hull-open-photo-preview" src="${openPhoto}" style="${openPhoto ? 'display:block;' : 'display:none;'} max-width:100%; max-height:200px; margin-top:8px; border-radius:6px; border:1px solid #444;" alt="Closed to Open photo">
         </div>
@@ -416,6 +507,11 @@ function createHullStatusForm(plantIdx) {
     `;
 }
 
+/**
+ * Draft Sensor (Light Condition) Form Template.
+ * Supports toggle between Physical and Simulated (Test Pipe) methods.
+ * @returns {string} HTML Template.
+ */
 function createDraftSensorLightForm() {
     return `
         <h2>Draft Sensor Check — Light Condition</h2>
@@ -429,6 +525,7 @@ function createDraftSensorLightForm() {
             </select>
         </div>
 
+        <!-- Physical Marks Section -->
         <div id="physical-draft-light-section">
             <h3 style="margin-top: 15px; margin-bottom: 10px;">Forward Sensors</h3>
             <div class="input-row">
@@ -491,6 +588,7 @@ function createDraftSensorLightForm() {
             </div>
         </div>
 
+        <!-- Simulated Pipe Section -->
         <div id="simulated-draft-light-section" class="hidden">
             <h3>Simulated Draft Check — Forward Sensor (Light)</h3>
             <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
@@ -554,6 +652,11 @@ function createDraftSensorLightForm() {
     `;
 }
 
+/**
+ * Draft Sensor (Loaded Condition) Form Template.
+ * Used for full hopper/scow inspections.
+ * @returns {string} HTML Template.
+ */
 function createDraftSensorLoadedForm() {
     return `
         <h2>Draft Sensor Check — Loaded Condition</h2>
@@ -567,6 +670,7 @@ function createDraftSensorLoadedForm() {
             </select>
         </div>
 
+        <!-- Physical Marks Section -->
         <div id="physical-draft-loaded-section">
             <h3 style="margin-top: 15px; margin-bottom: 10px;">Forward Sensors</h3>
             <div class="input-row">
@@ -629,6 +733,7 @@ function createDraftSensorLoadedForm() {
             </div>
         </div>
 
+        <!-- Simulated Pipe Section -->
         <div id="simulated-draft-loaded-section" class="hidden">
             <h3>Simulated Draft Check — Forward Sensor (Loaded)</h3>
             <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
@@ -661,17 +766,17 @@ function createDraftSensorLoadedForm() {
                 <div class="form-group"><label>Aft Offset (ft)</label><input type="number" id="sim-loaded-aft-offset" step="0.1" placeholder="e.g., 2.0"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-loaded-aft-depth-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-loaded-aft-reading-1" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-loaded-aft-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-loaded-aft-depth-2" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-loaded-aft-reading-2" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-loaded-aft-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-loaded-aft-depth-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-loaded-aft-reading-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-loaded-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
             </div>
@@ -692,19 +797,31 @@ function createDraftSensorLoadedForm() {
     `;
 }
 
-// Toggle functions for split draft check methods
+/**
+ * Toggles visibility of Light Draft check sections based on method selection.
+ * @param {number} plantIdx - Index suffix.
+ */
 function toggleDraftLightMethod(plantIdx) {
     const method = document.getElementById(`draft-light-check-method-${plantIdx}`)?.value;
     document.getElementById(`physical-draft-light-section-${plantIdx}`)?.classList.toggle('hidden', method === 'simulated');
     document.getElementById(`simulated-draft-light-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'simulated');
 }
 
+/**
+ * Toggles visibility of Loaded Draft check sections based on method selection.
+ * @param {number} plantIdx - Index suffix.
+ */
 function toggleDraftLoadedMethod(plantIdx) {
     const method = document.getElementById(`draft-loaded-check-method-${plantIdx}`)?.value;
     document.getElementById(`physical-draft-loaded-section-${plantIdx}`)?.classList.toggle('hidden', method === 'simulated');
     document.getElementById(`simulated-draft-loaded-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'simulated');
 }
 
+/**
+ * Simulated Draft (General) Form Template.
+ * Legacy template for integrated checks.
+ * @returns {string} HTML Template.
+ */
 function createDraftSensorSimulatedForm() {
     return `
         <h2>Draft Sensor Check — Simulated (Test Pipe Method)</h2>
@@ -766,6 +883,11 @@ function createDraftSensorSimulatedForm() {
     `;
 }
 
+/**
+ * Ullage (Light Condition) Form Template.
+ * Measurement of bin/hopper depth using weighted tape soundings.
+ * @returns {string} HTML Template.
+ */
 function createUllageLightForm() {
     return `
         <h2>Ullage Check — Light Condition</h2>
@@ -800,6 +922,7 @@ function createUllageLightForm() {
 
         <h3 style="margin-top: 15px; margin-bottom: 10px;">Aft Sensors</h3>
         <div class="input-row">
+        <div class="input-row">
             <div class="form-group">
                 <label>Aft Port Sounding (ft)</label>
                 <input type="number" id="ullage-light-aft-port" step="0.1" placeholder="0.0">
@@ -830,6 +953,11 @@ function createUllageLightForm() {
     `;
 }
 
+/**
+ * Ullage (Loaded Condition) Form Template.
+ * Used for full hopper/bin inspections.
+ * @returns {string} HTML Template.
+ */
 function createUllageLoadedForm() {
     return `
         <h2>Ullage Check — Loaded Condition</h2>
@@ -894,6 +1022,11 @@ function createUllageLoadedForm() {
     `;
 }
 
+/**
+ * Draghead Depth Check Form Template.
+ * Dynamically toggles sections for Port, Center, and Starboard dragheads.
+ * @returns {string} HTML Template.
+ */
 function createDragheadDepthForm() {
     return `
         <h2>Draghead Depth Check</h2>
@@ -911,6 +1044,7 @@ function createDragheadDepthForm() {
             </label>
         </div>
 
+        <!-- Port Section -->
         <div id="draghead-port-section" class="hidden">
             <h3>Port Draghead</h3>
             <div class="form-group" style="margin-bottom: 20px;">
@@ -932,12 +1066,13 @@ function createDragheadDepthForm() {
                 <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-port-dqm-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div style="margin-top: 10px; margin-bottom: 20px;">
+            <div class="status-buttons" style="margin-top: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Port) Completed', this)">📋 Log Port to Timeline</button>
             </div>
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
         </div>
 
+        <!-- Center Section -->
         <div id="draghead-center-section" class="hidden">
             <h3>Center Draghead</h3>
             <div class="form-group" style="margin-bottom: 20px;">
@@ -959,12 +1094,13 @@ function createDragheadDepthForm() {
                 <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-center-dqm-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-center-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div style="margin-top: 10px; margin-bottom: 20px;">
+            <div class="status-buttons" style="margin-top: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Center) Completed', this)">📋 Log Center to Timeline</button>
             </div>
             <hr style="margin: 20px 0; border: 0; border-top: 1px solid rgba(255,255,255,0.1);">
         </div>
         
+        <!-- Starboard Section -->
         <div id="draghead-stbd-section" class="hidden">
             <h3>Starboard Draghead</h3>
             <div class="form-group" style="margin-bottom: 20px;">
@@ -986,7 +1122,7 @@ function createDragheadDepthForm() {
                 <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-stbd-dqm-3" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-stbd-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
             </div>
-            <div style="margin-top: 10px; margin-bottom: 20px;">
+            <div class="status-buttons" style="margin-top: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Starboard) Completed', this)">📋 Log Stbd to Timeline</button>
             </div>
         </div>
@@ -998,6 +1134,10 @@ function createDragheadDepthForm() {
     `;
 }
 
+/**
+ * Toggles visibility of Draghead sections based on checkbox selection.
+ * @param {number} plantIdx - Index suffix.
+ */
 function toggleDragheadSections(plantIdx) {
     const port = document.getElementById(`draghead-check-port-${plantIdx}`)?.checked;
     const center = document.getElementById(`draghead-check-center-${plantIdx}`)?.checked;
@@ -1008,6 +1148,10 @@ function toggleDragheadSections(plantIdx) {
     document.getElementById(`draghead-stbd-section-${plantIdx}`)?.classList.toggle('hidden', !stbd);
 }
 
+/**
+ * Suction Mouth Depth Check Form Template.
+ * @returns {string} HTML Template.
+ */
 function createSuctionMouthDepthForm() {
     return `
         <h2>Suction Mouth Depth Check</h2>
@@ -1017,7 +1161,7 @@ function createSuctionMouthDepthForm() {
             <input type="number" id="suction-offset" step="0.1" placeholder="e.g., 2.0">
         </div>
         
-        <p class="text-muted">Record at least 3 measurements within the operating range</p>
+        <p class="text-muted">Record measurements within the operating range</p>
         
         <div class="input-row-3">
             <div class="form-group">
@@ -1151,6 +1295,11 @@ function toggleVelocityMethod(plantIdx) {
     document.getElementById(`velocity-meter-section-${plantIdx}`)?.classList.toggle('hidden', method !== 'meter');
 }
 
+/**
+ * Bucket/Grab Depth Check Form Template.
+ * Used for mechanical dredges.
+ * @returns {string} HTML Template.
+ */
 function createBucketDepthForm() {
     return `
         <h2>Bucket/Grab Depth Check</h2>
@@ -1186,6 +1335,11 @@ function createBucketDepthForm() {
     `;
 }
 
+/**
+ * Bucket Position Check Form Template.
+ * Verifies horizontal/swing accuracy for mechanical dredges.
+ * @returns {string} HTML Template.
+ */
 function createBucketPositionForm() {
     return `
         <h2>Bucket Position Check</h2>
@@ -1239,6 +1393,12 @@ function createBucketPositionForm() {
         <button type="button" class="log-timeline-btn">📋 Log to Timeline</button>
     `;
 }
+
+/**
+ * Captures the current device coordinates for position checks.
+ * @param {string} type - 'handheld' or 'dqm' (typically handheld).
+ * @param {number} plantIdx - Index for identifying target inputs.
+ */
 function captureGPS(type, plantIdx) {
     const button = event.target;
 
@@ -1286,8 +1446,13 @@ function captureGPS(type, plantIdx) {
     );
 }
 
-// Shows a photo preview for hull status file inputs and persists the data URL to state
-// Shows a photo preview for hull status file inputs and persists the data URL to state
+/**
+ * Shows a photo preview for hull status file inputs and persists the data URL to state.
+ * @param {HTMLInputElement} inputEl - File input element.
+ * @param {string} previewId - ID of target <img>.
+ * @param {string} stateKey - Key for storing in appState.checks.hullStatus.
+ * @param {number} plantIdx - Parent plant index.
+ */
 function previewHullPhoto(inputEl, previewId, stateKey, plantIdx) {
     // Try to find the preview image via DOM traversal first, fallback to ID
     const preview = inputEl.closest('.form-group')?.querySelector('img') || document.getElementById(`${previewId}-${plantIdx}`) || document.getElementById(previewId);
@@ -1314,6 +1479,10 @@ function previewHullPhoto(inputEl, previewId, stateKey, plantIdx) {
 }
 
 // ===== Data Management =====
+
+/**
+ * Updates application-level metadata from global form inputs.
+ */
 function updateAppState() {
     appState.checkDate = document.getElementById('check-date').value;
     appState.weatherConditions = document.getElementById('weather-conditions').value;
@@ -1323,6 +1492,11 @@ function updateAppState() {
     saveDraft();
 }
 
+/**
+ * Saves all input values from a check card into the application state.
+ * @param {string} checkType - The key for the check (e.g., 'hullStatus').
+ * @param {number} plantIdx - The index of the plant.
+ */
 function saveCheckData(checkType, plantIdx) {
     const card = document.getElementById(`${checkType}-card-${plantIdx}`);
     if (!card) return;
@@ -1349,6 +1523,9 @@ function saveCheckData(checkType, plantIdx) {
     saveDraft();
 }
 
+/**
+ * Serializes the current appState to LocalStorage.
+ */
 function saveDraft() {
     try {
         localStorage.setItem('dqm-qa-draft', JSON.stringify(appState));
@@ -1357,21 +1534,24 @@ function saveDraft() {
     }
 }
 
+/**
+ * Loads the application state from LocalStorage and reconstructs the UI.
+ */
 function loadDraft() {
     try {
         const draft = localStorage.getItem('dqm-qa-draft');
         if (draft) {
             const data = JSON.parse(draft);
 
-            // Restore metadata
+            // Restore metadata (Global form fields)
             if (data.checkDate) document.getElementById('check-date').value = data.checkDate;
             if (data.qaTeam) document.getElementById('qa-team').value = data.qaTeam;
             if (data.systemProvider) document.getElementById('system-provider').value = data.systemProvider;
             if (data.generalComments) document.getElementById('general-comments').value = data.generalComments;
 
-            // Restore plants
+            // Restore plants - This involves recreating the plant DOM entries
             if (data.plants && data.plants.length > 0) {
-                // Remove default plant
+                // Clear the default initial plant
                 document.getElementById('plants-container').innerHTML = '';
                 plantCounter = 0;
 
@@ -1380,6 +1560,7 @@ function loadDraft() {
                     const entries = document.querySelectorAll('.plant-entry');
                     const entry = entries[entries.length - 1];
 
+                    // Map state back to DOM
                     entry.querySelector('.plant-name').value = plant.name;
                     entry.querySelector('.vessel-type').value = plant.vesselType;
                     updateProfileOptions(entry.querySelector('.vessel-type'));
@@ -1389,19 +1570,20 @@ function loadDraft() {
                 updatePlants();
             }
 
-            // Restore timeline
+            // Restore timeline history
             if (data.timeline && Array.isArray(data.timeline)) {
                 appState.timeline = data.timeline;
                 renderTimeline();
             }
 
-            // Restore QA check data
+            // Merge full data back into active appState
             Object.assign(appState, data);
 
-            // Trigger a re-render of QA checks now that appState is fully populated
+            // Re-render the QA check cards based on the restored vessel profiles
             updateQAChecks();
 
-            // Run toggles for all plants after rendering
+            // Run conditional UI toggles (e.g., Simulated vs Physical Sections)
+            // Delay ensures the DOM generated by updateQAChecks is fully ready
             setTimeout(() => {
                 appState.plants.forEach((plant, pIdx) => {
                     const key = `${plant.vesselType}-${plant.profile}`;
@@ -1427,6 +1609,9 @@ function loadDraft() {
     }
 }
 
+/**
+ * Resets the application state and clears LocalStorage.
+ */
 function clearAll() {
     if (confirm('Clear all data? This cannot be undone.')) {
         localStorage.removeItem('dqm-qa-draft');
@@ -1435,6 +1620,10 @@ function clearAll() {
 }
 
 // ===== Export Functions =====
+
+/**
+ * Validates state, filters empty data, and triggers a JSON file download.
+ */
 function exportJSON() {
     updateAppState();
 
@@ -1444,13 +1633,13 @@ function exportJSON() {
         return;
     }
 
-    // Strip check entries where every value is empty/undefined
+    // Helper to check if a check object has any actual data (avoids exporting empty containers)
     function hasAnyValue(obj) {
         if (!obj) return false;
         return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
     }
 
-    // Filter checks for each plant
+    // Filter checks for each plant to keep the JSON file clean
     appState.plants.forEach(plant => {
         const filtered = {};
         if (plant.checks) {
@@ -1463,7 +1652,7 @@ function exportJSON() {
         plant.checks = filtered;
     });
 
-    // Build export object
+    // Build the final export structure
     const exportData = {
         metadata: {
             plants: appState.plants,
@@ -1477,12 +1666,12 @@ function exportJSON() {
         }
     };
 
-    // Generate filename
+    // Construct filename from plant names and date
     const plantNames = appState.plants.map(p => p.name.replace(/[^a-zA-Z0-9]/g, '')).join('_');
     const dateStr = appState.checkDate.replace(/-/g, '-');
     const filename = `DQM_QA_${plantNames}_${dateStr}.json`;
 
-    // Download
+    // Download via data URL
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -1497,6 +1686,10 @@ function exportJSON() {
 }
 
 // ===== Timeline Functions =====
+
+/**
+ * Adds a manual comment entry to the activity timeline.
+ */
 function addTimelineComment() {
     const notes = prompt('Enter timeline comment:');
     if (notes && notes.trim()) {
@@ -1512,6 +1705,11 @@ function addTimelineComment() {
     }
 }
 
+/**
+ * Logs a completed QA check to the timeline and updates visual status.
+ * @param {string} checkType - The check key.
+ * @param {number} plantIdx - The plant index.
+ */
 function logCheckToTimeline(checkType, plantIdx) {
     saveCheckData(checkType, plantIdx);
 
@@ -1547,7 +1745,7 @@ function logCheckToTimeline(checkType, plantIdx) {
     renderTimeline();
     saveDraft();
 
-    // Show confirmation
+    // Show temporary confirmation state on the button
     if (card) {
         const logBtn = card.querySelector('.log-timeline-btn');
         if (logBtn) {
@@ -1562,6 +1760,11 @@ function logCheckToTimeline(checkType, plantIdx) {
     }
 }
 
+/**
+ * Logs a custom event (e.g., partial draft check) to the timeline.
+ * @param {string} activityText - Context string for the event.
+ * @param {HTMLElement} button - The button that triggered the log.
+ */
 function logCustomToTimeline(activityText, button) {
     const entry = {
         time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
@@ -1586,6 +1789,9 @@ function logCustomToTimeline(activityText, button) {
     }
 }
 
+/**
+ * Re-renders the timeline table from appState.
+ */
 function renderTimeline() {
     const tbody = document.getElementById('timeline-body');
     if (!tbody) return;
@@ -1609,6 +1815,10 @@ function renderTimeline() {
     });
 }
 
+/**
+ * Deletes a specific entry from the activity timeline.
+ * @param {number} index - Index of the entry to remove.
+ */
 function deleteTimelineEntry(index) {
     if (confirm('Delete this timeline entry?')) {
         appState.timeline.splice(index, 1);
@@ -1617,11 +1827,18 @@ function deleteTimelineEntry(index) {
     }
 }
 
+/**
+ * Populates form inputs with data from the application state for a specific plant.
+ * @param {string} checkType - The key for the check (e.g., 'positionCheck').
+ * @param {number} plantIdx - The plant index.
+ * @param {Object} data - The state data object for this check.
+ */
 function restoreCheckData(checkType, plantIdx, data) {
     const card = document.getElementById(`${checkType}-card-${plantIdx}`);
     if (!card) return;
 
     for (const [key, value] of Object.entries(data)) {
+        // Find inputs by ID or name (supporting both template formats)
         const input = card.querySelector(`[id="${key}-${plantIdx}"], [name="${key}-${plantIdx}"]`);
         if (input) {
             if (input.type === 'checkbox') {
@@ -1632,7 +1849,7 @@ function restoreCheckData(checkType, plantIdx, data) {
         }
     }
 
-    // Special restoration for photos (previews)
+    // Special restoration for photo previews (converting state data URLs back to <img> src)
     if (checkType === 'hullStatus') {
         const openPreview = document.getElementById(`hull-open-photo-preview-${plantIdx}`);
         const closePreview = document.getElementById(`hull-close-photo-preview-${plantIdx}`);
@@ -1649,6 +1866,12 @@ function restoreCheckData(checkType, plantIdx, data) {
 }
 
 // ===== Auto-Calculation Functions =====
+
+/**
+ * Dispatcher for triggering calculations based on check type.
+ * @param {string} checkType - The check key.
+ * @param {number} plantIdx - The plant index.
+ */
 function calculateDifferences(checkType, plantIdx) {
     switch (checkType) {
         case 'positionCheck':
@@ -1686,6 +1909,10 @@ function calculateDifferences(checkType, plantIdx) {
     }
 }
 
+/**
+ * Calculates straight-line distance (feet) between handheld GPS and DQM GPS coordinates.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculatePositionDifference(plantIdx) {
     const lat1 = parseFloat(document.getElementById(`handheld-lat-${plantIdx}`)?.value);
     const lon1 = parseFloat(document.getElementById(`handheld-lon-${plantIdx}`)?.value);
@@ -1710,6 +1937,11 @@ function calculatePositionDifference(plantIdx) {
     }
 }
 
+/**
+ * Calculates differences for physical (draft-tube) measurements.
+ * @param {string} condition - 'light' or 'loaded'.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculatePhysicalDraftDifferences(condition, plantIdx) {
     ['fwd', 'aft'].forEach(pos => {
         const port = parseFloat(document.getElementById(`${condition}-${pos}-port-${plantIdx}`)?.value);
@@ -1735,6 +1967,11 @@ function calculatePhysicalDraftDifferences(condition, plantIdx) {
     });
 }
 
+/**
+ * Calculates differences for simulated draft checks using defined offsets.
+ * @param {string} condition - 'light' or 'loaded'.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateSimulatedDraftDifferences(condition, plantIdx) {
     // condition is 'light' or 'loaded'
     ['fwd', 'aft'].forEach(pos => {
@@ -1750,7 +1987,10 @@ function calculateSimulatedDraftDifferences(condition, plantIdx) {
     });
 }
 
-// Auto-calculations for the standalone Simulated Draft card
+/**
+ * Standalone simulated draft calculation logic (for non-integrated tabs).
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateStandaloneSimulatedDraftDifferences(plantIdx) {
     ['fwd', 'aft'].forEach(pos => {
         const offset = parseFloat(document.getElementById(`sim-${pos}-offset-${plantIdx}`)?.value) || 0;
@@ -1765,6 +2005,10 @@ function calculateStandaloneSimulatedDraftDifferences(plantIdx) {
     });
 }
 
+/**
+ * Calculates differences for Draghead Depth checks including vertical offsets.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateDragheadDifferences(plantIdx) {
     ['port', 'center', 'stbd'].forEach(side => {
         const offset = parseFloat(document.getElementById(`draghead-${side}-offset-${plantIdx}`)?.value) || 0;
@@ -1780,6 +2024,10 @@ function calculateDragheadDifferences(plantIdx) {
     });
 }
 
+/**
+ * Calculates differences for Suction Mouth Depth checks.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateSuctionDifferences(plantIdx) {
     const offset = parseFloat(document.getElementById(`suction-offset-${plantIdx}`)?.value) || 0;
 
@@ -1794,6 +2042,10 @@ function calculateSuctionDifferences(plantIdx) {
     }
 }
 
+/**
+ * Calculates Velocity based on either Dye Test (length/time) or Meter Comparison.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateVelocity(plantIdx) {
     const method = document.getElementById(`velocity-method-${plantIdx}`)?.value;
 
@@ -1828,6 +2080,11 @@ function calculateVelocity(plantIdx) {
     }
 }
 
+/**
+ * Calculates Ullage differences by averaging manual port/starboard soundings.
+ * @param {string} condition - 'light' or 'loaded'.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateUllageDifferences(condition, plantIdx) {
     // Forward: average port+stbd manual soundings vs DQM forward reading
     const fwdPort = parseFloat(document.getElementById(`ullage-${condition}-fwd-port-${plantIdx}`)?.value);
@@ -1870,6 +2127,10 @@ function calculateUllageDifferences(condition, plantIdx) {
     }
 }
 
+/**
+ * Calculates bucket depth differences including vertical heel offsets.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateBucketDepthDifferences(plantIdx) {
     const offset = parseFloat(document.getElementById(`bucket-offset-${plantIdx}`)?.value) || 0;
 
@@ -1883,6 +2144,10 @@ function calculateBucketDepthDifferences(plantIdx) {
     }
 }
 
+/**
+ * Calculates bucket position (horizontal/radial) differences.
+ * @param {number} plantIdx - Plant index.
+ */
 function calculateBucketPositionDifferences(plantIdx) {
     for (let i = 1; i <= 3; i++) {
         const manual = parseFloat(document.getElementById(`bucket-pos-manual-${i}-${plantIdx}`)?.value);

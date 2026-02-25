@@ -1,16 +1,26 @@
-// report-renderer.js
-// Generates the printable HTML report from application state
+/**
+ * report-renderer.js
+ * The "Final Output" engine for the Trip Report.
+ * Aggregates metadata, timeline logs, and vessel-specific QA checks
+ * into a professional, printable HTML document.
+ */
 
+/**
+ * The primary entry point for the Preview tab.
+ * Generates technical sheets based on a snapshot of appState.
+ */
 function renderReport() {
     const target = document.getElementById('report-render-target');
     const state = window.appState;
     const meta = state.meta;
 
+    // Safety Check: Avoid rendering empty structure if no data is present
     if (!state.sourceJson) {
         target.innerHTML = '<div class="text-center text-muted p-4" style="margin-top: 100px;">Please load a JSON file to see the preview.</div>';
         return;
     }
 
+    // 1. Core Document Structure (Header, Project Info, methodology)
     const reportHtml = `
         <div class="report-header-grid" style="border-bottom: 2px solid black; padding-bottom: 20px; align-items: end;">
             <div>
@@ -63,25 +73,35 @@ function renderReport() {
 
         <h2 style="text-align: center; font-size: 16pt; font-weight: bold; margin-bottom: 20px; border-bottom: none;">QA CHECK DATA OBSERVATION SHEETS</h2>
 
+        <!-- Detailed Check Data for each Vessel -->
         ${renderChecks(state)}
     `;
 
+    // 2. Deployment: Update UI Preview and Print Context
     target.innerHTML = reportHtml;
 
-    // Also copy to the actual hidden print container so window.print() works correctly
+    // Synchronization with the hidden print-only container
     document.getElementById('print-container').innerHTML = reportHtml;
 }
 
+/**
+ * Helper to render a comma-separated list of plants in the summary.
+ */
 function renderVesselList(plants) {
     if (!plants || plants.length === 0) return 'None';
     return plants.map(p => `${escapeHtml(p.name)} (${escapeHtml(p.vesselType)})`).join(', ');
 }
 
+/**
+ * Iterates through all plants and their respective checks.
+ * Applies the 'overrides' layer on top of 'original' data.
+ */
 function renderChecks(state) {
     let html = '';
     const plants = state.plants || [];
     const overrides = state.overrides || {};
 
+    // Standard Print Order for Audit Sheets
     const order = [
         'positionCheck',
         'draftSensorLight',
@@ -128,12 +148,16 @@ function renderChecks(state) {
         'bucketPosition': 'Bucket Position Check'
     };
 
+    /**
+     * Predicate to skip sections that contain only empty/null fields.
+     */
     function hasAnyValue(obj) {
         if (!obj) return false;
         return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
     }
 
     if (plants.length > 0) {
+        // Multi-Plant rendering logic
         plants.forEach((plant, pIdx) => {
             const plantChecks = plant.checks || {};
             let plantHtml = '';
@@ -143,10 +167,12 @@ function renderChecks(state) {
                     plantHtml += `<h4 style="margin-top: 20px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 5px;">${labels[type]}</h4>`;
 
                     const data = plantChecks[type];
-                    // Overrides are currently flat, but we might want to index them by plant in the future
-                    // For now, let's keep it simple or try to find a plant-specific override if we implement it
+                    // Merged Override Logic: 
+                    // 1. Try plant-specific override [pIdx][type]
+                    // 2. Fallback to generic override [type] (for legacy data)
                     const override = (overrides[pIdx] && overrides[pIdx][type]) || overrides[type] || {};
 
+                    // Choose appropriate table engine
                     if (type === 'draftSensorSimulated') {
                         plantHtml += renderSimulatedDraft(data, override, null, type);
                     } else if (type.startsWith('draftSensor') || type.startsWith('ullage')) {
@@ -164,6 +190,7 @@ function renderChecks(state) {
             });
 
             if (plantHtml) {
+                // Wrap each plant's data in a distinct visual card
                 html += `
                     <div class="vessel-checks-section" style="margin-top: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; background: #fafafa;">
                         <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #2c3e50;">${escapeHtml(plant.name || `Vessel #${pIdx + 1}`)} (${escapeHtml(plant.vesselType)})</h3>
@@ -173,7 +200,7 @@ function renderChecks(state) {
             }
         });
     } else {
-        // Fallback for files with no plants array but top-level checks
+        // Legacy Fallback for files without a 'plants' array
         const checks = state.qaChecks || {};
         order.forEach(type => {
             if (checks[type] && hasAnyValue(checks[type])) {
@@ -199,11 +226,14 @@ function renderChecks(state) {
     return html;
 }
 
-// Renders the complex 1-line tables for Draft and Ullage variants
+/**
+ * Specialized Renderer: Ship Measurements (Draft/Ullage).
+ * Computes Port/Starboard averages and differences from system readings.
+ */
 function renderShipData(data, override, typeName) {
     let html = '';
 
-    // Map check type to the exact key prefix used by the QA app
+    // Human-to-Internal key mapping for variants
     const prefixMap = {
         'draftSensorLight': 'light-',
         'draftSensorLightFwd': 'light-',
@@ -223,6 +253,7 @@ function renderShipData(data, override, typeName) {
     const isFwdOnly = typeName.endsWith('Fwd');
     const isAftOnly = typeName.endsWith('Aft');
 
+    // Attribute extraction with override precedence
     let fwdPort = getVal(data, override, `${prefix}fwd-port`);
     let fwdStbd = getVal(data, override, `${prefix}fwd-stbd`);
     let aftPort = getVal(data, override, `${prefix}aft-port`);
@@ -230,9 +261,8 @@ function renderShipData(data, override, typeName) {
     let dqmFwd = getVal(data, override, `${prefix}dqm-fwd`);
     let dqmAft = getVal(data, override, `${prefix}dqm-aft`);
 
-    // Check if physical data exists
+    // Verify presence of data before attempting calculation
     if (fwdPort !== undefined || fwdStbd !== undefined || aftPort !== undefined || aftStbd !== undefined || dqmFwd !== undefined || dqmAft !== undefined) {
-        // Compute averages
         let fwdAvg = avg(fwdPort, fwdStbd);
         let aftAvg = avg(aftPort, aftStbd);
         let fwdDiff = diff(fwdAvg, dqmFwd);
@@ -269,7 +299,7 @@ function renderShipData(data, override, typeName) {
         </table>`;
     }
 
-    // Now check for nested simulated data
+    // 2. Secondary Logic: Append Simulated Draft offsets if present
     if (typeName.startsWith('draftSensor')) {
         const simPrefix = `sim-${prefix}`;
         const hasSim = Object.keys(data).some(k => k.startsWith(simPrefix));
@@ -278,7 +308,7 @@ function renderShipData(data, override, typeName) {
         }
     }
 
-    // Remarks: try type-specific key first, then generic
+    // 3. Remarks Consolidation: Aggregate from various legacy check naming conventions
     let remarks = getVal(data, override, `${prefix}remarks`)
         || getVal(data, override, `remarks`)
         || getVal(data, override, `draft-${typeName.includes('light') ? 'light' : 'loaded'}-remarks`)
@@ -291,6 +321,10 @@ function renderShipData(data, override, typeName) {
     return html;
 }
 
+/**
+ * Specialized Renderer: Simulated Draft Tables.
+ * Renders the 3-point depth verification for sensors.
+ */
 function renderSimulatedDraft(data, override, prefixOverride, typeName) {
     let html = '';
     const prefix = prefixOverride || 'sim-';
@@ -343,7 +377,10 @@ function renderSimulatedDraft(data, override, prefixOverride, typeName) {
     return html;
 }
 
-// Special Draghead rendering
+/**
+ * Specialized Renderer: Draghead Depth Verification.
+ * Supports Port, Center, and Starboard configurations.
+ */
 function renderDragheadTable(data, override) {
     let html = '';
     let dragheads = [
@@ -388,18 +425,19 @@ function renderDragheadTable(data, override) {
     });
 
     let remarks = getVal(data, override, 'draghead-remarks');
-
     if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
 
     return html || '<p>No draghead data recorded.</p>';
 }
 
-
-// Renders images for Hull Status
+/**
+ * Specialized Renderer: Hull Status with Photos.
+ * Embeds base64 or URL images for visual verification of sensors.
+ */
 function renderHullStatus(data, override) {
     let html = '<div style="display: flex; flex-wrap: wrap; gap: 20px; margin-top: 10px;">';
 
-    // Original photo keys in SOP + App 2 keys
+    // Aggregate known photo keys from both App 1 and App 2
     const sections = [
         { key: 'photo-fwd', label: 'Forward Marks' },
         { key: 'photo-aft', label: 'Aft Marks' },
@@ -411,7 +449,7 @@ function renderHullStatus(data, override) {
 
     let hasAnyPhoto = false;
 
-    // Display hull-opened status if present
+    // Numerical/Boolean state check
     const hullOpened = getVal(data, override, 'hull-opened');
     if (hullOpened) {
         html += `<p style="margin: 0 0 10px 0; font-size: 10pt;"><strong>Hull Opened:</strong> ${hullOpened.toUpperCase()}</p>`;
@@ -419,7 +457,7 @@ function renderHullStatus(data, override) {
 
     sections.forEach(s => {
         let val = getVal(data, override, s.key);
-        if (val && val.length > 10) { // Basic check for base64 or URL
+        if (val && val.length > 10) {
             hasAnyPhoto = true;
             html += `
                 <div style="flex: 1; min-width: 200px; max-width: 45%; border: 1px solid #eee; padding: 10px; border-radius: 4px;">
@@ -441,7 +479,10 @@ function renderHullStatus(data, override) {
     return hasAnyContent ? html : '<p>No hull status data recorded.</p>';
 }
 
-// Special Draghead rendering
+/**
+ * Specialized Renderer: Velocity Check (Dye or Meter).
+ * Handles time-distance and direct comparison audits.
+ */
 function renderVelocityTable(data, override) {
     let method = getVal(data, override, 'velocity-method');
     let html = '';
@@ -522,12 +563,16 @@ function renderVelocityTable(data, override) {
     }
 
     let remarks = getVal(data, override, 'velocity-remarks');
-
     if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
 
     return html || '<p>No velocity data recorded.</p>';
 }
 
+/**
+ * Fallback Renderer: Generic Key-Value Table.
+ * Recursively builds tables for nested objects.
+ * Handles photo embedding for any key containing "photo".
+ */
 function renderGenericTable(originalData, overrideData) {
     let rows = '';
     function recurse(obj, overrideObj, prefix = '') {
@@ -565,6 +610,10 @@ function renderGenericTable(originalData, overrideData) {
     `;
 }
 
+/**
+ * Renders the Audit Timeline sheet.
+ * Maps 'action'/'activity' and 'details'/'notes' permutations from different app versions.
+ */
 function renderTimeline(timelineArray) {
     if (!timelineArray || timelineArray.length === 0) return '';
 
@@ -590,12 +639,21 @@ function renderTimeline(timelineArray) {
 }
 
 // Helpers
+
+/**
+ * Safe Value Retrieval.
+ * Checks for user overrides before falling back to original audit data.
+ */
 function getVal(data, override, key) {
     if (override && override[key] !== undefined && override[key] !== '') return override[key];
     if (data && data[key] !== undefined && data[key] !== '') return data[key];
     return undefined;
 }
 
+/**
+ * Arithmetic Average.
+ * Returns a fixed 2-decimal string. Handles missing single values gracefully.
+ */
 function avg(a, b) {
     const na = Number(a); const nb = Number(b);
     if (!isNaN(na) && !isNaN(nb)) return ((na + nb) / 2).toFixed(2);
@@ -604,17 +662,26 @@ function avg(a, b) {
     return undefined;
 }
 
+/**
+ * Arithmetic Difference (Absolute).
+ */
 function diff(a, b) {
     const na = Number(a); const nb = Number(b);
     if (!isNaN(na) && !isNaN(nb)) return Math.abs(na - nb).toFixed(2);
     return undefined;
 }
 
+/**
+ * Formats a number for report display (returns '-' for null/undefined).
+ */
 function formatNum(val) {
     if (val === undefined || val === null || val === '') return '-';
     return val;
 }
 
+/**
+ * Formats a date string into "Month Day, Year".
+ */
 function formatDate(dateStr) {
     if (!dateStr) return '';
     const d = new Date(dateStr);
@@ -622,19 +689,26 @@ function formatDate(dateStr) {
     return d.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
 }
 
+/**
+ * Humanizes technical keys (camelCase/kebab-case -> Title Case).
+ */
 function formatLabel(prop) {
     const result = prop.replace(/([A-Z])/g, " $1");
     let mapped = result.charAt(0).toUpperCase() + result.slice(1);
     mapped = mapped.replace(/-/g, ' '); // handle hyphenated keys like "light-fwd-port" -> "light fwd port"
-    // Title Case it
+
+    // Proper Title Casing
     return mapped.replace(
-        /\\w\\S*/g,
+        /\w\S*/g,
         function (txt) {
             return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
         }
     );
 }
 
+/**
+ * Primitive XSS Protection for report generation.
+ */
 function escapeHtml(unsafe) {
     if (!unsafe) return '';
     return unsafe

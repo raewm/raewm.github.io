@@ -1,12 +1,15 @@
-// ui-tabs.js
-// Handles tab navigation and form binding to state
+/**
+ * ui-tabs.js
+ * Manages tabbed navigation and metadata form data-binding.
+ * Ensures the UI state stays in sync with the global appState.
+ */
 
 function initTabs() {
     const tabBtns = document.querySelectorAll('.tab-btn');
     const tabPanes = document.querySelectorAll('.tab-pane');
     const nextBtns = document.querySelectorAll('.next-tab-btn');
 
-    // Tab clicks
+    // 1. Navigation Event Listeners
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.getAttribute('data-tab');
@@ -14,7 +17,7 @@ function initTabs() {
         });
     });
 
-    // Next buttons inside panels
+    // Support for sequential "Next" flow within panels
     nextBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             const targetId = btn.getAttribute('data-next');
@@ -22,6 +25,11 @@ function initTabs() {
         });
     });
 
+    /**
+     * Cycles visibility of tab buttons and content panes.
+     * Triggers render logic for dynamic tabs (Editor & Preview).
+     * @param {string} targetId - The ID of the tab pane to activate.
+     */
     function switchTab(targetId) {
         tabBtns.forEach(b => b.classList.remove('active'));
         tabPanes.forEach(p => p.classList.remove('active'));
@@ -32,7 +40,8 @@ function initTabs() {
         if (targetBtn) targetBtn.classList.add('active');
         if (targetPane) targetPane.classList.add('active');
 
-        // On specific tab activations, run logic
+        // Dynamic State Synchronization:
+        // Ensure the visual state is refreshed when moving to core logic tabs.
         if (targetId === 'edit-tab') {
             if (typeof renderEditor === 'function') renderEditor();
         } else if (targetId === 'preview-tab') {
@@ -41,7 +50,10 @@ function initTabs() {
     }
 }
 
-// Bind metadata form fields to state
+/**
+ * Binds DOM input elements in the Report Info tab to appState.meta.
+ * Implements two-way data-binding (Load-to-Form and Input-to-State).
+ */
 function initMetaForm() {
     const fields = [
         'reportDate', 'preparedBy', 'qaTeam', 'district', 'operator',
@@ -51,10 +63,10 @@ function initMetaForm() {
     fields.forEach(field => {
         const input = document.getElementById(`meta-${field.toLowerCase()}`);
         if (input) {
-            // Populate form from state
+            // Rehydrate form from global state (e.g. after draft restoration)
             input.value = window.appState.meta[field] || '';
 
-            // Listen for changes
+            // Update state on every keystroke/change and persist to LocalStorage.
             input.addEventListener('input', (e) => {
                 window.appState.meta[field] = e.target.value;
                 if (typeof saveDraft === 'function') saveDraft();
@@ -62,10 +74,15 @@ function initMetaForm() {
         }
     });
 
+    /**
+     * Methodology Templates Handler.
+     * Allows users to quickly populate standard methodology text
+     * based on vessel types defined in config.js.
+     */
     document.querySelectorAll('[id^=btn-template-]').forEach(btn => {
         btn.addEventListener('click', (e) => {
             const type = e.target.id.replace('btn-template-', '');
-            // Load templates from the user-editable config.js
+            // Pull templates mapped in global window scope by config.js
             const templates = window.methodTemplates || {};
 
             if (templates[type]) {
@@ -73,6 +90,7 @@ function initMetaForm() {
                 input.value = templates[type];
                 window.appState.meta.methods = templates[type];
 
+                // Immediate save to prevent data loss before manual save click.
                 if (typeof window.saveDraft === 'function') {
                     window.saveDraft();
                 }

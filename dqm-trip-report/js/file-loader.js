@@ -1,5 +1,8 @@
-// file-loader.js
-// Handles drag-and-drop and file selection for the JSON report
+/**
+ * file-loader.js
+ * Ingestion module for the Trip Report application.
+ * Handles drag-and-drop or file-picker selection of .json audit exports.
+ */
 
 function initFileLoader() {
     const dropZone = document.getElementById('drop-zone');
@@ -8,10 +11,10 @@ function initFileLoader() {
     const summaryCard = document.getElementById('loaded-summary');
     const summaryContent = document.getElementById('summary-content');
 
-    // Click to upload
+    // 1. Interaction Setup
     dropZone.addEventListener('click', () => fileInput.click());
 
-    // Drag and drop events
+    // Drag and drop event orchestration
     ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
         dropZone.addEventListener(eventName, preventDefaults, false);
     });
@@ -21,6 +24,7 @@ function initFileLoader() {
         e.stopPropagation();
     }
 
+    // Visual feedback for drag states
     ['dragenter', 'dragover'].forEach(eventName => {
         dropZone.addEventListener(eventName, () => dropZone.classList.add('dragover'), false);
     });
@@ -32,17 +36,30 @@ function initFileLoader() {
     dropZone.addEventListener('drop', handleDrop, false);
     fileInput.addEventListener('change', handleFileSelect, false);
 
+    // 2. Data Ingestion Handlers
+
+    /**
+     * Entry point for dropped files.
+     */
     function handleDrop(e) {
         const dt = e.dataTransfer;
         const file = dt.files[0];
         if (file) processFile(file);
     }
 
+    /**
+     * Entry point for standard file input selection.
+     */
     function handleFileSelect(e) {
         const file = e.target.files[0];
         if (file) processFile(file);
     }
 
+    /**
+     * Validates and reads the JSON file contents.
+     * Triggers state updates and UI transitions upon success.
+     * @param {File} file - The raw browser File object.
+     */
     function processFile(file) {
         if (!file.name.endsWith('.json')) {
             showStatus('Error: Please upload a valid .json file from the DQM QA App.', 'error');
@@ -53,16 +70,18 @@ function initFileLoader() {
         reader.onload = (e) => {
             try {
                 const data = JSON.parse(e.target.result);
+
+                // Sanity check to ensure the file originated from our QA Apps
                 if (data.action !== 'dqmQaLogExport') {
                     showStatus('Warning: This file might not be a valid DQM QA App export.', 'warning');
                 }
 
-                // Update state
+                // Inject data into the global appState
                 if (typeof setSourceData === 'function') {
                     setSourceData(data);
                 }
 
-                // Also update the form immediately since we might have pulled meta out of JSON
+                // Refresh the metadata form (Report Info tab)
                 if (typeof initMetaForm === 'function') {
                     initMetaForm();
                 }
@@ -78,6 +97,11 @@ function initFileLoader() {
         reader.readAsText(file);
     }
 
+    /**
+     * Displays transient status messages to the user.
+     * @param {string} msg - The text to display.
+     * @param {string} type - 'success', 'warning', or 'error' (affects CSS class).
+     */
     function showStatus(msg, type) {
         loadStatus.textContent = msg;
         loadStatus.className = `status-message ${type}`;
@@ -85,6 +109,11 @@ function initFileLoader() {
         setTimeout(() => loadStatus.classList.add('hidden'), 5000);
     }
 
+    /**
+     * Renders a brief summary of the loaded audit file to the Load Tab.
+     * Useful for verifying the correct file was selected before generating the report.
+     * @param {Object} data - The parsed audit JSON.
+     */
     function displaySummary(data) {
         const meta = data.metadata || data;
         const plants = meta.plants || [];
@@ -112,7 +141,10 @@ function initFileLoader() {
     }
 }
 
-// Global exposure
+/**
+ * Global helper to refresh the summary UI without re-loading the whole file.
+ * Used during state restoration (loadDraft).
+ */
 window.updateLoadSummaryUI = function () {
     if (window.appState && window.appState.sourceJson) {
         const summaryCard = document.getElementById('loaded-summary');

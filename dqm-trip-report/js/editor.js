@@ -1,6 +1,13 @@
-// editor.js
-// Renders the editable QA check fields from the loaded JSON
+/**
+ * editor.js
+ * Core engine for the Trip Report data editor.
+ * Researches the Loaded JSON data and renders a structured, editable interface
+ * allowing users to review and override audit findings.
+ */
 
+/**
+ * Human-readable mapping for technical check keys.
+ */
 const checkLabels = {
     'positionCheck': 'Position Check',
     'hullStatus': 'Hull Status',
@@ -24,12 +31,17 @@ const checkLabels = {
     'bucketPosition': 'Bucket Position'
 };
 
+/**
+ * The primary entry point for the Editor tab.
+ * Wipes the container and rebuilds the UI from appState.
+ */
 function renderEditor() {
     const container = document.getElementById('editor-container');
     const plants = window.appState.plants || [];
     const legacyChecks = window.appState.qaChecks || {};
     const overrides = window.appState.overrides || {};
 
+    // Initial State Check
     if (plants.length === 0 && Object.keys(legacyChecks).length === 0) {
         container.innerHTML = '<div class="text-center text-muted p-4">No QA checks found in the loaded data.</div>';
         return;
@@ -37,14 +49,17 @@ function renderEditor() {
 
     container.innerHTML = '';
 
-    // Render Timeline Editor First
+    // 1. Render Timeline Editor at the top for prominence
     renderTimelineEditor(container);
 
+    // 2. Render Check Sections
     if (plants.length > 0) {
+        // Multi-Plant View: Group checks by Vessel/Plant
         plants.forEach((plant, pIdx) => {
             const plantChecks = plant.checks || {};
             if (Object.keys(plantChecks).length === 0) return;
 
+            // Visual Plant Separator
             const plantHeader = document.createElement('h3');
             plantHeader.style.margin = '30px 0 15px 0';
             plantHeader.style.padding = '10px';
@@ -54,13 +69,16 @@ function renderEditor() {
             plantHeader.textContent = `${plant.name || `Vessel #${pIdx + 1}`} (${plant.vesselType})`;
             container.appendChild(plantHeader);
 
+            // Iterate through each unique QA check (Position, Draft, etc.)
             for (const [checkType, data] of Object.entries(plantChecks)) {
                 if (!data || Object.keys(data).length === 0) continue;
-                renderSection(checkType, data, (overrides[pIdx] && overrides[pIdx][checkType]) || {}, container, pIdx);
+                // Fetch existing overrides for this specific plant/check
+                const plantOverrides = (overrides[pIdx] && overrides[pIdx][checkType]) || {};
+                renderSection(checkType, data, plantOverrides, container, pIdx);
             }
         });
     } else {
-        // Fallback for legacy top-level checks
+        // Legacy Fallback: Single-vessel audits where data is top-level
         for (const [checkType, data] of Object.entries(legacyChecks)) {
             if (!data || Object.keys(data).length === 0) continue;
             renderSection(checkType, data, overrides[checkType] || {}, container, null);
@@ -68,6 +86,10 @@ function renderEditor() {
     }
 }
 
+/**
+ * Renders a "Section" (Collapsible accordion) for a specific QA check.
+ * Selects the appropriate layout engine based on 'checkType'.
+ */
 function renderSection(checkType, data, overrideObj, container, plantIdx) {
     const section = document.createElement('div');
     section.className = 'editor-section';
@@ -79,7 +101,7 @@ function renderSection(checkType, data, overrideObj, container, plantIdx) {
     const body = document.createElement('div');
     body.className = 'editor-section-body';
 
-    // Provide custom layout for specific complex checks
+    // Heuristics to choose specialized layout renderers
     if (checkType.startsWith('draftSensor') || checkType.startsWith('ullage')) {
         renderCustomShipData(data, overrideObj, body, checkType, plantIdx);
     } else if (checkType === 'dragheadDepth') {
@@ -87,7 +109,7 @@ function renderSection(checkType, data, overrideObj, container, plantIdx) {
     } else if (checkType === 'velocity') {
         renderVelocityData(data, overrideObj, body, checkType, plantIdx);
     } else {
-        // Fallback generic grid
+        // Default Grid layout for simple key/value checks
         const grid = document.createElement('div');
         grid.className = 'form-grid';
         buildInputs(data, overrideObj, grid, checkType, '', plantIdx);
@@ -97,6 +119,7 @@ function renderSection(checkType, data, overrideObj, container, plantIdx) {
     section.appendChild(header);
     section.appendChild(body);
 
+    // Interactive Accordion toggle
     header.addEventListener('click', () => {
         section.classList.toggle('open');
     });
@@ -104,13 +127,15 @@ function renderSection(checkType, data, overrideObj, container, plantIdx) {
     container.appendChild(section);
 }
 
-// Custom layout for Draft/Ullage (Light/Loaded/Simulated)
+/**
+ * Specialized Layout: Ship Draft & Ullage.
+ * Handles grouping forward/aft measurements and simulated draft offsets.
+ */
 function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantIdx) {
-    // Render Simulated Draft
+    // 1. Group and Render Simulated Draft (Repeated measurements 1-3)
     const simKeys = Object.keys(dataObj).filter(k => k.toLowerCase().includes('sim-') || k.toLowerCase().includes('simulated'));
     if (simKeys.length > 0) {
         const wrap = document.createElement('div');
-        // ... (styling omitted for brevity, but I should keep it)
         wrap.style.marginBottom = '20px';
         wrap.style.padding = '15px';
         wrap.style.backgroundColor = 'rgba(255,255,255,0.02)';
@@ -124,6 +149,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
                 posWrap.style.marginBottom = '15px';
                 posWrap.innerHTML = `<h5 style="margin-bottom:8px; color:#aaa;">${pos === 'fwd' ? 'Forward' : 'Aft'} (Simulated)</h5>`;
 
+                // Render each test row (typically 1, 2, 3)
                 [1, 2, 3].forEach(num => {
                     const lineKeys = posKeys.filter(k => k.includes(`-${num}`));
                     if (lineKeys.length > 0) {
@@ -133,6 +159,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
                         lineGrid.style.gap = '15px';
                         lineGrid.style.marginBottom = '10px';
 
+                        // Enforce consistent column order
                         const sortOrder = ['depth', 'reading', 'diff'];
                         const sortFn = (a, b) => {
                             const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
@@ -153,7 +180,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
         parentDom.appendChild(wrap);
     }
 
-    // Render Light or Loaded Draft/Ullage
+    // 2. Group and Render Physical Measurements (Port/Starboard/Avg/DQM)
     const condKeys = Object.keys(dataObj).filter(k => !k.toLowerCase().includes('sim-') && !k.toLowerCase().includes('remarks'));
     if (condKeys.length > 0) {
         const wrap = document.createElement('div');
@@ -167,7 +194,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
         const aftKeys = condKeys.filter(k => k.toLowerCase().includes('aft'));
         const otherKeys = condKeys.filter(k => !k.toLowerCase().includes('fwd') && !k.toLowerCase().includes('aft'));
 
-        // Define sort order: Port, Starboard, Avg, DQM, Diff
+        // Logical column ordering for ship measurements
         const sortOrder = ['port', 'stbd', 'avg', 'dqm', 'diff'];
         const sortFn = (a, b) => {
             const aIdx = sortOrder.findIndex(o => a.toLowerCase().includes(o));
@@ -175,7 +202,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
             return (aIdx === -1 ? 99 : aIdx) - (bIdx === -1 ? 99 : bIdx);
         };
 
-        // Render Fwd row
+        // Forward Measurements row
         if (fwdKeys.length > 0) {
             const fwdWrap = document.createElement('div');
             fwdWrap.style.marginBottom = '15px';
@@ -192,7 +219,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
             wrap.appendChild(fwdWrap);
         }
 
-        // Render Aft row
+        // Aft Measurements row
         if (aftKeys.length > 0) {
             const aftWrap = document.createElement('div');
             aftWrap.style.marginBottom = '15px';
@@ -209,7 +236,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
             wrap.appendChild(aftWrap);
         }
 
-        // Render Other
+        // Catch-all grid for remaining data (e.g. system offsets)
         if (otherKeys.length > 0) {
             const otherGrid = document.createElement('div');
             otherGrid.className = 'form-grid';
@@ -220,7 +247,7 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
         parentDom.appendChild(wrap);
     }
 
-    // Render any keys that aren't specific to the layout above (like remarks, strings)
+    // 3. Final Catch-all for non-layout keys (e.g. Remarks)
     const remainingKeys = Object.keys(dataObj).filter(k =>
         !k.toLowerCase().includes('fwd') &&
         !k.toLowerCase().includes('aft') &&
@@ -241,6 +268,9 @@ function renderCustomShipData(dataObj, overrideObj, parentDom, checkType, plantI
     }
 }
 
+/**
+ * Utility: Mapping internal ship keys to short UI labels.
+ */
 function getShortLabel(prop) {
     const low = prop.toLowerCase();
     if (low.includes('port')) return 'Port';
@@ -259,15 +289,10 @@ function getSimShortLabel(prop) {
     return null;
 }
 
-function getDragheadShortLabel(prop) {
-    const low = prop.toLowerCase();
-    if (low.includes('manual')) return 'Manual';
-    if (low.includes('dqm')) return 'DQM System';
-    if (low.includes('diff')) return 'Difference';
-    return null;
-}
-
-// Custom layout for array-like table data (Draghead Port, Center, Stbd)
+/**
+ * Specialized Layout: Draghead Depth entries (typically Port/Center/Starboard).
+ * Renders multiple measurements (1-3) in a columnar grid.
+ */
 function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title, plantIdx) {
     const wrap = document.createElement('div');
 
@@ -321,20 +346,14 @@ function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title
     parentDom.appendChild(wrap);
 }
 
-function getVelocityShortLabel(prop) {
-    const low = prop.toLowerCase();
-    if (low.includes('time')) return 'Travel Time';
-    if (low.includes('calc')) return 'Calc Velocity';
-    if (low.includes('dqm')) return 'DQM Velocity';
-    if (low.includes('diff')) return 'Difference';
-    if (low.includes('manual')) return 'Meter Velocity';
-    return null;
-}
-
+/**
+ * Specialized Layout: Velocity Data.
+ * Groups Dye Test and External Meter results.
+ */
 function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx) {
     const wrap = document.createElement('div');
 
-    // Top level info
+    // 1. Static Configuration (Pipe Length, Method, Calibration Date)
     const topKeys = ['velocity-pipe-length', 'velocity-method', 'velocity-cal-date'];
     const topGrid = document.createElement('div');
     topGrid.className = 'form-grid';
@@ -344,7 +363,7 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx
     });
     if (topGrid.children.length > 0) wrap.appendChild(topGrid);
 
-    // Tests (Dye or Meter)
+    // 2. Test Trials (Dye results or External Meter comparisons)
     ['dye', 'meter'].forEach(method => {
         [1, 2, 3].forEach(num => {
             const numKeys = Object.keys(dataObj).filter(k => k.includes(`-${method}-`) && k.includes(`-${num}`));
@@ -388,14 +407,19 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx
     parentDom.appendChild(wrap);
 }
 
-// Generic recursive builder
+/**
+ * Generic Recursive Builder.
+ * Used for deeply nested check objects or simple grids.
+ * @param {Object} dataObj - The raw data to render.
+ * @param {Object} overrideObj - Current overrides for this level.
+ */
 function buildInputs(dataObj, overrideObj, parentGrid, checkType, path, plantIdx) {
     for (const [key, value] of Object.entries(dataObj)) {
         const currentPath = path ? `${path}.${key}` : key;
 
         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+            // Nested Grouping
             const sectionWrap = document.createElement('div');
-            // ... (styling)
             sectionWrap.style.gridColumn = '1 / -1';
             sectionWrap.style.marginTop = '10px';
             sectionWrap.style.paddingLeft = '10px';
@@ -414,12 +438,16 @@ function buildInputs(dataObj, overrideObj, parentGrid, checkType, path, plantIdx
             sectionWrap.appendChild(nestedGrid);
             parentGrid.appendChild(sectionWrap);
         } else {
+            // Leaf node: build actual input
             buildSingleInput(currentPath, value, overrideObj[key], parentGrid, checkType, currentPath, null, plantIdx);
         }
     }
 }
 
-// Builds one input group
+/**
+ * Builds a single labeled input group and attaches synchronization listeners.
+ * Handles both text/number inputs and specialized photo previews.
+ */
 function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid, checkType, savePath, customLabel, plantIdx) {
     const displayLabel = customLabel || formatLabel(displayPath.split('.').pop());
 
@@ -429,15 +457,15 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
     const label = document.createElement('label');
     label.textContent = displayLabel;
 
+    // Use override if present, otherwise default to original audit data
     let currentValue = originalValue;
     if (overrideValue !== undefined) {
         currentValue = overrideValue;
     }
 
-    // Feature: If the field is a photo, render a file input and image preview
+    // Specialized Logic: Photo Handle
     if (savePath.toLowerCase().includes('photo')) {
         const photoContainer = document.createElement('div');
-        // ... (as before, but update saveOverride call)
         photoContainer.style.display = 'flex';
         photoContainer.style.flexDirection = 'column';
         photoContainer.style.gap = '10px';
@@ -525,11 +553,22 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
     parentGrid.appendChild(group);
 }
 
+/**
+ * Formats camelCase or snake_case keys into Title Case labels.
+ */
 function formatLabel(prop) {
     const result = prop.replace(/([A-Z])/g, " $1");
     return result.charAt(0).toUpperCase() + result.slice(1);
 }
 
+/**
+ * Persists a user override into the global appState.
+ * Supports deep path resolution (e.g. "path.sub.key").
+ * @param {string} checkType - The key of the QA check.
+ * @param {string} pathStr - Dot-notated path within the check data.
+ * @param {*} value - The new value to set.
+ * @param {number} plantIdx - The index of the plant (null for legacy files).
+ */
 function saveOverride(checkType, pathStr, value, plantIdx = null) {
     if (!window.appState.overrides) {
         window.appState.overrides = {};
@@ -548,6 +587,7 @@ function saveOverride(checkType, pathStr, value, plantIdx = null) {
     const parts = pathStr.split('.');
     let current = root[checkType];
 
+    // Traverse the path to set the nested value
     for (let i = 0; i < parts.length - 1; i++) {
         const part = parts[i];
         if (!current[part]) current[part] = {};
@@ -558,6 +598,11 @@ function saveOverride(checkType, pathStr, value, plantIdx = null) {
     window.saveDraft();
 }
 
+/**
+ * Renders the integrated Timeline Editor.
+ * Provides a spreadsheet-like interface for managing chronological event logs.
+ * Synchronizes instantly with the global Preview tab.
+ */
 function renderTimelineEditor(parentDom) {
     if (!window.appState.timeline) {
         window.appState.timeline = [];
@@ -565,14 +610,16 @@ function renderTimelineEditor(parentDom) {
 
     let section = document.getElementById('timeline-editor-section');
     if (!section) {
+        // Initial creation of the timeline container
         section = document.createElement('div');
         section.id = 'timeline-editor-section';
-        section.className = 'editor-section mb-4';
+        section.className = 'editor-section mb-4 open'; // Default to open
         parentDom.appendChild(section);
     }
 
     section.innerHTML = '';
 
+    // 1. Interactive Header with Controls
     const header = document.createElement('div');
     header.className = 'editor-section-header';
     header.style.backgroundColor = '#2c3e50';
@@ -586,6 +633,7 @@ function renderTimelineEditor(parentDom) {
     btnGroup.style.display = 'flex';
     btnGroup.style.gap = '8px';
 
+    // Chronological Sort Tool
     const sortBtn = document.createElement('button');
     sortBtn.className = 'btn-secondary';
     sortBtn.style.padding = '5px 12px';
@@ -604,6 +652,7 @@ function renderTimelineEditor(parentDom) {
         if (typeof window.updatePreview === 'function') window.updatePreview();
     };
 
+    // New Entry Tool
     const addBtn = document.createElement('button');
     addBtn.className = 'btn-primary';
     addBtn.style.padding = '5px 12px';
@@ -625,9 +674,10 @@ function renderTimelineEditor(parentDom) {
     btnGroup.appendChild(addBtn);
     header.appendChild(btnGroup);
 
+    // 2. Table-based Editor Body
     const body = document.createElement('div');
     body.className = 'editor-section-body';
-    body.style.padding = '0'; // Clean table look
+    body.style.padding = '0';
     body.style.display = 'block';
 
     const table = document.createElement('table');
@@ -635,7 +685,7 @@ function renderTimelineEditor(parentDom) {
     table.style.borderCollapse = 'collapse';
     table.style.fontSize = '13px';
 
-    // Table Header
+    // Thead definition
     const thead = document.createElement('thead');
     thead.style.backgroundColor = 'rgba(255,255,255,0.05)';
     thead.innerHTML = `
@@ -648,18 +698,13 @@ function renderTimelineEditor(parentDom) {
     `;
     table.appendChild(thead);
 
-    thead.querySelector('#timeline-time-header').onclick = () => {
-        window.appState.timeline.sort((a, b) => (a.time || '').localeCompare(b.time || ''));
-        renderTimelineEditor(parentDom);
-        if (typeof window.updatePreview === 'function') window.updatePreview();
-    };
-
+    // Tbody: Render each entry as an editable row
     const tbody = document.createElement('tbody');
     window.appState.timeline.forEach((item, index) => {
         const tr = document.createElement('tr');
         tr.style.borderBottom = '1px solid rgba(255,255,255,0.05)';
 
-        // Time Cell
+        // Time Cell (HH:MM or string)
         const tdTime = document.createElement('td');
         tdTime.style.padding = '8px 10px';
         const invTime = document.createElement('input');
@@ -676,7 +721,7 @@ function renderTimelineEditor(parentDom) {
         };
         tdTime.appendChild(invTime);
 
-        // Activity Cell
+        // Activity Cell (Short summary)
         const tdAct = document.createElement('td');
         tdAct.style.padding = '8px 10px';
         const invAct = document.createElement('input');
@@ -693,7 +738,7 @@ function renderTimelineEditor(parentDom) {
         };
         tdAct.appendChild(invAct);
 
-        // Details Cell
+        // Details Cell (Verbose notes)
         const tdDet = document.createElement('td');
         tdDet.style.padding = '8px 10px';
         const invDet = document.createElement('input');
@@ -710,7 +755,7 @@ function renderTimelineEditor(parentDom) {
         };
         tdDet.appendChild(invDet);
 
-        // Action Cell
+        // Deletion Tool
         const tdAction = document.createElement('td');
         tdAction.style.padding = '8px 10px';
         tdAction.style.textAlign = 'center';
@@ -739,6 +784,7 @@ function renderTimelineEditor(parentDom) {
         tbody.appendChild(tr);
     });
 
+    // Empty state fallback
     if (window.appState.timeline.length === 0) {
         const tr = document.createElement('tr');
         tr.innerHTML = `<td colspan="4" style="padding: 30px; text-align: center; color: var(--text-muted); font-style: italic;">No timeline entries recorded.</td>`;

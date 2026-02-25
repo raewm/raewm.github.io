@@ -1,9 +1,14 @@
-// config.js
-// This file contains configuration strings that can be modified by users 
-// without needing to touch the core application logic.
+/**
+ * config.js
+ * Boilerplate text templates for the DQM Trip Report.
+ * These strings are used to auto-populate the "Methodology" section
+ * of the report based on the selected dredge type.
+ */
 
-// Note: Strings are enclosed in backticks (` `) rather than standard quotes
-// so that you can hit 'Enter' and make actual line breaks without breaking the file formatting.
+/**
+ * Global Mapping of Methods.
+ * Uses backticks to allow multiline strings for easier formatting.
+ */
 window.methodTemplates = {
     'hopper': `Draghead Depth Check -A marked tape or calibrated pressure sensor is attached to the draghead at the elevation of the draghead heel (or with a measured offset from the heel) and the head is lowered to 3 depths at which the DQM display is compared to the tape or sensor and the difference recorded.
 

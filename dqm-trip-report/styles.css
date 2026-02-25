@@ -425,10 +425,22 @@ h3 {
         page-break-inside: avoid;
     }
 
-    /* Header/Footer setup via CSS Paged Media */
+    /* 
+     * HACK: To hide browser-default print headers (file name, date, page #), 
+     * we set the @page margin to 0. We then re-apply a visual margin 
+     * using padding on the target container.
+     */
     @page {
-        margin: 0.75in;
+        margin: 0;
         size: letter portrait;
+    }
+
+    #print-container {
+        display: block !important;
+        font-family: Arial, sans-serif;
+        font-size: 11pt;
+        padding: 0.75in;
+        /* Simulated page margin */
     }
 }
 

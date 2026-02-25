@@ -1,4 +1,7 @@
-// ===== State Management =====
+/**
+ * Application State for DQM QA App 2.
+ * Focuses on a single-modal, multi-plant workflow.
+ */
 const appState = {
     plants: [],
     checkDate: '',
@@ -11,7 +14,10 @@ const appState = {
     activePlantIndex: null // Tracks which plant the active check belongs to
 };
 
-// ===== Constants & Profiles (Reused from dqm-qa-app) =====
+/**
+ * Vessel Configuration & Profile Mappings.
+ * Defines which QA checks are required for each vessel type/profile combination.
+ */
 const vesselProfiles = {
     'Scow': ['Monitoring', 'Ullage'],
     'Hopper Dredge': ['Standard'],
@@ -19,6 +25,9 @@ const vesselProfiles = {
     'Mechanical Dredge': ['Standard']
 };
 
+/**
+ * Mapping of Profile combinations to specific Check IDs.
+ */
 const requiredChecks = {
     'Scow-Monitoring': ['positionCheck', 'hullStatus', 'draftSensorLightFwd', 'draftSensorLightAft', 'draftSensorLoadedFwd', 'draftSensorLoadedAft'],
     'Scow-Ullage': ['positionCheck', 'hullStatus', 'draftSensorLightFwd', 'draftSensorLightAft', 'draftSensorLoadedFwd', 'draftSensorLoadedAft', 'ullageLightFwd', 'ullageLightAft', 'ullageLoadedFwd', 'ullageLoadedAft'],
@@ -28,6 +37,9 @@ const requiredChecks = {
     'Mechanical Dredge-Standard': ['positionCheck', 'bucketDepth', 'bucketPosition']
 };
 
+/**
+ * Human-readable display names for QA checks.
+ */
 const checkNames = {
     'positionCheck': 'Position Check',
     'hullStatus': 'Hull Status Check',
@@ -47,16 +59,20 @@ const checkNames = {
 };
 
 // ===== Initialization =====
+
 document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
     loadDraft();
 });
 
+/**
+ * Sets up global event listeners and initializes default state.
+ */
 function initializeApp() {
-    // Set default date
+    // Set default date to today
     document.getElementById('check-date').valueAsDate = new Date();
 
-    // Event Listeners: Main Actions
+    // Event Listeners: Main Global Actions
     document.getElementById('add-plant-btn').addEventListener('click', addPlant);
     document.getElementById('save-draft-btn').addEventListener('click', saveDraft);
     document.getElementById('export-btn').addEventListener('click', exportJSON);
@@ -67,19 +83,19 @@ function initializeApp() {
         }
     });
 
-    // Event Listeners: Input Tracking
+    // Event Listeners: State Syncing (Global Header Fields)
     ['check-date', 'weather-conditions', 'qa-team', 'system-provider', 'general-comments'].forEach(id => {
         document.getElementById(id).addEventListener('input', updateAppState);
     });
 
-    // Modal Events
+    // Modal & Overlay Interaction Events
     document.getElementById('add-qa-btn').addEventListener('click', openPicker);
     document.getElementById('add-comment-btn').addEventListener('click', addTimelineComment);
     document.getElementById('modal-close-btn').addEventListener('click', closeModal);
     document.getElementById('modal-cancel-btn').addEventListener('click', closeModal);
     document.getElementById('modal-log-btn').addEventListener('click', logActiveCheckToTimeline);
 
-    // Close on overlay click
+    // Overlay click-to-close logic
     document.getElementById('picker-overlay').addEventListener('click', (e) => {
         if (e.target.id === 'picker-overlay') closePicker();
     });
@@ -87,12 +103,15 @@ function initializeApp() {
         if (e.target.id === 'modal-overlay') closeModal();
     });
 
-    // Add initial plant
+    // Start with at least one plant if none loaded from draft
     if (appState.plants.length === 0) addPlant();
 
     renderTimeline();
 }
 
+/**
+ * Appends a comment entry to the timeline from a prompt.
+ */
 function addTimelineComment() {
     const notes = prompt('Enter timeline comment:');
     if (notes && notes.trim()) {
@@ -108,6 +127,9 @@ function addTimelineComment() {
     }
 }
 
+/**
+ * Syncs global application metadata from the header inputs to appState.
+ */
 function updateAppState() {
     appState.checkDate = document.getElementById('check-date').value;
     appState.weatherConditions = document.getElementById('weather-conditions').value;
@@ -118,7 +140,12 @@ function updateAppState() {
 }
 
 // ===== Plant Management =====
+
 let plantCounter = 0;
+
+/**
+ * Dynamically adds a new plant entry row to the UI.
+ */
 function addPlant() {
     plantCounter++;
     const container = document.getElementById('plants-container');
@@ -153,11 +180,17 @@ function addPlant() {
     updatePlants();
 }
 
+/**
+ * Removes a plant entry row and refreshes the state.
+ */
 function removePlant(btn) {
     btn.closest('.plant-entry').remove();
     updatePlants();
 }
 
+/**
+ * Refreshes profile dropdown based on selected vessel type.
+ */
 function updateProfileOptions(select) {
     const type = select.value;
     const profileSelect = select.closest('.plant-entry').querySelector('.vessel-profile');
@@ -175,6 +208,9 @@ function updateProfileOptions(select) {
     updatePlants();
 }
 
+/**
+ * SCRAPES the plant entry rows from the DOM and syncs them to appState.
+ */
 function updatePlants() {
     const newPlants = [];
     document.querySelectorAll('.plant-entry').forEach((entry, idx) => {
@@ -182,7 +218,7 @@ function updatePlants() {
         const type = entry.querySelector('.vessel-type').value;
         const profile = entry.querySelector('.vessel-profile').value;
 
-        // Preserve existing checks if this plant already existed in state
+        // Preserve existing checks data for this plant index
         let checks = {};
         if (appState.plants[idx]) {
             checks = appState.plants[idx].checks || {};
@@ -197,12 +233,16 @@ function updatePlants() {
 }
 
 // ===== Picker & Modal Logic =====
+
+/**
+ * Opens the initial picker to choose either a Vessel (if multi-plant) or a QA Check.
+ */
 function openPicker() {
     const grid = document.getElementById('picker-grid');
     grid.innerHTML = '';
 
     if (appState.plants.length > 1) {
-        // Step 1: Select Vessel
+        // Step 1: Vessel Selection (for multi-plant projects)
         const title = document.querySelector('#picker-overlay h3');
         const originalTitle = title.textContent;
         title.textContent = 'Select Vessel';
@@ -220,7 +260,7 @@ function openPicker() {
             grid.appendChild(btn);
         });
     } else {
-        // Only one plant, default to it
+        // Only one plant, skip vessel selection and show checks immediately
         appState.activePlantIndex = 0;
         renderCheckPickerForPlant(0);
     }
@@ -228,6 +268,10 @@ function openPicker() {
     document.getElementById('picker-overlay').classList.remove('hidden');
 }
 
+/**
+ * Renders the available QA Checks for a specific plant in the picker grid.
+ * @param {number} plantIdx - The index of the selected plant.
+ */
 function renderCheckPickerForPlant(plantIdx) {
     const grid = document.getElementById('picker-grid');
     grid.innerHTML = '';
@@ -248,10 +292,17 @@ function renderCheckPickerForPlant(plantIdx) {
     });
 }
 
+/**
+ * Closes the picker overlay.
+ */
 function closePicker() {
     document.getElementById('picker-overlay').classList.add('hidden');
 }
 
+/**
+ * Opens the main modal for a specific QA check and loads its content.
+ * @param {string} checkType - The key identifying the check.
+ */
 function openModal(checkType) {
     appState.activeCheckType = checkType;
     const modal = document.getElementById('modal-overlay');
@@ -262,13 +313,13 @@ function openModal(checkType) {
     title.textContent = `${plant.name || `Plant #${appState.activePlantIndex + 1}`} - ${checkNames[checkType]}`;
     content.innerHTML = getCheckContent(checkType);
 
-    // Restore data if exists for this specific plant
+    // Populate data from state if it exists for this plant's check
     const existingData = plant.checks[checkType];
     if (existingData) {
         setTimeout(() => restoreCheckData(checkType, existingData), 0);
     }
 
-    // Attach local input listeners for auto-calc
+    // Attach listeners for auto-calc and real-time state syncing
     setTimeout(() => {
         content.querySelectorAll('input, select, textarea').forEach(el => {
             el.addEventListener('input', () => {
@@ -280,15 +331,22 @@ function openModal(checkType) {
     }, 0);
 
     modal.classList.remove('hidden');
-    document.body.style.overflow = 'hidden';
+    document.body.style.overflow = 'hidden'; // Prevent background scrolling
 }
 
+/**
+ * Closes the main modal.
+ */
 function closeModal() {
     document.getElementById('modal-overlay').classList.add('hidden');
     document.body.style.overflow = 'auto';
     appState.activeCheckType = null;
 }
 
+/**
+ * Persists the values from the modal's internal form to the application state.
+ * @param {string} checkType - The check key.
+ */
 function saveCheckData(checkType) {
     const content = document.getElementById('modal-content');
     const plant = appState.plants[appState.activePlantIndex];
@@ -304,6 +362,11 @@ function saveCheckData(checkType) {
     saveDraft();
 }
 
+/**
+ * Restores data to the modal's DOM elements from the application state.
+ * @param {string} checkType - The check key.
+ * @param {Object} data - The saved state data for this check.
+ */
 function restoreCheckData(checkType, data) {
     Object.keys(data).forEach(id => {
         const el = document.getElementById(id);
@@ -313,7 +376,7 @@ function restoreCheckData(checkType, data) {
         }
     });
 
-    // Restore photo previews for hullStatus
+    // Special restoration for photo previews in Hull Status
     if (checkType === 'hullStatus') {
         const openPhoto = data['hull-open-photo'];
         const closePhoto = data['hull-close-photo'];
@@ -333,7 +396,7 @@ function restoreCheckData(checkType, data) {
         }
     }
 
-    // Trigger toggles
+    // Trigger UI toggles based on the restored values (e.g. simulated vs physical sections)
     if (checkType === 'velocity') toggleVelocityMethod();
     if (checkType === 'dragheadDepth') toggleDragheadSections();
     if (checkType === 'draftSensorLight') toggleDraftLightMethod();
@@ -341,16 +404,21 @@ function restoreCheckData(checkType, data) {
 }
 
 // ===== Timeline & Logging =====
+
+/**
+ * Logs the current check in the modal to the activity timeline.
+ */
 function logActiveCheckToTimeline() {
     const type = appState.activeCheckType;
     if (!type) return;
 
+    // Ensure all current values are saved before logging
     saveCheckData(type);
 
     const plant = appState.plants[appState.activePlantIndex];
     let activityText = `[${plant.name || `Plant #${appState.activePlantIndex + 1}`}] ${checkNames[type]} Completed`;
 
-    // Dynamic naming for Draghead
+    // Dynamic naming enhancement for Draghead Depth (listing which sides were checked)
     if (type === 'dragheadDepth') {
         const sides = [];
         const portChk = document.getElementById('dh-port-chk');
@@ -361,6 +429,7 @@ function logActiveCheckToTimeline() {
         if (centerChk && centerChk.checked) sides.push('Center');
         if (stbdChk && stbdChk.checked) sides.push('Stbd');
 
+        // Fallback for case where checkboxes aren't in current DOM view (just in case)
         if (sides.length === 0 && plant.checks[type]) {
             const data = plant.checks[type];
             if (data['dh-port-chk']) sides.push('Port');
@@ -388,12 +457,16 @@ function logActiveCheckToTimeline() {
     closeModal();
 }
 
-// Helper to check if a specific check is logged in the timeline for a plant
+/**
+ * Checks if a specific check is already logged in the timeline for a plant.
+ */
 function isCheckLogged(plantIdx, checkType) {
     return appState.timeline.some(entry => entry.plantIdx === plantIdx && entry.checkType === checkType);
 }
 
-// Helper to check if all required checks for a plant are logged
+/**
+ * Checks if all required QA elements for a plant are in the timeline.
+ */
 function isPlantComplete(plantIdx) {
     const p = appState.plants[plantIdx];
     if (!p) return false;
@@ -403,6 +476,9 @@ function isPlantComplete(plantIdx) {
     return required.every(type => isCheckLogged(plantIdx, type));
 }
 
+/**
+ * Re-renders the timeline table.
+ */
 function renderTimeline() {
     const tbody = document.getElementById('timeline-body');
     tbody.innerHTML = '';
@@ -423,6 +499,9 @@ function renderTimeline() {
     });
 }
 
+/**
+ * Deletes a specific timeline entry.
+ */
 window.deleteTimelineEntry = (idx) => {
     if (confirm('Delete entry?')) {
         appState.timeline.splice(idx, 1);
@@ -432,6 +511,10 @@ window.deleteTimelineEntry = (idx) => {
 };
 
 // ===== Data Persistence & Export =====
+
+/**
+ * Saves the entire appState to LocalStorage.
+ */
 function saveDraft() {
     try {
         localStorage.setItem('dqm-window-qa-draft', JSON.stringify(appState));
@@ -440,20 +523,23 @@ function saveDraft() {
     }
 }
 
+/**
+ * Loads application state from LocalStorage and reconstructs the UI.
+ */
 function loadDraft() {
     const draft = localStorage.getItem('dqm-window-qa-draft');
     if (!draft) return;
     const data = JSON.parse(draft);
     Object.assign(appState, data);
 
-    // Restore UI
+    // Restore Global Header UI
     document.getElementById('check-date').value = appState.checkDate || '';
     document.getElementById('weather-conditions').value = appState.weatherConditions || '';
     document.getElementById('qa-team').value = appState.qaTeam || '';
     document.getElementById('system-provider').value = appState.systemProvider || '';
     document.getElementById('general-comments').value = appState.generalComments || '';
 
-    // Restore Plants
+    // Reconstruct Plant Rows
     if (appState.plants.length > 0) {
         document.getElementById('plants-container').innerHTML = '';
         plantCounter = 0;
@@ -469,6 +555,9 @@ function loadDraft() {
     renderTimeline();
 }
 
+/**
+ * Triggers a JSON file download for the current audit data.
+ */
 function exportJSON() {
     updateAppState();
     const exportData = {
@@ -492,6 +581,10 @@ function exportJSON() {
 }
 
 // ===== Form Generators (Ported from dqm-qa-app) =====
+
+/**
+ * Factory for retrieving HTML template for a specific check.
+ */
 function getCheckContent(type) {
     switch (type) {
         case 'positionCheck': return createPositionCheckForm();
@@ -513,6 +606,9 @@ function getCheckContent(type) {
     }
 }
 
+/**
+ * Generates HTML for GPS Position Check.
+ */
 function createPositionCheckForm() {
     return `
         <div class="form-group">
@@ -543,6 +639,9 @@ function createPositionCheckForm() {
     `;
 }
 
+/**
+ * Generates HTML for Hull Status (photo upload) Form.
+ */
 function createHullStatusForm() {
     return `
         <div class="form-group">
@@ -576,6 +675,9 @@ function createHullStatusForm() {
     `;
 }
 
+/**
+ * Generates HTML for Draft Sensor (integrated physical/simulated) Form.
+ */
 function createDraftSensorForm(cond, side) {
     const SideProper = side === 'fwd' ? 'Forward' : 'Aft';
     const CondProper = cond === 'light' ? 'Light' : 'Loaded';
@@ -623,6 +725,9 @@ function createDraftSensorForm(cond, side) {
     `;
 }
 
+/**
+ * Generates HTML for Ullage Sounding Comparison Form.
+ */
 function createUllageForm(cond, side) {
     const SideProper = side === 'fwd' ? 'Forward' : 'Aft';
     const CondProper = cond === 'light' ? 'Light' : 'Loaded';
@@ -644,6 +749,9 @@ function createUllageForm(cond, side) {
     `;
 }
 
+/**
+ * Generates HTML for Draghead Depth Check Form with Port/Center/Stbd toggles.
+ */
 function createDragheadDepthForm() {
     return `
         <div class="form-group" style="display:flex; gap:10px;">
@@ -687,6 +795,9 @@ function createDragheadDepthForm() {
     `;
 }
 
+/**
+ * Generates HTML for Suction Mouth Depth (Cutterhead) Form.
+ */
 function createSuctionMouthDepthForm() {
     return `
         <div class="form-group">
@@ -703,6 +814,9 @@ function createSuctionMouthDepthForm() {
     `;
 }
 
+/**
+ * Generates HTML for Discharge Velocity (Dye/Meter) Form.
+ */
 function createVelocityForm() {
     return `
         <div class="form-group">
@@ -734,6 +848,9 @@ function createVelocityForm() {
     `;
 }
 
+/**
+ * Generates HTML for Bucket/Grab Depth Form.
+ */
 function createBucketDepthForm() {
     return `
         <div class="form-group">
@@ -750,6 +867,9 @@ function createBucketDepthForm() {
     `;
 }
 
+/**
+ * Generates HTML for Bucket Position (Spatial) Form.
+ */
 function createBucketPositionForm() {
     return `
         <p class="text-muted">Verify bucket X/Y against physical boom angle/drawings.</p>
@@ -764,22 +884,45 @@ function createBucketPositionForm() {
 }
 
 // ===== Toggle Helpers =====
-window.toggleDraftLightMethod = () => {
-    const val = document.getElementById('draft-light-method').value;
-    document.getElementById('physical-draft-light-section').classList.toggle('hidden', val !== 'physical');
-    document.getElementById('simulated-draft-light-section').classList.toggle('hidden', val !== 'simulated');
+
+/**
+ * Toggles visibility between physical and simulated draft sections in the modal.
+ * @param {string} cond - The condition ('light' or 'loaded').
+ * @param {string} side - The side ('fwd' or 'aft').
+ */
+window.toggleDraftMethod = (cond, side) => {
+    const val = document.getElementById(`draft-${cond}-${side}-method`).value;
+    document.getElementById(`physical-${cond}-${side}-section`).classList.toggle('hidden', val !== 'physical');
+    document.getElementById(`simulated-${cond}-${side}-section`).classList.toggle('hidden', val !== 'simulated');
 };
-window.toggleDraftLoadedMethod = () => {
-    const val = document.getElementById('draft-loaded-method').value;
-    document.getElementById('physical-draft-loaded-section').classList.toggle('hidden', val !== 'physical');
-    document.getElementById('simulated-draft-loaded-section').classList.toggle('hidden', val !== 'simulated');
-};
+
+/**
+ * Toggles visibility of Draghead sections based on checkboxes.
+ */
 window.toggleDragheadSections = () => {
     document.getElementById('dh-port-sec').classList.toggle('hidden', !document.getElementById('dh-port-chk').checked);
-    document.getElementById('dh-center-sec').classList.toggle('hidden', !document.getElementById('dh-center-chk') || !document.getElementById('dh-center-chk').checked);
+    const centerChk = document.getElementById('dh-center-chk');
+    if (centerChk) { // Check if center checkbox exists (it might not for some vessel types)
+        document.getElementById('dh-center-sec').classList.toggle('hidden', !centerChk.checked);
+    }
     document.getElementById('dh-stbd-sec').classList.toggle('hidden', !document.getElementById('dh-stbd-chk').checked);
 };
 
+/**
+ * Toggles visibility between Dye Test and External Meter velocity sections.
+ */
+window.toggleVelocityMethod = () => {
+    const method = document.getElementById('velocity-method').value;
+    document.getElementById('velocity-dye-sec').classList.toggle('hidden', method !== 'dye');
+    document.getElementById('velocity-meter-sec').classList.toggle('hidden', method !== 'meter');
+};
+
+/**
+ * Converts a browser File to a DataURL and updates the preview <img>.
+ * Persists the DataURL to the application state.
+ * @param {HTMLInputElement} input - The file input element.
+ * @param {string} previewId - The ID of the image element to display the preview.
+ */
 window.handleHullPhoto = (input, previewId) => {
     const file = input.files[0];
     if (file) {
@@ -790,10 +933,9 @@ window.handleHullPhoto = (input, previewId) => {
             preview.src = dataUrl;
             preview.style.display = 'block';
 
-            // Persist to state
+            // Persist the binary data to the application state
             const plant = appState.plants[appState.activePlantIndex];
             if (!plant.checks.hullStatus) plant.checks.hullStatus = {};
-            // Map preview ID to state key
             const stateKey = previewId === 'hull-open-preview' ? 'hull-open-photo' : 'hull-close-photo';
             plant.checks.hullStatus[stateKey] = dataUrl;
 
@@ -801,21 +943,15 @@ window.handleHullPhoto = (input, previewId) => {
         };
         reader.readAsDataURL(file);
     }
-};
+}; // This closing brace was missing for window.handleHullPhoto
 
-window.toggleDraftMethod = (cond, side) => {
-    const val = document.getElementById(`draft-${cond}-${side}-method`).value;
-    document.getElementById(`physical-${cond}-${side}-section`).classList.toggle('hidden', val !== 'physical');
-    document.getElementById(`simulated-${cond}-${side}-section`).classList.toggle('hidden', val !== 'simulated');
-};
-window.toggleVelocityMethod = () => {
-    const val = document.getElementById('velocity-method').value;
-    document.getElementById('velocity-dye-sec').classList.toggle('hidden', val !== 'dye');
-    document.getElementById('velocity-meter-sec').classList.toggle('hidden', val !== 'meter');
-};
+// ===== Calculations & GPS =====
 
-// ===== Calculations =====
-// ===== Calculations =====
+/**
+ * Triggers re-calculation of field differences within the active modal.
+ * Uses IDs relative to the open modal DOM.
+ * @param {string} type - The check type key.
+ */
 function calculateDifferences(type) {
     if (type.startsWith('draftSensor')) {
         const parts = type.split(/(?=[A-Z])/);
@@ -839,91 +975,132 @@ function calculateDifferences(type) {
     }
 }
 
+/**
+ * Draft calculation logic for integrated forms.
+ * @param {string} cond - 'light' or 'loaded'
+ * @param {string} side - 'fwd' or 'aft'
+ */
 function calcDraft(cond, side) {
     const methodEl = document.getElementById(`draft-${cond}-${side}-method`);
     if (!methodEl) return;
 
     if (methodEl.value === 'physical') {
-        const p = parseFloat(document.getElementById(`${cond}-${side}-port`).value);
-        const s = parseFloat(document.getElementById(`${cond}-${side}-stbd`).value);
-        const dqm = parseFloat(document.getElementById(`${cond}-dqm-${side}`).value);
+        const p = parseFloat(document.getElementById(`${cond}-${side}-port`)?.value);
+        const s = parseFloat(document.getElementById(`${cond}-${side}-stbd`)?.value);
+        const dqm = parseFloat(document.getElementById(`${cond}-dqm-${side}`)?.value);
         const el = document.getElementById(`${cond}-${side}-diff`);
-        if (!isNaN(p) && !isNaN(s) && !isNaN(dqm)) el.value = Math.abs(((p + s) / 2) - dqm).toFixed(2);
+        if (!isNaN(p) && !isNaN(s) && !isNaN(dqm) && el) {
+            el.value = Math.abs(((p + s) / 2) - dqm).toFixed(2);
+        }
     } else {
-        const off = parseFloat(document.getElementById(`sim-${cond}-${side}-offset`).value) || 0;
+        const off = parseFloat(document.getElementById(`sim-${cond}-${side}-offset`)?.value) || 0;
         for (let i = 1; i <= 3; i++) {
-            const d = parseFloat(document.getElementById(`sim-${cond}-${side}-depth-${i}`).value);
-            const r = parseFloat(document.getElementById(`sim-${cond}-${side}-reading-${i}`).value);
+            const d = parseFloat(document.getElementById(`sim-${cond}-${side}-depth-${i}`)?.value);
+            const r = parseFloat(document.getElementById(`sim-${cond}-${side}-reading-${i}`)?.value);
             const el = document.getElementById(`sim-${cond}-${side}-diff-${i}`);
-            if (!isNaN(d) && !isNaN(r)) el.value = Math.abs((d + off) - r).toFixed(1);
+            if (!isNaN(d) && !isNaN(r) && el) {
+                el.value = Math.abs((d + off) - r).toFixed(1);
+            }
         }
     }
 }
 
+/**
+ * Ullage calculation logic.
+ * @param {string} cond - 'light' or 'loaded'
+ * @param {string} side - 'fwd' or 'aft'
+ */
 function calcUllage(cond, side) {
-    const p = parseFloat(document.getElementById(`ullage-${cond}-${side}-port`).value);
-    const s = parseFloat(document.getElementById(`ullage-${cond}-${side}-stbd`).value);
-    const dqm = parseFloat(document.getElementById(`ullage-${cond}-dqm-${side}`).value);
+    const p = parseFloat(document.getElementById(`ullage-${cond}-${side}-port`)?.value);
+    const s = parseFloat(document.getElementById(`ullage-${cond}-${side}-stbd`)?.value);
+    const dqm = parseFloat(document.getElementById(`ullage-${cond}-dqm-${side}`)?.value);
     const el = document.getElementById(`ullage-${cond}-diff-${side}`);
-    if (!isNaN(p) && !isNaN(s) && !isNaN(dqm)) el.value = Math.abs(((p + s) / 2) - dqm).toFixed(2);
+    if (!isNaN(p) && !isNaN(s) && !isNaN(dqm) && el) {
+        el.value = Math.abs(((p + s) / 2) - dqm).toFixed(2);
+    }
 }
 
+/**
+ * Draghead depth calculation logic.
+ */
 function calcDraghead() {
     ['port', 'center', 'stbd'].forEach(side => {
         const offsetEl = document.getElementById(`dh-${side}-offset`);
         if (!offsetEl) return;
         const off = parseFloat(offsetEl.value) || 0;
         for (let i = 1; i <= 3; i++) {
-            const m = parseFloat(document.getElementById(`dh-${side}-man-${i}`).value);
-            const d = parseFloat(document.getElementById(`dh-${side}-dqm-${i}`).value);
+            const m = parseFloat(document.getElementById(`dh-${side}-man-${i}`)?.value);
+            const d = parseFloat(document.getElementById(`dh-${side}-dqm-${i}`)?.value);
             const el = document.getElementById(`dh-${side}-diff-${i}`);
-            if (!isNaN(m) && !isNaN(d)) el.value = Math.abs((m + off) - d).toFixed(1);
+            if (!isNaN(m) && !isNaN(d) && el) {
+                el.value = Math.abs((m + off) - d).toFixed(1);
+            }
         }
     });
 }
 
+/**
+ * Suction mouth depth calculation logic.
+ */
 function calcSuction() {
-    const off = parseFloat(document.getElementById('suction-offset').value) || 0;
+    const off = parseFloat(document.getElementById('suction-offset')?.value) || 0;
     for (let i = 1; i <= 3; i++) {
-        const m = parseFloat(document.getElementById(`suction-man-${i}`).value);
-        const d = parseFloat(document.getElementById(`suction-dqm-${i}`).value);
+        const m = parseFloat(document.getElementById(`suction-man-${i}`)?.value);
+        const d = parseFloat(document.getElementById(`suction-dqm-${i}`)?.value);
         const el = document.getElementById(`suction-diff-${i}`);
-        if (!isNaN(m) && !isNaN(d)) el.value = Math.abs((m + off) - d).toFixed(1);
+        if (!isNaN(m) && !isNaN(d) && el) {
+            el.value = Math.abs((m + off) - d).toFixed(1);
+        }
     }
 }
 
+/**
+ * Velocity calculation logic.
+ */
 function calcVelocity() {
     const methodEl = document.getElementById('velocity-method');
     if (!methodEl) return;
 
     if (methodEl.value === 'dye') {
-        const L = parseFloat(document.getElementById('vel-pipe-length').value);
+        const L = parseFloat(document.getElementById('vel-pipe-length')?.value);
         for (let i = 1; i <= 2; i++) {
-            const t = parseFloat(document.getElementById(`vel-dye-time-${i}`).value);
-            const d = parseFloat(document.getElementById(`vel-dye-dqm-${i}`).value);
+            const t = parseFloat(document.getElementById(`vel-dye-time-${i}`)?.value);
+            const d = parseFloat(document.getElementById(`vel-dye-dqm-${i}`)?.value);
             const el = document.getElementById(`vel-dye-diff-${i}`);
-            if (!isNaN(L) && !isNaN(t) && !isNaN(d) && t > 0) el.value = Math.abs((L / t) - d).toFixed(2);
+            if (!isNaN(L) && !isNaN(t) && !isNaN(d) && t > 0 && el) {
+                el.value = Math.abs((L / t) - d).toFixed(2);
+            }
         }
     } else {
         for (let i = 1; i <= 2; i++) {
-            const m = parseFloat(document.getElementById(`vel-meter-man-${i}`).value);
-            const d = parseFloat(document.getElementById(`vel-meter-dqm-${i}`).value);
+            const m = parseFloat(document.getElementById(`vel-meter-man-${i}`)?.value);
+            const d = parseFloat(document.getElementById(`vel-meter-dqm-${i}`)?.value);
             const el = document.getElementById(`vel-meter-diff-${i}`);
-            if (!isNaN(m) && !isNaN(d)) el.value = Math.abs(m - d).toFixed(2);
+            if (!isNaN(m) && !isNaN(d) && el) {
+                el.value = Math.abs(m - d).toFixed(2);
+            }
         }
     }
 }
 
+/**
+ * Bucket depth calculation logic.
+ */
 function calcBucketDepth() {
-    const off = parseFloat(document.getElementById('bucket-offset').value) || 0;
+    const off = parseFloat(document.getElementById('bucket-offset')?.value) || 0;
     for (let i = 1; i <= 3; i++) {
-        const m = parseFloat(document.getElementById(`bucket-man-${i}`).value);
-        const d = parseFloat(document.getElementById(`bucket-dqm-${i}`).value);
+        const m = parseFloat(document.getElementById(`bucket-man-${i}`)?.value);
+        const d = parseFloat(document.getElementById(`bucket-dqm-${i}`)?.value);
         const el = document.getElementById(`bucket-diff-${i}`);
-        if (!isNaN(m) && !isNaN(d)) el.value = Math.abs((m + off) - d).toFixed(1);
+        if (!isNaN(m) && !isNaN(d) && el) {
+            el.value = Math.abs((m + off) - d).toFixed(1);
+        }
     }
 }
 
+/**
+ * Bucket position calculation logic.
+ */
 function calcBucketPos() {
     for (let i = 1; i <= 2; i++) {
         const mEl = document.getElementById(`bpos-man-${i}`);
@@ -937,15 +1114,18 @@ function calcBucketPos() {
     }
 }
 
+/**
+ * Position check (GPS) difference calculation.
+ */
 function calculatePositionDifference() {
-    const lat1 = parseFloat(document.getElementById('handheld-lat').value);
-    const lon1 = parseFloat(document.getElementById('handheld-lon').value);
-    const lat2 = parseFloat(document.getElementById('dqm-lat').value);
-    const lon2 = parseFloat(document.getElementById('dqm-lon').value);
+    const lat1 = parseFloat(document.getElementById('handheld-lat')?.value);
+    const lon1 = parseFloat(document.getElementById('handheld-lon')?.value);
+    const lat2 = parseFloat(document.getElementById('dqm-lat')?.value);
+    const lon2 = parseFloat(document.getElementById('dqm-lon')?.value);
 
     if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return;
 
-    const R = 20925525; // Earth radius in feet
+    const R = 20902231; // Earth radius in feet
     const dLat = (lat2 - lat1) * Math.PI / 180;
     const dLon = (lon2 - lon1) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
@@ -958,6 +1138,9 @@ function calculatePositionDifference() {
     if (el) el.value = dist.toFixed(1);
 }
 
+/**
+ * Uses browser GeoLocation API to capture current Lat/Lon.
+ */
 function captureGPS() {
     if ("geolocation" in navigator) {
         navigator.geolocation.getCurrentPosition(pos => {
