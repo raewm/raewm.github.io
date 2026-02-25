@@ -697,7 +697,8 @@ function createDraftSensorForm(cond, side) {
                 <div class="form-group"><label>${SideProper} Port</label><input type="number" id="${cond}-${side}-port" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>${SideProper} Stbd</label><input type="number" id="${cond}-${side}-stbd" step="0.1" placeholder="0.0"></div>
             </div>
-            <div class="input-row">
+            <div class="input-row-3">
+                <div class="form-group"><label>Avg</label><input type="number" id="${cond}-${side}-avg" readonly placeholder="Avg"></div>
                 <div class="form-group"><label>DQM ${SideProper}</label><input type="number" id="${cond}-dqm-${side}" step="0.1" placeholder="0.0"></div>
                 <div class="form-group"><label>Diff</label><input type="number" id="${cond}-${side}-diff" readonly placeholder="Auto-calc"></div>
             </div>
@@ -738,7 +739,8 @@ function createUllageForm(cond, side) {
             <div class="form-group"><label>${SideProper} Port Sounding</label><input type="number" id="ullage-${cond}-${side}-port" step="0.1" placeholder="0.0"></div>
             <div class="form-group"><label>${SideProper} Stbd Sounding</label><input type="number" id="ullage-${cond}-${side}-stbd" step="0.1" placeholder="0.0"></div>
         </div>
-        <div class="input-row">
+        <div class="input-row-3">
+            <div class="form-group"><label>Average</label><input type="number" id="ullage-${cond}-${side}-avg" readonly placeholder="Avg"></div>
             <div class="form-group"><label>DQM System ${SideProper}</label><input type="number" id="ullage-${cond}-dqm-${side}" step="0.1" placeholder="0.0"></div>
             <div class="form-group"><label>Diff</label><input type="number" id="ullage-${cond}-diff-${side}" readonly placeholder="Auto-calc"></div>
         </div>
@@ -943,7 +945,7 @@ window.handleHullPhoto = (input, previewId) => {
         };
         reader.readAsDataURL(file);
     }
-}; // This closing brace was missing for window.handleHullPhoto
+};
 
 // ===== Calculations & GPS =====
 
@@ -988,9 +990,14 @@ function calcDraft(cond, side) {
         const p = parseFloat(document.getElementById(`${cond}-${side}-port`)?.value);
         const s = parseFloat(document.getElementById(`${cond}-${side}-stbd`)?.value);
         const dqm = parseFloat(document.getElementById(`${cond}-dqm-${side}`)?.value);
+        const avgEl = document.getElementById(`${cond}-${side}-avg`);
         const el = document.getElementById(`${cond}-${side}-diff`);
-        if (!isNaN(p) && !isNaN(s) && !isNaN(dqm) && el) {
-            el.value = Math.abs(((p + s) / 2) - dqm).toFixed(2);
+        if (!isNaN(p) && !isNaN(s) && avgEl) {
+            const average = (p + s) / 2;
+            avgEl.value = average.toFixed(2);
+            if (!isNaN(dqm) && el) {
+                el.value = Math.abs(average - dqm).toFixed(2);
+            }
         }
     } else {
         const off = parseFloat(document.getElementById(`sim-${cond}-${side}-offset`)?.value) || 0;
@@ -1014,9 +1021,14 @@ function calcUllage(cond, side) {
     const p = parseFloat(document.getElementById(`ullage-${cond}-${side}-port`)?.value);
     const s = parseFloat(document.getElementById(`ullage-${cond}-${side}-stbd`)?.value);
     const dqm = parseFloat(document.getElementById(`ullage-${cond}-dqm-${side}`)?.value);
+    const avgEl = document.getElementById(`ullage-${cond}-${side}-avg`);
     const el = document.getElementById(`ullage-${cond}-diff-${side}`);
-    if (!isNaN(p) && !isNaN(s) && !isNaN(dqm) && el) {
-        el.value = Math.abs(((p + s) / 2) - dqm).toFixed(2);
+    if (!isNaN(p) && !isNaN(s) && avgEl) {
+        const average = (p + s) / 2;
+        avgEl.value = average.toFixed(2);
+        if (!isNaN(dqm) && el) {
+            el.value = Math.abs(average - dqm).toFixed(2);
+        }
     }
 }
 

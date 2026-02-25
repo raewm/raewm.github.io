@@ -179,8 +179,10 @@ function renderChecks(state) {
                         plantHtml += renderShipData(data, override, type);
                     } else if (type === 'hullStatus') {
                         plantHtml += renderHullStatus(data, override);
-                    } else if (type === 'dragheadDepth') {
-                        plantHtml += renderDragheadTable(data, override);
+                    } else if (type === 'suctionMouthDepth') {
+                        plantHtml += renderSuctionTable(data, override);
+                    } else if (type === 'bucketDepth') {
+                        plantHtml += renderBucketTable(data, override);
                     } else if (type === 'velocity') {
                         plantHtml += renderVelocityTable(data, override);
                     } else {
@@ -214,6 +216,10 @@ function renderChecks(state) {
                     html += renderShipData(data, override, type);
                 } else if (type === 'dragheadDepth') {
                     html += renderDragheadTable(data, override);
+                } else if (type === 'suctionMouthDepth') {
+                    html += renderSuctionTable(data, override);
+                } else if (type === 'bucketDepth') {
+                    html += renderBucketTable(data, override);
                 } else if (type === 'velocity') {
                     html += renderVelocityTable(data, override);
                 } else {
@@ -338,9 +344,15 @@ function renderSimulatedDraft(data, override, prefixOverride, typeName) {
 
         let rows = '';
         [1, 2, 3].forEach(num => {
+            let offset = parseFloat(getVal(data, override, `${prefix}${pos}-offset`)) || 0;
             let depth = getVal(data, override, `${prefix}${pos}-depth-${num}`) || getVal(data, override, `${prefix}${pos}-depth${num}`);
             let reading = getVal(data, override, `${prefix}${pos}-reading-${num}`) || getVal(data, override, `${prefix}${pos}-reading${num}`);
-            let diffVal = diff(depth, reading);
+
+            // Re-calculate difference using offset: |(depth + offset) - reading|
+            let diffVal = undefined;
+            if (depth !== undefined && reading !== undefined) {
+                diffVal = Math.abs((parseFloat(depth) + offset) - parseFloat(reading)).toFixed(2);
+            }
 
             if (depth !== undefined || reading !== undefined) {
                 rows += `
@@ -354,7 +366,8 @@ function renderSimulatedDraft(data, override, prefixOverride, typeName) {
         });
 
         if (rows) {
-            html += `<h4 style="margin: 15px 0 5px;">${pos === 'fwd' ? 'Forward' : 'Aft'} Sensors</h4>
+            let offset = parseFloat(getVal(data, override, `${prefix}${pos}-offset`)) || 0;
+            html += `<h4 style="margin: 15px 0 5px;">${pos === 'fwd' ? 'Forward' : 'Aft'} Sensors — Offset: ${formatNum(offset)} ft</h4>
             <table class="report-table">
                 <tr>
                     <th width="40%">Measurement</th>
@@ -392,9 +405,14 @@ function renderDragheadTable(data, override) {
     dragheads.forEach(dh => {
         let rows = '';
         [1, 2, 3].forEach(num => {
-            let manual = getVal(data, override, `draghead-${dh.key}-manual-${num}`);
-            let dqm = getVal(data, override, `draghead-${dh.key}-dqm-${num}`);
-            let diff = getVal(data, override, `draghead-${dh.key}-diff-${num}`);
+            let offset = parseFloat(getVal(data, override, `draghead-${dh.key}-offset`)) || parseFloat(getVal(data, override, `dh-${dh.key}-offset`)) || 0;
+            let manual = getVal(data, override, `draghead-${dh.key}-manual-${num}`) || getVal(data, override, `dh-${dh.key}-man-${num}`);
+            let dqm = getVal(data, override, `draghead-${dh.key}-dqm-${num}`) || getVal(data, override, `dh-${dh.key}-dqm-${num}`);
+
+            let diffVal = undefined;
+            if (manual !== undefined && dqm !== undefined) {
+                diffVal = Math.abs((parseFloat(manual) + offset) - parseFloat(dqm)).toFixed(2);
+            }
 
             if (manual !== undefined || dqm !== undefined) {
                 rows += `
@@ -402,7 +420,7 @@ function renderDragheadTable(data, override) {
                     <td class="text-center">Depth Measurement ${num}</td>
                     <td class="text-center">${formatNum(manual)}</td>
                     <td class="text-center">${formatNum(dqm)}</td>
-                    <td class="text-center">${formatNum(diff)}</td>
+                    <td class="text-center">${formatNum(diffVal)}</td>
                 </tr>`;
             }
         });
@@ -410,7 +428,7 @@ function renderDragheadTable(data, override) {
         if (rows !== '') {
             html += `
             <div style="margin-bottom: 10px;">
-                <h4 style="margin:0 0 5px 0; font-size:11pt; color:#333;">${dh.label}</h4>
+                <h4 style="margin:0 0 5px 0; font-size:11pt; color:#333;">${dh.label} — Offset: ${formatNum(offset)} ft</h4>
                 <table class="report-table">
                     <tr>
                         <th width="40%">Measurement</th>
@@ -424,10 +442,106 @@ function renderDragheadTable(data, override) {
         }
     });
 
-    let remarks = getVal(data, override, 'draghead-remarks');
+    let remarks = getVal(data, override, 'draghead-remarks') || getVal(data, override, 'remarks');
     if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
 
     return html || '<p>No draghead data recorded.</p>';
+}
+
+/**
+ * Specialized Renderer: Suction Mouth Depth (Cutterhead).
+ */
+function renderSuctionTable(data, override) {
+    let rows = '';
+    let offset = parseFloat(getVal(data, override, 'suction-offset')) || 0;
+
+    [1, 2, 3].forEach(num => {
+        let manual = getVal(data, override, `suction-manual-${num}`) || getVal(data, override, `suction-man-${num}`);
+        let dqm = getVal(data, override, `suction-dqm-${num}`);
+
+        let diffVal = undefined;
+        if (manual !== undefined && dqm !== undefined) {
+            diffVal = Math.abs((parseFloat(manual) + offset) - parseFloat(dqm)).toFixed(2);
+        }
+
+        if (manual !== undefined || dqm !== undefined) {
+            rows += `
+            <tr>
+                <td class="text-center">Measurement ${num}</td>
+                <td class="text-center">${formatNum(manual)}</td>
+                <td class="text-center">${formatNum(dqm)}</td>
+                <td class="text-center">${formatNum(diffVal)}</td>
+            </tr>`;
+        }
+    });
+
+    if (!rows) return '<p>No suction mouth data recorded.</p>';
+
+    let html = `
+        <h4 style="margin: 15px 0 5px; font-size:11pt; color:#333;">Suction Mouth — Offset: ${formatNum(offset)} ft</h4>
+        <table class="report-table">
+            <tr>
+                <th width="40%">Measurement</th>
+                <th width="20%" class="text-center">Manual QA (ft)</th>
+                <th width="20%" class="text-center">DQM System (ft)</th>
+                <th width="20%" class="text-center">Difference</th>
+            </tr>
+            ${rows}
+        </table>
+    `;
+
+    let remarks = getVal(data, override, 'suction-remarks') || getVal(data, override, 'remarks');
+    if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+
+    return html;
+}
+
+/**
+ * Specialized Renderer: Bucket Depth (Mechanical).
+ */
+function renderBucketTable(data, override) {
+    let rows = '';
+    let offset = parseFloat(getVal(data, override, 'bucket-offset')) || 0;
+
+    [1, 2, 3].forEach(num => {
+        let manual = getVal(data, override, `bucket-manual-${num}`) || getVal(data, override, `bucket-man-${num}`);
+        let dqm = getVal(data, override, `bucket-dqm-${num}`);
+
+        let diffVal = undefined;
+        if (manual !== undefined && dqm !== undefined) {
+            diffVal = Math.abs((parseFloat(manual) + offset) - parseFloat(dqm)).toFixed(2);
+        }
+
+        if (manual !== undefined || dqm !== undefined) {
+            rows += `
+            <tr>
+                <td class="text-center">Measurement ${num}</td>
+                <td class="text-center">${formatNum(manual)}</td>
+                <td class="text-center">${formatNum(dqm)}</td>
+                <td class="text-center">${formatNum(diffVal)}</td>
+            </tr>`;
+        }
+    });
+
+    if (!rows) return '<p>No bucket depth data recorded.</p>';
+
+    let html = `
+        <h4 style="margin: 15px 0 5px; font-size:11pt; color:#333;">Bucket/Grab — Offset: ${formatNum(offset)} ft</h4>
+        <table class="report-table">
+            <tr>
+                <th width="40%">Measurement</th>
+                <th width="20%" class="text-center">Manual QA (ft)</th>
+                <th width="20%" class="text-center">DQM System (ft)</th>
+                <th width="20%" class="text-center">Difference</th>
+            </tr>
+            ${rows}
+        </table>
+    `;
+
+    let remarks = getVal(data, override, 'bucket-depth-remarks') || getVal(data, override, 'remarks');
+    if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+
+    return html;
 }
 
 /**

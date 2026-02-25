@@ -904,7 +904,11 @@ function createUllageLightForm() {
                 <input type="number" id="ullage-light-fwd-stbd" step="0.1" placeholder="0.0">
             </div>
         </div>
-        <div class="input-row">
+        <div class="input-row-3">
+            <div class="form-group">
+                <label>Avg Sounding (ft)</label>
+                <input type="number" id="ullage-light-fwd-avg" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
             <div class="form-group">
                 <label>DQM System Forward (ft)</label>
                 <input type="number" id="ullage-light-dqm-fwd" step="0.1" placeholder="0.0">
@@ -932,7 +936,11 @@ function createUllageLightForm() {
                 <input type="number" id="ullage-light-aft-stbd" step="0.1" placeholder="0.0">
             </div>
         </div>
-        <div class="input-row">
+        <div class="input-row-3">
+            <div class="form-group">
+                <label>Avg Sounding (ft)</label>
+                <input type="number" id="ullage-light-aft-avg" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
             <div class="form-group">
                 <label>DQM System Aft (ft)</label>
                 <input type="number" id="ullage-light-dqm-aft" step="0.1" placeholder="0.0">
@@ -974,7 +982,11 @@ function createUllageLoadedForm() {
                 <input type="number" id="ullage-loaded-fwd-stbd" step="0.1" placeholder="0.0">
             </div>
         </div>
-        <div class="input-row">
+        <div class="input-row-3">
+            <div class="form-group">
+                <label>Avg Sounding (ft)</label>
+                <input type="number" id="ullage-loaded-fwd-avg" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
             <div class="form-group">
                 <label>DQM System Forward (ft)</label>
                 <input type="number" id="ullage-loaded-dqm-fwd" step="0.1" placeholder="0.0">
@@ -1001,7 +1013,11 @@ function createUllageLoadedForm() {
                 <input type="number" id="ullage-loaded-aft-stbd" step="0.1" placeholder="0.0">
             </div>
         </div>
-        <div class="input-row">
+        <div class="input-row-3">
+            <div class="form-group">
+                <label>Avg Sounding (ft)</label>
+                <input type="number" id="ullage-loaded-aft-avg" step="0.01" placeholder="Auto-calc" readonly>
+            </div>
             <div class="form-group">
                 <label>DQM System Aft (ft)</label>
                 <input type="number" id="ullage-loaded-dqm-aft" step="0.1" placeholder="0.0">
@@ -2090,9 +2106,10 @@ function calculateUllageDifferences(condition, plantIdx) {
     const fwdPort = parseFloat(document.getElementById(`ullage-${condition}-fwd-port-${plantIdx}`)?.value);
     const fwdStbd = parseFloat(document.getElementById(`ullage-${condition}-fwd-stbd-${plantIdx}`)?.value);
     const dqmFwd = parseFloat(document.getElementById(`ullage-${condition}-dqm-fwd-${plantIdx}`)?.value);
+    const fwdAvg = document.getElementById(`ullage-${condition}-fwd-avg-${plantIdx}`);
     const fwdDiff = document.getElementById(`ullage-${condition}-diff-fwd-${plantIdx}`);
 
-    if (fwdDiff) {
+    if (fwdAvg) {
         let manualFwd;
         if (!isNaN(fwdPort) && !isNaN(fwdStbd)) {
             manualFwd = (fwdPort + fwdStbd) / 2;
@@ -2101,8 +2118,15 @@ function calculateUllageDifferences(condition, plantIdx) {
         } else if (!isNaN(fwdStbd)) {
             manualFwd = fwdStbd;
         }
-        if (manualFwd !== undefined && !isNaN(dqmFwd)) {
-            fwdDiff.value = Math.abs(manualFwd - dqmFwd).toFixed(2);
+
+        if (manualFwd !== undefined) {
+            fwdAvg.value = manualFwd.toFixed(2);
+            if (!isNaN(dqmFwd) && fwdDiff) {
+                fwdDiff.value = Math.abs(manualFwd - dqmFwd).toFixed(2);
+            }
+        } else {
+            fwdAvg.value = '';
+            if (fwdDiff) fwdDiff.value = '';
         }
     }
 
@@ -2110,9 +2134,10 @@ function calculateUllageDifferences(condition, plantIdx) {
     const aftPort = parseFloat(document.getElementById(`ullage-${condition}-aft-port-${plantIdx}`)?.value);
     const aftStbd = parseFloat(document.getElementById(`ullage-${condition}-aft-stbd-${plantIdx}`)?.value);
     const dqmAft = parseFloat(document.getElementById(`ullage-${condition}-dqm-aft-${plantIdx}`)?.value);
+    const aftAvg = document.getElementById(`ullage-${condition}-aft-avg-${plantIdx}`);
     const aftDiff = document.getElementById(`ullage-${condition}-diff-aft-${plantIdx}`);
 
-    if (aftDiff) {
+    if (aftAvg) {
         let manualAft;
         if (!isNaN(aftPort) && !isNaN(aftStbd)) {
             manualAft = (aftPort + aftStbd) / 2;
@@ -2121,8 +2146,15 @@ function calculateUllageDifferences(condition, plantIdx) {
         } else if (!isNaN(aftStbd)) {
             manualAft = aftStbd;
         }
-        if (manualAft !== undefined && !isNaN(dqmAft)) {
-            aftDiff.value = Math.abs(manualAft - dqmAft).toFixed(2);
+
+        if (manualAft !== undefined) {
+            aftAvg.value = manualAft.toFixed(2);
+            if (!isNaN(dqmAft) && aftDiff) {
+                aftDiff.value = Math.abs(manualAft - dqmAft).toFixed(2);
+            }
+        } else {
+            aftAvg.value = '';
+            if (aftDiff) aftDiff.value = '';
         }
     }
 }
