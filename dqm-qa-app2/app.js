@@ -193,7 +193,8 @@ function removePlant(btn) {
  */
 function updateProfileOptions(select) {
     const type = select.value;
-    const profileSelect = select.closest('.plant-entry').querySelector('.vessel-profile');
+    const plantEntry = select.closest('.plant-entry');
+    const profileSelect = plantEntry.querySelector('.vessel-profile');
     profileSelect.innerHTML = '<option value="">Profile...</option>';
     if (type && vesselProfiles[type]) {
         profileSelect.disabled = false;
@@ -202,6 +203,13 @@ function updateProfileOptions(select) {
             opt.value = p; opt.textContent = p;
             profileSelect.appendChild(opt);
         });
+
+        // Restore last selected profile for this vessel type if available
+        const plantIdx = Array.from(document.querySelectorAll('.plant-entry')).indexOf(plantEntry);
+        const plantData = appState.plants[plantIdx];
+        if (plantData && plantData.lastProfiles && plantData.lastProfiles[type]) {
+            profileSelect.value = plantData.lastProfiles[type];
+        }
     } else {
         profileSelect.disabled = true;
     }
@@ -218,14 +226,21 @@ function updatePlants() {
         const type = entry.querySelector('.vessel-type').value;
         const profile = entry.querySelector('.vessel-profile').value;
 
-        // Preserve existing checks data for this plant index
+        // Preserve existing checks and profile history
         let checks = {};
+        let lastProfiles = {};
         if (appState.plants[idx]) {
             checks = appState.plants[idx].checks || {};
+            lastProfiles = appState.plants[idx].lastProfiles || {};
+        }
+
+        // Update profile memory if selected
+        if (type && profile) {
+            lastProfiles[type] = profile;
         }
 
         if (name || type || profile) {
-            newPlants.push({ name, vesselType: type, profile, checks });
+            newPlants.push({ name, vesselType: type, profile, checks, lastProfiles });
         }
     });
     appState.plants = newPlants;
@@ -694,22 +709,22 @@ function createDraftSensorForm(cond, side) {
         
         <div id="physical-${cond}-${side}-section" class="${cond === 'light' ? 'hidden' : ''}">
             <div class="input-row">
-                <div class="form-group"><label>${SideProper} Port</label><input type="number" id="${cond}-${side}-port" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>${SideProper} Stbd</label><input type="number" id="${cond}-${side}-stbd" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>${SideProper} Port</label><input type="number" id="${cond}-${side}-port" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>${SideProper} Stbd</label><input type="number" id="${cond}-${side}-stbd" step="0.01" placeholder="0.0"></div>
             </div>
             <div class="input-row-3">
                 <div class="form-group"><label>Avg</label><input type="number" id="${cond}-${side}-avg" readonly placeholder="Avg"></div>
-                <div class="form-group"><label>DQM ${SideProper}</label><input type="number" id="${cond}-dqm-${side}" step="0.1" placeholder="0.0"></div>
+                <div class="form-group"><label>DQM ${SideProper}</label><input type="number" id="${cond}-dqm-${side}" step="0.01" placeholder="0.0"></div>
                 <div class="form-group"><label>Diff</label><input type="number" id="${cond}-${side}-diff" readonly placeholder="Auto-calc"></div>
             </div>
         </div>
 
         <div id="simulated-${cond}-${side}-section" class="${cond === 'loaded' ? 'hidden' : ''}">
-            <div class="form-group"><label>${SideProper} Offset (ft)</label><input type="number" id="sim-${cond}-${side}-offset" step="0.1" placeholder="e.g., 2.0"></div>
+            <div class="form-group"><label>${SideProper} Offset (ft)</label><input type="number" id="sim-${cond}-${side}-offset" step="0.01" placeholder="e.g., 2.0"></div>
             ${[1, 2, 3].map(i => `
                 <div class="input-row">
-                    <div class="form-group"><label>Depth ${i}</label><input type="number" id="sim-${cond}-${side}-depth-${i}" step="0.1" placeholder="0.0"></div>
-                    <div class="form-group"><label>Reading ${i}</label><input type="number" id="sim-${cond}-${side}-reading-${i}" step="0.1" placeholder="0.0"></div>
+                    <div class="form-group"><label>Depth ${i}</label><input type="number" id="sim-${cond}-${side}-depth-${i}" step="0.01" placeholder="0.0"></div>
+                    <div class="form-group"><label>Reading ${i}</label><input type="number" id="sim-${cond}-${side}-reading-${i}" step="0.01" placeholder="0.0"></div>
                     <div class="form-group"><label>Diff</label><input type="number" id="sim-${cond}-${side}-diff-${i}" readonly placeholder="Auto-calc"></div>
                 </div>
             `).join('')}
@@ -736,12 +751,12 @@ function createUllageForm(cond, side) {
     return `
         <h2>Ullage Check — ${CondProper} (${SideProper})</h2>
         <div class="input-row">
-            <div class="form-group"><label>${SideProper} Port Sounding</label><input type="number" id="ullage-${cond}-${side}-port" step="0.1" placeholder="0.0"></div>
-            <div class="form-group"><label>${SideProper} Stbd Sounding</label><input type="number" id="ullage-${cond}-${side}-stbd" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>${SideProper} Port Sounding</label><input type="number" id="ullage-${cond}-${side}-port" step="0.01" placeholder="0.0"></div>
+            <div class="form-group"><label>${SideProper} Stbd Sounding</label><input type="number" id="ullage-${cond}-${side}-stbd" step="0.01" placeholder="0.0"></div>
         </div>
         <div class="input-row-3">
             <div class="form-group"><label>Average</label><input type="number" id="ullage-${cond}-${side}-avg" readonly placeholder="Avg"></div>
-            <div class="form-group"><label>DQM System ${SideProper}</label><input type="number" id="ullage-${cond}-dqm-${side}" step="0.1" placeholder="0.0"></div>
+            <div class="form-group"><label>DQM System ${SideProper}</label><input type="number" id="ullage-${cond}-dqm-${side}" step="0.01" placeholder="0.0"></div>
             <div class="form-group"><label>Diff</label><input type="number" id="ullage-${cond}-diff-${side}" readonly placeholder="Auto-calc"></div>
         </div>
         <div class="form-group">
@@ -763,33 +778,33 @@ function createDragheadDepthForm() {
         </div>
         <div id="dh-port-sec" class="hidden">
             <h3>Port Draghead</h3>
-            <div class="form-group"><label>Offset</label><input type="number" id="dh-port-offset" value="0" step="0.1"></div>
+            <div class="form-group"><label>Offset</label><input type="number" id="dh-port-offset" value="0" step="0.01"></div>
             ${[1, 2, 3].map(i => `
                 <div class="input-row">
-                    <div class="form-group"><label>Man ${i}</label><input type="number" id="dh-port-man-${i}" step="0.1" placeholder="0.0"></div>
-                    <div class="form-group"><label>DQM ${i}</label><input type="number" id="dh-port-dqm-${i}" step="0.1" placeholder="0.0"></div>
+                    <div class="form-group"><label>Man ${i}</label><input type="number" id="dh-port-man-${i}" step="0.01" placeholder="0.0"></div>
+                    <div class="form-group"><label>DQM ${i}</label><input type="number" id="dh-port-dqm-${i}" step="0.01" placeholder="0.0"></div>
                     <div class="form-group"><label>Diff</label><input type="number" id="dh-port-diff-${i}" readonly placeholder="Auto-calc"></div>
                 </div>
             `).join('')}
         </div>
         <div id="dh-center-sec" class="hidden">
             <h3>Center Draghead</h3>
-            <div class="form-group"><label>Offset</label><input type="number" id="dh-center-offset" value="0" step="0.1"></div>
+            <div class="form-group"><label>Offset</label><input type="number" id="dh-center-offset" value="0" step="0.01"></div>
             ${[1, 2, 3].map(i => `
                 <div class="input-row">
-                    <div class="form-group"><label>Man ${i}</label><input type="number" id="dh-center-man-${i}" step="0.1" placeholder="0.0"></div>
-                    <div class="form-group"><label>DQM ${i}</label><input type="number" id="dh-center-dqm-${i}" step="0.1" placeholder="0.0"></div>
+                    <div class="form-group"><label>Man ${i}</label><input type="number" id="dh-center-man-${i}" step="0.01" placeholder="0.0"></div>
+                    <div class="form-group"><label>DQM ${i}</label><input type="number" id="dh-center-dqm-${i}" step="0.01" placeholder="0.0"></div>
                     <div class="form-group"><label>Diff</label><input type="number" id="dh-center-diff-${i}" readonly placeholder="Auto-calc"></div>
                 </div>
             `).join('')}
         </div>
         <div id="dh-stbd-sec" class="hidden">
             <h3>Starboard Draghead</h3>
-            <div class="form-group"><label>Offset</label><input type="number" id="dh-stbd-offset" value="0" step="0.1"></div>
+            <div class="form-group"><label>Offset</label><input type="number" id="dh-stbd-offset" value="0" step="0.01"></div>
             ${[1, 2, 3].map(i => `
                 <div class="input-row">
-                    <div class="form-group"><label>Man ${i}</label><input type="number" id="dh-stbd-man-${i}" step="0.1" placeholder="0.0"></div>
-                    <div class="form-group"><label>DQM ${i}</label><input type="number" id="dh-stbd-dqm-${i}" step="0.1" placeholder="0.0"></div>
+                    <div class="form-group"><label>Man ${i}</label><input type="number" id="dh-stbd-man-${i}" step="0.01" placeholder="0.0"></div>
+                    <div class="form-group"><label>DQM ${i}</label><input type="number" id="dh-stbd-dqm-${i}" step="0.01" placeholder="0.0"></div>
                     <div class="form-group"><label>Diff</label><input type="number" id="dh-stbd-diff-${i}" readonly placeholder="Auto-calc"></div>
                 </div>
             `).join('')}
@@ -804,12 +819,12 @@ function createSuctionMouthDepthForm() {
     return `
         <div class="form-group">
             <label>Depth Offset (ft)</label>
-            <input type="number" id="suction-offset" step="0.1" value="0">
+            <input type="number" id="suction-offset" step="0.01" value="0">
         </div>
         ${[1, 2, 3].map(i => `
             <div class="input-row">
-                <div class="form-group"><label>Manual ${i}</label><input type="number" id="suction-man-${i}" step="0.1"></div>
-                <div class="form-group"><label>DQM ${i}</label><input type="number" id="suction-dqm-${i}" step="0.1"></div>
+                <div class="form-group"><label>Manual ${i}</label><input type="number" id="suction-man-${i}" step="0.01"></div>
+                <div class="form-group"><label>DQM ${i}</label><input type="number" id="suction-dqm-${i}" step="0.01"></div>
                 <div class="form-group"><label>Diff</label><input type="number" id="suction-diff-${i}" readonly></div>
             </div>
         `).join('')}
@@ -1006,7 +1021,7 @@ function calcDraft(cond, side) {
             const r = parseFloat(document.getElementById(`sim-${cond}-${side}-reading-${i}`)?.value);
             const el = document.getElementById(`sim-${cond}-${side}-diff-${i}`);
             if (!isNaN(d) && !isNaN(r) && el) {
-                el.value = Math.abs((d + off) - r).toFixed(1);
+                el.value = Math.abs((d + off) - r).toFixed(2);
             }
         }
     }
@@ -1045,7 +1060,7 @@ function calcDraghead() {
             const d = parseFloat(document.getElementById(`dh-${side}-dqm-${i}`)?.value);
             const el = document.getElementById(`dh-${side}-diff-${i}`);
             if (!isNaN(m) && !isNaN(d) && el) {
-                el.value = Math.abs((m + off) - d).toFixed(1);
+                el.value = Math.abs((m + off) - d).toFixed(2);
             }
         }
     });
@@ -1061,7 +1076,7 @@ function calcSuction() {
         const d = parseFloat(document.getElementById(`suction-dqm-${i}`)?.value);
         const el = document.getElementById(`suction-diff-${i}`);
         if (!isNaN(m) && !isNaN(d) && el) {
-            el.value = Math.abs((m + off) - d).toFixed(1);
+            el.value = Math.abs((m + off) - d).toFixed(2);
         }
     }
 }
@@ -1105,7 +1120,7 @@ function calcBucketDepth() {
         const d = parseFloat(document.getElementById(`bucket-dqm-${i}`)?.value);
         const el = document.getElementById(`bucket-diff-${i}`);
         if (!isNaN(m) && !isNaN(d) && el) {
-            el.value = Math.abs((m + off) - d).toFixed(1);
+            el.value = Math.abs((m + off) - d).toFixed(2);
         }
     }
 }
@@ -1147,7 +1162,7 @@ function calculatePositionDifference() {
     const dist = R * c;
 
     const el = document.getElementById('position-diff');
-    if (el) el.value = dist.toFixed(1);
+    if (el) el.value = dist.toFixed(2);
 }
 
 /**

@@ -790,6 +790,9 @@ function diff(a, b) {
  */
 function formatNum(val) {
     if (val === undefined || val === null || val === '') return '-';
+    // If it's a number (or string that looks like one), format to 2 decimals
+    const n = Number(val);
+    if (!isNaN(n)) return n.toFixed(2);
     return val;
 }
 

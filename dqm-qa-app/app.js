@@ -181,6 +181,12 @@ function updateProfileOptions(selectElement) {
             option.textContent = profile;
             profileSelect.appendChild(option);
         });
+
+        // Restore last selected profile for this vessel type if available
+        const plantData = appState.plants[plantEntry.id.split('-').pop()];
+        if (plantData && plantData.lastProfiles && plantData.lastProfiles[vesselType]) {
+            profileSelect.value = plantData.lastProfiles[vesselType];
+        }
     } else {
         profileSelect.disabled = true;
     }
@@ -422,7 +428,7 @@ function createPositionCheckForm() {
             </div>
             <div class="form-group">
                 <label>Position Difference (ft)</label>
-                <input type="number" id="position-diff" step="0.1" placeholder="Auto-calculated or manual">
+                <input type="number" id="position-diff" step="0.01" placeholder="Auto-calculated or manual">
             </div>
         </div>
         
@@ -531,11 +537,11 @@ function createDraftSensorLightForm() {
             <div class="input-row">
                 <div class="form-group">
                     <label>Forward Port (ft)</label>
-                    <input type="number" id="light-fwd-port" step="0.1" placeholder="0.0">
+                    <input type="number" id="light-fwd-port" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Forward Starboard (ft)</label>
-                    <input type="number" id="light-fwd-stbd" step="0.1" placeholder="0.0">
+                    <input type="number" id="light-fwd-stbd" step="0.01" placeholder="0.0">
                 </div>
             </div>
             <div class="input-row-3">
@@ -545,7 +551,7 @@ function createDraftSensorLightForm() {
                 </div>
                 <div class="form-group">
                     <label>DQM System Fwd (ft)</label>
-                    <input type="number" id="light-dqm-fwd" step="0.1" placeholder="0.0">
+                    <input type="number" id="light-dqm-fwd" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Fwd Diff (ft)</label>
@@ -562,11 +568,11 @@ function createDraftSensorLightForm() {
             <div class="input-row">
                 <div class="form-group">
                     <label>Aft Port (ft)</label>
-                    <input type="number" id="light-aft-port" step="0.1" placeholder="0.0">
+                    <input type="number" id="light-aft-port" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Aft Starboard (ft)</label>
-                    <input type="number" id="light-aft-stbd" step="0.1" placeholder="0.0">
+                    <input type="number" id="light-aft-stbd" step="0.01" placeholder="0.0">
                 </div>
             </div>
             <div class="input-row-3">
@@ -576,7 +582,7 @@ function createDraftSensorLightForm() {
                 </div>
                 <div class="form-group">
                     <label>DQM System Aft (ft)</label>
-                    <input type="number" id="light-dqm-aft" step="0.1" placeholder="0.0">
+                    <input type="number" id="light-dqm-aft" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Aft Diff (ft)</label>
@@ -593,22 +599,22 @@ function createDraftSensorLightForm() {
             <h3>Simulated Draft Check — Forward Sensor (Light)</h3>
             <p class="text-muted">Test pipe method: Measure sensor response at known water depths</p>
             <div class="input-row-3">
-                <div class="form-group"><label>Fwd Offset (ft)</label><input type="number" id="sim-light-fwd-offset" step="0.1" placeholder="e.g., 2.0"></div>
+                <div class="form-group"><label>Fwd Offset (ft)</label><input type="number" id="sim-light-fwd-offset" step="0.01" placeholder="e.g., 2.0"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-fwd-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
-                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-fwd-reading-1" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-fwd-depth-1" step="0.01" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-fwd-reading-1" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-1" step="0.01" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-light-fwd-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
-                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-light-fwd-reading-2" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-light-fwd-depth-2" step="0.01" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-light-fwd-reading-2" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-2" step="0.01" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-light-fwd-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
-                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-fwd-reading-3" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-light-fwd-depth-3" step="0.01" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-fwd-reading-3" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-fwd-diff-3" step="0.01" readonly placeholder="Auto-calc"></div>
             </div>
             <div style="margin-top: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Simulated Draft Check (Forward) Completed', this)">📋 Log Simulated Fwd</button>
@@ -618,22 +624,22 @@ function createDraftSensorLightForm() {
 
             <h3>Simulated Draft Check — Aft Sensor (Light)</h3>
             <div class="input-row-3">
-                <div class="form-group"><label>Aft Offset (ft)</label><input type="number" id="sim-light-aft-offset" step="0.1" placeholder="e.g., 2.0"></div>
+                <div class="form-group"><label>Aft Offset (ft)</label><input type="number" id="sim-light-aft-offset" step="0.01" placeholder="e.g., 2.0"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-aft-depth-1" step="0.1" placeholder="e.g., 5.0"></div>
-                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-aft-reading-1" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-1" step="0.1" readonly placeholder="Auto-calc"></div>
+                <div class="form-group"><label>Test Depth 1 (ft)</label><input type="number" id="sim-light-aft-depth-1" step="0.01" placeholder="e.g., 5.0"></div>
+                <div class="form-group"><label>DQM Reading 1 (ft)</label><input type="number" id="sim-light-aft-reading-1" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-1" step="0.01" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-light-aft-depth-2" step="0.1" placeholder="e.g., 10.0"></div>
-                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-light-aft-reading-2" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-2" step="0.1" readonly placeholder="Auto-calc"></div>
+                <div class="form-group"><label>Test Depth 2 (ft)</label><input type="number" id="sim-light-aft-depth-2" step="0.01" placeholder="e.g., 10.0"></div>
+                <div class="form-group"><label>DQM Reading 2 (ft)</label><input type="number" id="sim-light-aft-reading-2" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-2" step="0.01" readonly placeholder="Auto-calc"></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-light-aft-depth-3" step="0.1" placeholder="e.g., 15.0"></div>
-                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-aft-reading-3" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-3" step="0.1" readonly placeholder="Auto-calc"></div>
+                <div class="form-group"><label>Test Depth 3 (ft)</label><input type="number" id="sim-light-aft-depth-3" step="0.01" placeholder="e.g., 15.0"></div>
+                <div class="form-group"><label>DQM Reading 3 (ft)</label><input type="number" id="sim-light-aft-reading-3" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="sim-light-aft-diff-3" step="0.01" readonly placeholder="Auto-calc"></div>
             </div>
             <div style="margin-top: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Light Simulated Draft Check (Aft) Completed', this)">📋 Log Simulated Aft</button>
@@ -676,11 +682,11 @@ function createDraftSensorLoadedForm() {
             <div class="input-row">
                 <div class="form-group">
                     <label>Forward Port (ft)</label>
-                    <input type="number" id="loaded-fwd-port" step="0.1" placeholder="0.0">
+                    <input type="number" id="loaded-fwd-port" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Forward Starboard (ft)</label>
-                    <input type="number" id="loaded-fwd-stbd" step="0.1" placeholder="0.0">
+                    <input type="number" id="loaded-fwd-stbd" step="0.01" placeholder="0.0">
                 </div>
             </div>
             <div class="input-row-3">
@@ -690,7 +696,7 @@ function createDraftSensorLoadedForm() {
                 </div>
                 <div class="form-group">
                     <label>DQM System Fwd (ft)</label>
-                    <input type="number" id="loaded-dqm-fwd" step="0.1" placeholder="0.0">
+                    <input type="number" id="loaded-dqm-fwd" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Fwd Diff (ft)</label>
@@ -707,11 +713,11 @@ function createDraftSensorLoadedForm() {
             <div class="input-row">
                 <div class="form-group">
                     <label>Aft Port (ft)</label>
-                    <input type="number" id="loaded-aft-port" step="0.1" placeholder="0.0">
+                    <input type="number" id="loaded-aft-port" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Aft Starboard (ft)</label>
-                    <input type="number" id="loaded-aft-stbd" step="0.1" placeholder="0.0">
+                    <input type="number" id="loaded-aft-stbd" step="0.01" placeholder="0.0">
                 </div>
             </div>
             <div class="input-row-3">
@@ -721,7 +727,7 @@ function createDraftSensorLoadedForm() {
                 </div>
                 <div class="form-group">
                     <label>DQM System Aft (ft)</label>
-                    <input type="number" id="loaded-dqm-aft" step="0.1" placeholder="0.0">
+                    <input type="number" id="loaded-dqm-aft" step="0.01" placeholder="0.0">
                 </div>
                 <div class="form-group">
                     <label>Aft Diff (ft)</label>
@@ -975,11 +981,11 @@ function createUllageLoadedForm() {
         <div class="input-row">
             <div class="form-group">
                 <label>Forward Port Sounding (ft)</label>
-                <input type="number" id="ullage-loaded-fwd-port" step="0.1" placeholder="0.0">
+                <input type="number" id="ullage-loaded-fwd-port" step="0.01" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Forward Starboard Sounding (ft)</label>
-                <input type="number" id="ullage-loaded-fwd-stbd" step="0.1" placeholder="0.0">
+                <input type="number" id="ullage-loaded-fwd-stbd" step="0.01" placeholder="0.0">
             </div>
         </div>
         <div class="input-row-3">
@@ -989,7 +995,7 @@ function createUllageLoadedForm() {
             </div>
             <div class="form-group">
                 <label>DQM System Forward (ft)</label>
-                <input type="number" id="ullage-loaded-dqm-fwd" step="0.1" placeholder="0.0">
+                <input type="number" id="ullage-loaded-dqm-fwd" step="0.01" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Fwd Diff (ft)</label>
@@ -1006,11 +1012,11 @@ function createUllageLoadedForm() {
         <div class="input-row">
             <div class="form-group">
                 <label>Aft Port Sounding (ft)</label>
-                <input type="number" id="ullage-loaded-aft-port" step="0.1" placeholder="0.0">
+                <input type="number" id="ullage-loaded-aft-port" step="0.01" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Aft Starboard Sounding (ft)</label>
-                <input type="number" id="ullage-loaded-aft-stbd" step="0.1" placeholder="0.0">
+                <input type="number" id="ullage-loaded-aft-stbd" step="0.01" placeholder="0.0">
             </div>
         </div>
         <div class="input-row-3">
@@ -1020,7 +1026,7 @@ function createUllageLoadedForm() {
             </div>
             <div class="form-group">
                 <label>DQM System Aft (ft)</label>
-                <input type="number" id="ullage-loaded-dqm-aft" step="0.1" placeholder="0.0">
+                <input type="number" id="ullage-loaded-dqm-aft" step="0.01" placeholder="0.0">
             </div>
             <div class="form-group">
                 <label>Aft Diff (ft)</label>
@@ -1065,22 +1071,22 @@ function createDragheadDepthForm() {
             <h3>Port Draghead</h3>
             <div class="form-group" style="margin-bottom: 20px;">
                 <label>Depth Offset (ft)</label>
-                <input type="number" id="draghead-port-offset" step="0.1" placeholder="e.g., 2.0">
+                <input type="number" id="draghead-port-offset" step="0.01" placeholder="e.g., 2.0">
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-port-manual-1" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-port-dqm-1" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-1" step="0.1" placeholder="Auto-calc" readonly></div>
+                <div class="form-group"><label>Measurement 1 - Manual (ft)</label><input type="number" id="draghead-port-manual-1" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 1 - DQM (ft)</label><input type="number" id="draghead-port-dqm-1" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-1" step="0.01" placeholder="Auto-calc" readonly></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Measurement 2 - Manual (ft)</label><input type="number" id="draghead-port-manual-2" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Measurement 2 - DQM (ft)</label><input type="number" id="draghead-port-dqm-2" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-2" step="0.1" placeholder="Auto-calc" readonly></div>
+                <div class="form-group"><label>Measurement 2 - Manual (ft)</label><input type="number" id="draghead-port-manual-2" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 2 - DQM (ft)</label><input type="number" id="draghead-port-dqm-2" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-2" step="0.01" placeholder="Auto-calc" readonly></div>
             </div>
             <div class="input-row-3">
-                <div class="form-group"><label>Measurement 3 - Manual (ft)</label><input type="number" id="draghead-port-manual-3" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-port-dqm-3" step="0.1" placeholder="0.0"></div>
-                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-3" step="0.1" placeholder="Auto-calc" readonly></div>
+                <div class="form-group"><label>Measurement 3 - Manual (ft)</label><input type="number" id="draghead-port-manual-3" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Measurement 3 - DQM (ft)</label><input type="number" id="draghead-port-dqm-3" step="0.01" placeholder="0.0"></div>
+                <div class="form-group"><label>Difference (ft)</label><input type="number" id="draghead-port-diff-3" step="0.01" placeholder="Auto-calc" readonly></div>
             </div>
             <div class="status-buttons" style="margin-top: 10px; margin-bottom: 20px;">
                 <button type="button" class="btn-secondary log-custom-btn" onclick="logCustomToTimeline('Draghead Depth Check (Port) Completed', this)">📋 Log Port to Timeline</button>
@@ -1528,10 +1534,17 @@ function saveCheckData(checkType, plantIdx) {
             // Never serialize fake file paths into the JSON object
             if (input.type === 'file') return;
 
+            // Fix for "doubling suffix" bug: 
+            // Ensure we strip the -${plantIdx} suffix from the ID before saving to state
+            let key = input.id;
+            if (key.endsWith(`-${plantIdx}`)) {
+                key = key.substring(0, key.lastIndexOf(`-${plantIdx}`));
+            }
+
             if (input.type === 'checkbox') {
-                data[input.id] = input.checked;
+                data[key] = input.checked;
             } else {
-                data[input.id] = input.value;
+                data[key] = input.value;
             }
         }
     });
@@ -1949,7 +1962,7 @@ function calculatePositionDifference(plantIdx) {
 
     const diffInput = document.getElementById(`position-diff-${plantIdx}`);
     if (diffInput) {
-        diffInput.value = distance.toFixed(1);
+        diffInput.value = distance.toFixed(2);
     }
 }
 
@@ -1997,7 +2010,7 @@ function calculateSimulatedDraftDifferences(condition, plantIdx) {
             const reading = parseFloat(document.getElementById(`sim-${condition}-${pos}-reading-${i}-${plantIdx}`)?.value);
             const diffInput = document.getElementById(`sim-${condition}-${pos}-diff-${i}-${plantIdx}`);
             if (!isNaN(depth) && !isNaN(reading) && diffInput) {
-                diffInput.value = Math.abs((depth + offset) - reading).toFixed(1);
+                diffInput.value = Math.abs((depth + offset) - reading).toFixed(2);
             }
         }
     });
@@ -2015,7 +2028,7 @@ function calculateStandaloneSimulatedDraftDifferences(plantIdx) {
             const reading = parseFloat(document.getElementById(`sim-${pos}-reading-${i}-${plantIdx}`)?.value);
             const diffInput = document.getElementById(`sim-${pos}-diff-${i}-${plantIdx}`);
             if (!isNaN(depth) && !isNaN(reading) && diffInput) {
-                diffInput.value = Math.abs((depth + offset) - reading).toFixed(1);
+                diffInput.value = Math.abs((depth + offset) - reading).toFixed(2);
             }
         }
     });
@@ -2034,7 +2047,7 @@ function calculateDragheadDifferences(plantIdx) {
             const diffInput = document.getElementById(`draghead-${side}-diff-${i}-${plantIdx}`);
 
             if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-                diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
+                diffInput.value = Math.abs((manual + offset) - dqm).toFixed(2);
             }
         }
     });
@@ -2053,7 +2066,7 @@ function calculateSuctionDifferences(plantIdx) {
         const diffInput = document.getElementById(`suction-diff-${i}-${plantIdx}`);
 
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-            diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
+            diffInput.value = Math.abs((manual + offset) - dqm).toFixed(2);
         }
     }
 }
@@ -2171,7 +2184,7 @@ function calculateBucketDepthDifferences(plantIdx) {
         const dqm = parseFloat(document.getElementById(`bucket-dqm-${i}-${plantIdx}`)?.value);
         const diffInput = document.getElementById(`bucket-diff-${i}-${plantIdx}`);
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-            diffInput.value = Math.abs((manual + offset) - dqm).toFixed(1);
+            diffInput.value = Math.abs((manual + offset) - dqm).toFixed(2);
         }
     }
 }
@@ -2186,7 +2199,7 @@ function calculateBucketPositionDifferences(plantIdx) {
         const dqm = parseFloat(document.getElementById(`bucket-pos-dqm-${i}-${plantIdx}`)?.value);
         const diffInput = document.getElementById(`bucket-pos-diff-${i}-${plantIdx}`);
         if (!isNaN(manual) && !isNaN(dqm) && diffInput) {
-            diffInput.value = Math.abs(manual - dqm).toFixed(1);
+            diffInput.value = Math.abs(manual - dqm).toFixed(2);
         }
     }
 }
