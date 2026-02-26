@@ -1696,9 +1696,10 @@ function exportJSON() {
     };
 
     // Construct filename from plant names and date
-    const plantNames = appState.plants.map(p => p.name.replace(/[^a-zA-Z0-9]/g, '')).join('_');
-    const dateStr = appState.checkDate.replace(/-/g, '-');
-    const filename = `DQM_QA_${plantNames}_${dateStr}.json`;
+    const plantNames = appState.plants.map(p => p.name.trim()).filter(n => n).join(' ');
+    const displayPlantNames = plantNames || 'Unnamed Plants';
+    const dateStr = appState.checkDate || new Date().toISOString().split('T')[0];
+    const filename = `DQM QA ${displayPlantNames} ${dateStr}.json`;
 
     // Download via data URL
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });

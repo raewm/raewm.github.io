@@ -587,11 +587,17 @@ function exportJSON() {
             exportedAt: new Date().toISOString()
         }
     };
+    // Construct filename from plant names and date
+    const plantNames = appState.plants.map(p => p.name.trim()).filter(n => n).join(' ');
+    const displayPlantNames = plantNames || 'Unnamed Plants';
+    const dateStr = appState.checkDate || new Date().toISOString().split('T')[0];
+    const filename = `DQM QA ${displayPlantNames} ${dateStr}.json`;
+
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `DQM_QA_CHECK_${new Date().toISOString().split('T')[0]}.json`;
+    a.download = filename;
     a.click();
 }
 
