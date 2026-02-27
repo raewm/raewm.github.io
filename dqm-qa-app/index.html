@@ -12,7 +12,14 @@
 <body>
     <div class="container">
         <header style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-            <img src="assets/logo.png" alt="DQM Logo" style="height: 50px; filter: invert(1);">
+            <div style="position: absolute; top: 1rem; right: 1rem;">
+                <button id="theme-toggle" class="btn-secondary"
+                    style="padding: 0.5rem; min-width: 44px; display: flex; align-items: center; justify-content: center;"
+                    title="Toggle Light/Dark Mode">
+                    <span id="theme-toggle-icon">🌙</span>
+                </button>
+            </div>
+            <img src="assets/logo.png" alt="DQM Logo" class="logo">
             <div style="text-align: left;">
                 <h1 style="margin-bottom: 0; line-height: 1.2;">DQM QA Check</h1>
                 <p class="subtitle" style="margin-top: 5px;">National Dredging Quality Management Program</p>

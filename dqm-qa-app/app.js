@@ -52,6 +52,8 @@ const requiredChecks = {
  * Sets up default values, adds initial plant, and attaches global listeners.
  */
 document.addEventListener('DOMContentLoaded', () => {
+    initTheme();
+
     // 1. Load data FIRST before doing ANY initialization that might trigger a save
     loadDraft();
 
@@ -63,6 +65,40 @@ document.addEventListener('DOMContentLoaded', () => {
         saveDraft(); // Final sync
     });
 });
+
+/**
+ * Initializes the theme from localStorage.
+ */
+function initTheme() {
+    const theme = localStorage.getItem('dqm-theme') || 'dark';
+    if (theme === 'light') {
+        document.body.classList.add('light-mode');
+        const icon = document.getElementById('theme-toggle-icon');
+        if (icon) icon.textContent = '☀️';
+    }
+
+    const toggleBtn = document.getElementById('theme-toggle');
+    if (toggleBtn) {
+        toggleBtn.addEventListener('click', toggleTheme);
+    }
+}
+
+/**
+ * Toggles between light and dark mode.
+ */
+function toggleTheme() {
+    const body = document.body;
+    const icon = document.getElementById('theme-toggle-icon');
+
+    body.classList.toggle('light-mode');
+
+    const isLight = body.classList.contains('light-mode');
+    localStorage.setItem('dqm-theme', isLight ? 'light' : 'dark');
+
+    if (icon) {
+        icon.textContent = isLight ? '☀️' : '🌙';
+    }
+}
 
 /**
  * Performs core app initialization.

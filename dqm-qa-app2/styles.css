@@ -22,6 +22,7 @@
     --glass-bg: #1e1e1e;
     --glass-border: #444;
     --shadow: rgba(0, 0, 0, 0.4);
+    --logo-filter: invert(1);
 
     --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.2);
     --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.4);
@@ -34,6 +35,25 @@
     --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
 }
 
+/* ===== Light Mode Overrides ===== */
+body.light-mode {
+    --bg-primary: #f0f2f5;
+    --bg-secondary: #ffffff;
+    --bg-card: #ffffff;
+    --bg-overlay: rgba(0, 0, 0, 0.4);
+    --text-primary: #1a1a1a;
+    --text-secondary: #4b5563;
+    --text-muted: #9ca3af;
+    --border: #d1d5db;
+    --border-focus: #3b82f6;
+    --glass-bg: rgba(255, 255, 255, 0.8);
+    --glass-border: #e5e7eb;
+    --shadow: rgba(0, 0, 0, 0.1);
+    --primary-light: #2563eb;
+    --logo-filter: none;
+}
+
+/* ===== Reset & Base ===== */
 * {
     box-sizing: border-box;
     margin: 0;
@@ -79,8 +99,9 @@ header {
 }
 
 .logo {
-    height: 3.5rem;
-    filter: invert(1);
+    height: 44px;
+    width: auto;
+    filter: var(--logo-filter);
 }
 
 h1 {
