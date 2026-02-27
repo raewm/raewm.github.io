@@ -61,20 +61,33 @@ const checkNames = {
 // ===== Initialization =====
 
 document.addEventListener('DOMContentLoaded', () => {
-    initializeApp();
+    // 1. Load data FIRST before doing ANY initialization that might trigger a save
     loadDraft();
+
+    // 2. Perform UI setup and add default plant ONLY if nothing was loaded
+    initializeApp();
+
+    // 3. Prevent data loss on accidental navigation
+    window.addEventListener('beforeunload', (e) => {
+        saveDraft(); // Final sync
+    });
 });
 
 /**
  * Sets up global event listeners and initializes default state.
  */
 function initializeApp() {
-    // Set default date to today
-    document.getElementById('check-date').valueAsDate = new Date();
+    // Set default date to today if not already set by loadDraft
+    if (!document.getElementById('check-date').value) {
+        document.getElementById('check-date').valueAsDate = new Date();
+    }
 
     // Event Listeners: Main Global Actions
     document.getElementById('add-plant-btn').addEventListener('click', addPlant);
-    document.getElementById('save-draft-btn').addEventListener('click', saveDraft);
+    document.getElementById('save-draft-btn').addEventListener('click', () => {
+        saveDraft();
+        showToast('Draft Saved');
+    });
     document.getElementById('export-btn').addEventListener('click', exportJSON);
     document.getElementById('clear-btn').addEventListener('click', () => {
         if (confirm('Clear all data?')) {
@@ -85,7 +98,8 @@ function initializeApp() {
 
     // Event Listeners: State Syncing (Global Header Fields)
     ['check-date', 'weather-conditions', 'qa-team', 'system-provider', 'general-comments'].forEach(id => {
-        document.getElementById(id).addEventListener('input', updateAppState);
+        const el = document.getElementById(id);
+        if (el) el.addEventListener('input', updateAppState);
     });
 
     // Modal & Overlay Interaction Events
@@ -107,6 +121,42 @@ function initializeApp() {
     if (appState.plants.length === 0) addPlant();
 
     renderTimeline();
+}
+
+/**
+ * Shows a brief visual notification to the user.
+ * @param {string} message - Text to display.
+ */
+function showToast(message) {
+    let toast = document.getElementById('save-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'save-toast';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #28a745;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+
+    clearTimeout(toast.hideTimeout);
+    toast.hideTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+    }, 2000);
 }
 
 /**
@@ -473,6 +523,17 @@ function logActiveCheckToTimeline() {
 }
 
 /**
+ * Reopens a QA check modal from a timeline entry.
+ * @param {number} plantIdx - Index of the plant.
+ * @param {string} checkType - Type of the check.
+ */
+function openTimelineEntry(plantIdx, checkType) {
+    if (plantIdx === undefined || !checkType) return;
+    appState.activePlantIndex = plantIdx;
+    openModal(checkType);
+}
+
+/**
  * Checks if a specific check is already logged in the timeline for a plant.
  */
 function isCheckLogged(plantIdx, checkType) {
@@ -503,12 +564,19 @@ function renderTimeline() {
     }
 
     appState.timeline.forEach((item, idx) => {
+        const isClickable = item.plantIdx !== undefined && item.checkType;
         const row = document.createElement('tr');
+        if (isClickable) {
+            row.className = 'clickable-row';
+            row.title = 'Click to reopen this QA check';
+            row.onclick = () => openTimelineEntry(item.plantIdx, item.checkType);
+        }
+
         row.innerHTML = `
             <td class="timeline-time">${item.time}</td>
             <td class="timeline-activity">${item.activity}</td>
             <td class="timeline-notes">${item.notes || ''}</td>
-            <td class="col-action"><button class="timeline-delete-btn" onclick="deleteTimelineEntry(${idx})">✕</button></td>
+            <td class="col-action"><button class="timeline-delete-btn" onclick="event.stopPropagation(); deleteTimelineEntry(${idx})">✕</button></td>
         `;
         tbody.appendChild(row);
     });

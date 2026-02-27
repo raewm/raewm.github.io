@@ -386,6 +386,19 @@ textarea {
     color: var(--danger);
 }
 
+.clickable-row {
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.clickable-row:hover {
+    background-color: rgba(52, 152, 219, 0.1) !important;
+}
+
+.clickable-row:active {
+    background-color: rgba(52, 152, 219, 0.2) !important;
+}
+
 /* Modals */
 .picker-btn strong {
     display: block;

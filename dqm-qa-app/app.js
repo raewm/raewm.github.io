@@ -52,23 +52,38 @@ const requiredChecks = {
  * Sets up default values, adds initial plant, and attaches global listeners.
  */
 document.addEventListener('DOMContentLoaded', () => {
+    // 1. Load data FIRST before doing ANY initialization that might trigger a save
+    loadDraft();
+
+    // 2. Perform UI setup and add default plant ONLY if nothing was loaded
     initializeApp();
-    loadDraft(); // Attempt to restore work from LocalStorage
+
+    // 3. Prevent data loss on accidental navigation
+    window.addEventListener('beforeunload', (e) => {
+        saveDraft(); // Final sync
+    });
 });
 
 /**
  * Performs core app initialization.
  */
 function initializeApp() {
-    // Set default date to today for convenience
-    document.getElementById('check-date').valueAsDate = new Date();
+    // Set default date to today for convenience if not already set by loadDraft
+    if (!document.getElementById('check-date').value) {
+        document.getElementById('check-date').valueAsDate = new Date();
+    }
 
-    // Start with one plant entry by default
-    addPlant();
+    // Start with one plant entry by default ONLY if loadDraft didn't find any
+    if (appState.plants.length === 0) {
+        addPlant();
+    }
 
     // Global Action Button Listeners
     document.getElementById('add-plant-btn').addEventListener('click', addPlant);
-    document.getElementById('save-draft-btn').addEventListener('click', saveDraft);
+    document.getElementById('save-draft-btn').addEventListener('click', () => {
+        saveDraft();
+        showToast('Draft Saved');
+    });
     document.getElementById('export-btn').addEventListener('click', exportJSON);
     document.getElementById('clear-btn').addEventListener('click', clearAll);
     // Metadata Input Syncing
@@ -81,6 +96,42 @@ function initializeApp() {
 
     // Initial timeline render
     renderTimeline();
+}
+
+/**
+ * Shows a brief visual notification to the user.
+ * @param {string} message - Text to display.
+ */
+function showToast(message) {
+    let toast = document.getElementById('save-toast');
+    if (!toast) {
+        toast = document.createElement('div');
+        toast.id = 'save-toast';
+        toast.style.cssText = `
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            background: #28a745;
+            color: white;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-weight: 500;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+            z-index: 10000;
+            transition: opacity 0.3s, transform 0.3s;
+            pointer-events: none;
+        `;
+        document.body.appendChild(toast);
+    }
+    toast.textContent = message;
+    toast.style.opacity = '1';
+    toast.style.transform = 'translateY(0)';
+
+    clearTimeout(toast.hideTimeout);
+    toast.hideTimeout = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+    }, 2000);
 }
 
 // ===== Plant Management =====

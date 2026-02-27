@@ -153,7 +153,7 @@ function renderChecks(state) {
      */
     function hasAnyValue(obj) {
         if (!obj) return false;
-        return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined);
+        return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined && v !== false);
     }
 
     if (plants.length > 0) {
@@ -179,6 +179,8 @@ function renderChecks(state) {
                         plantHtml += renderShipData(data, override, type);
                     } else if (type === 'hullStatus') {
                         plantHtml += renderHullStatus(data, override);
+                    } else if (type === 'dragheadDepth') {
+                        plantHtml += renderDragheadTable(data, override);
                     } else if (type === 'suctionMouthDepth') {
                         plantHtml += renderSuctionTable(data, override);
                     } else if (type === 'bucketDepth') {
@@ -397,15 +399,20 @@ function renderSimulatedDraft(data, override, prefixOverride, typeName) {
 function renderDragheadTable(data, override) {
     let html = '';
     let dragheads = [
-        { key: 'port', label: 'Port Draghead' },
-        { key: 'center', label: 'Center Draghead' },
-        { key: 'stbd', label: 'Starboard Draghead' }
+        { key: 'port', label: 'Port Draghead', checkKey: 'draghead-check-port', altCheckKey: 'dh-port-chk' },
+        { key: 'center', label: 'Center Draghead', checkKey: 'draghead-check-center', altCheckKey: 'dh-center-chk' },
+        { key: 'stbd', label: 'Starboard Draghead', checkKey: 'draghead-check-stbd', altCheckKey: 'dh-stbd-chk' }
     ];
 
     dragheads.forEach(dh => {
+        // Skip this draghead if it was explicitly unchecked in the app
+        const isChecked = getVal(data, override, dh.checkKey) !== false && getVal(data, override, dh.altCheckKey) !== false;
+        if (!isChecked) return;
+
         let rows = '';
+        let offset = parseFloat(getVal(data, override, `draghead-${dh.key}-offset`)) || parseFloat(getVal(data, override, `dh-${dh.key}-offset`)) || 0;
+
         [1, 2, 3].forEach(num => {
-            let offset = parseFloat(getVal(data, override, `draghead-${dh.key}-offset`)) || parseFloat(getVal(data, override, `dh-${dh.key}-offset`)) || 0;
             let manual = getVal(data, override, `draghead-${dh.key}-manual-${num}`) || getVal(data, override, `dh-${dh.key}-man-${num}`);
             let dqm = getVal(data, override, `draghead-${dh.key}-dqm-${num}`) || getVal(data, override, `dh-${dh.key}-dqm-${num}`);
 
@@ -432,8 +439,8 @@ function renderDragheadTable(data, override) {
                 <table class="report-table">
                     <tr>
                         <th width="40%">Measurement</th>
-                        <th width="20%" class="text-center">Manual QA (ft)</th>
-                        <th width="20%" class="text-center">DQM System (ft)</th>
+                        <th width="20%" class="text-center">Measured (ft)</th>
+                        <th width="20%" class="text-center">DQM Reported (ft)</th>
                         <th width="20%" class="text-center">Difference</th>
                     </tr>
                     ${rows}
@@ -482,8 +489,8 @@ function renderSuctionTable(data, override) {
         <table class="report-table">
             <tr>
                 <th width="40%">Measurement</th>
-                <th width="20%" class="text-center">Manual QA (ft)</th>
-                <th width="20%" class="text-center">DQM System (ft)</th>
+                <th width="20%" class="text-center">Measured (ft)</th>
+                <th width="20%" class="text-center">DQM Reported (ft)</th>
                 <th width="20%" class="text-center">Difference</th>
             </tr>
             ${rows}
@@ -530,8 +537,8 @@ function renderBucketTable(data, override) {
         <table class="report-table">
             <tr>
                 <th width="40%">Measurement</th>
-                <th width="20%" class="text-center">Manual QA (ft)</th>
-                <th width="20%" class="text-center">DQM System (ft)</th>
+                <th width="20%" class="text-center">Measured (ft)</th>
+                <th width="20%" class="text-center">DQM Reported (ft)</th>
                 <th width="20%" class="text-center">Difference</th>
             </tr>
             ${rows}
