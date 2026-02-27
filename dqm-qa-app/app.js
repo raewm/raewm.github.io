@@ -1811,7 +1811,7 @@ function addTimelineComment() {
     const notes = prompt('Enter timeline comment:');
     if (notes && notes.trim()) {
         const entry = {
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
             activity: 'Comment',
             notes: notes.trim(),
             timestamp: new Date().toISOString()
@@ -1852,7 +1852,7 @@ function logCheckToTimeline(checkType, plantIdx) {
     }
 
     const entry = {
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
         activity: `[${plant.name}] ${checkNames[checkType]} Completed`,
         notes: '',
         timestamp: new Date().toISOString()
@@ -1884,7 +1884,7 @@ function logCheckToTimeline(checkType, plantIdx) {
  */
 function logCustomToTimeline(activityText, button) {
     const entry = {
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
         activity: activityText,
         notes: '',
         timestamp: new Date().toISOString()

@@ -14,6 +14,8 @@ const appState = {
     activePlantIndex: null // Tracks which plant the active check belongs to
 };
 
+let isRestoring = false; // Flag to prevent "empty scraping" during initial DOM reconstruction
+
 /**
  * Vessel Configuration & Profile Mappings.
  * Defines which QA checks are required for each vessel type/profile combination.
@@ -70,10 +72,15 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeApp();
 
     // 3. Prevent data loss on accidental navigation
-    window.addEventListener('beforeunload', (e) => {
-        saveDraft(); // Final sync
-    });
+    window.addEventListener('beforeunload', handleBeforeUnload);
 });
+
+/**
+ * Global listener to ensure state is persisted before the window closes.
+ */
+function handleBeforeUnload() {
+    saveDraft();
+}
 
 /**
  * Initializes the theme from localStorage.
@@ -127,6 +134,7 @@ function initializeApp() {
     document.getElementById('export-btn').addEventListener('click', exportJSON);
     document.getElementById('clear-btn').addEventListener('click', () => {
         if (confirm('Clear all data?')) {
+            window.removeEventListener('beforeunload', handleBeforeUnload);
             localStorage.removeItem('dqm-window-qa-draft');
             location.reload();
         }
@@ -202,7 +210,7 @@ function addTimelineComment() {
     const notes = prompt('Enter timeline comment:');
     if (notes && notes.trim()) {
         const entry = {
-            time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+            time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
             activity: 'Comment',
             notes: notes.trim(),
             timestamp: new Date().toISOString()
@@ -306,6 +314,7 @@ function updateProfileOptions(select) {
  * SCRAPES the plant entry rows from the DOM and syncs them to appState.
  */
 function updatePlants() {
+    if (isRestoring) return; // Don't scrape while the UI is being reconstructed from state
     const newPlants = [];
     document.querySelectorAll('.plant-entry').forEach((entry, idx) => {
         const name = entry.querySelector('.plant-name').value;
@@ -403,21 +412,23 @@ function closePicker() {
 /**
  * Opens the main modal for a specific QA check and loads its content.
  * @param {string} checkType - The key identifying the check.
+ * @param {Object} snapshotData - Optional: Prioritize this data over the current state (for timeline review).
  */
-function openModal(checkType) {
+function openModal(checkType, snapshotData = null) {
     appState.activeCheckType = checkType;
     const modal = document.getElementById('modal-overlay');
     const title = document.getElementById('modal-title');
     const content = document.getElementById('modal-content');
 
+    // Populate data from state if it exists for this plant's check
     const plant = appState.plants[appState.activePlantIndex];
     title.textContent = `${plant.name || `Plant #${appState.activePlantIndex + 1}`} - ${checkNames[checkType]}`;
     content.innerHTML = getCheckContent(checkType);
 
-    // Populate data from state if it exists for this plant's check
-    const existingData = plant.checks[checkType];
-    if (existingData) {
-        setTimeout(() => restoreCheckData(checkType, existingData), 0);
+    const dataToRestore = snapshotData || plant.checks[checkType];
+
+    if (dataToRestore) {
+        setTimeout(() => restoreCheckData(checkType, dataToRestore), 0);
     }
 
     // Attach listeners for auto-calc and real-time state syncing
@@ -544,12 +555,13 @@ function logActiveCheckToTimeline() {
     }
 
     const entry = {
-        time: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
         activity: activityText,
         notes: '',
         timestamp: new Date().toISOString(),
         plantIdx: appState.activePlantIndex,
-        checkType: type
+        checkType: type,
+        data: JSON.parse(JSON.stringify(plant.checks[type])) // Capture a snapshot of the data
     };
 
     appState.timeline.push(entry);
@@ -562,11 +574,15 @@ function logActiveCheckToTimeline() {
  * Reopens a QA check modal from a timeline entry.
  * @param {number} plantIdx - Index of the plant.
  * @param {string} checkType - Type of the check.
+ * @param {number} entryIdx - Index of the timeline entry (to pull snapshot data).
  */
-function openTimelineEntry(plantIdx, checkType) {
+function openTimelineEntry(plantIdx, checkType, entryIdx) {
     if (plantIdx === undefined || !checkType) return;
     appState.activePlantIndex = plantIdx;
-    openModal(checkType);
+
+    // Pass the historical snapshot data to the modal
+    const snapshot = appState.timeline[entryIdx]?.data;
+    openModal(checkType, snapshot);
 }
 
 /**
@@ -605,7 +621,7 @@ function renderTimeline() {
         if (isClickable) {
             row.className = 'clickable-row';
             row.title = 'Click to reopen this QA check';
-            row.onclick = () => openTimelineEntry(item.plantIdx, item.checkType);
+            row.onclick = () => openTimelineEntry(item.plantIdx, item.checkType, idx);
         }
 
         row.innerHTML = `
@@ -648,30 +664,36 @@ function saveDraft() {
 function loadDraft() {
     const draft = localStorage.getItem('dqm-window-qa-draft');
     if (!draft) return;
-    const data = JSON.parse(draft);
-    Object.assign(appState, data);
 
-    // Restore Global Header UI
-    document.getElementById('check-date').value = appState.checkDate || '';
-    document.getElementById('weather-conditions').value = appState.weatherConditions || '';
-    document.getElementById('qa-team').value = appState.qaTeam || '';
-    document.getElementById('system-provider').value = appState.systemProvider || '';
-    document.getElementById('general-comments').value = appState.generalComments || '';
+    isRestoring = true; // Block scraping
+    try {
+        const data = JSON.parse(draft);
+        Object.assign(appState, data);
 
-    // Reconstruct Plant Rows
-    if (appState.plants.length > 0) {
-        document.getElementById('plants-container').innerHTML = '';
-        plantCounter = 0;
-        appState.plants.forEach(p => {
-            addPlant();
-            const last = document.querySelector('.plant-entry:last-child');
-            last.querySelector('.plant-name').value = p.name;
-            last.querySelector('.vessel-type').value = p.vesselType;
-            updateProfileOptions(last.querySelector('.vessel-type'));
-            last.querySelector('.vessel-profile').value = p.profile;
-        });
+        // Restore Global Header UI
+        document.getElementById('check-date').value = appState.checkDate || '';
+        document.getElementById('weather-conditions').value = appState.weatherConditions || '';
+        document.getElementById('qa-team').value = appState.qaTeam || '';
+        document.getElementById('system-provider').value = appState.systemProvider || '';
+        document.getElementById('general-comments').value = appState.generalComments || '';
+
+        // Reconstruct Plant Rows
+        if (appState.plants.length > 0) {
+            document.getElementById('plants-container').innerHTML = '';
+            plantCounter = 0;
+            appState.plants.forEach(p => {
+                addPlant();
+                const last = document.querySelector('.plant-entry:last-child');
+                last.querySelector('.plant-name').value = p.name;
+                last.querySelector('.vessel-type').value = p.vesselType;
+                updateProfileOptions(last.querySelector('.vessel-type'));
+                last.querySelector('.vessel-profile').value = p.profile;
+            });
+        }
+        renderTimeline();
+    } finally {
+        isRestoring = false; // Re-enable scraping
     }
-    renderTimeline();
 }
 
 /**
