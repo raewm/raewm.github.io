@@ -738,21 +738,41 @@ function renderGenericTable(originalData, overrideData) {
 function renderTimeline(timelineArray) {
     if (!timelineArray || timelineArray.length === 0) return '';
 
-    let rows = timelineArray.map(item => `
+    let rows = timelineArray.map(item => {
+        let actionText = (item.action || item.activity || '').trim();
+        const commentText = (item.details || item.notes || '').trim();
+        
+        // Sanitization Layer: Remove unexplained ", 0" from legacy app strings
+        actionText = actionText.replace(/,\s*0\s*(?=\))/g, '');
+
+        let combinedAction = '';
+        if (actionText.toLowerCase() === 'comment') {
+            // Case: Action is a generic "Comment" placeholder; omit it for the actual content
+            combinedAction = `<strong>Comment:</strong> ${escapeHtml(commentText)}`;
+        } else if (actionText && commentText) {
+            // Case: Specific action with additional details; keep on one line
+            combinedAction = `${escapeHtml(actionText)} <span style="font-size: 0.9em; font-style: italic;">(Comment: ${escapeHtml(commentText)})</span>`;
+        } else {
+            // fallback for single-field entries
+            combinedAction = escapeHtml(actionText || commentText);
+            if (!actionText && commentText) {
+                combinedAction = `<strong>Comment:</strong> ${escapeHtml(commentText)}`;
+            }
+        }
+
+        return `
         <tr>
             <td width="20%">${escapeHtml(item.time)}</td>
-            <td width="30%">${escapeHtml(item.action || item.activity)}</td>
-            <td width="50%">${escapeHtml(item.details || item.notes)}</td>
+            <td width="80%">${combinedAction}</td>
         </tr>
-    `).join('');
+    `}).join('');
 
     return `
         <h3>QA Timeline</h3>
         <table class="report-table" style="margin-bottom: 30px;">
             <tr>
-                <th>Time</th>
-                <th>Action</th>
-                <th>Details</th>
+                <th width="20%">Time</th>
+                <th width="80%">Action / Comment</th>
             </tr>
             ${rows}
         </table>
