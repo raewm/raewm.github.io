@@ -92,7 +92,7 @@ function renderEditor() {
  */
 function renderSection(checkType, data, overrideObj, container, plantIdx) {
     const section = document.createElement('div');
-    section.className = 'editor-section';
+    section.className = 'editor-section open'; // Start expanded so checks are immediately visible
 
     const header = document.createElement('div');
     header.className = 'editor-section-header';
@@ -289,6 +289,24 @@ function getSimShortLabel(prop) {
     return null;
 }
 
+function getDragheadShortLabel(prop) {
+    const low = prop.toLowerCase();
+    if (low.includes('manual')) return 'Manual';
+    if (low.includes('dqm')) return 'DQM System';
+    if (low.includes('diff')) return 'Difference';
+    return formatLabel(prop.split('-').pop());
+}
+
+function getVelocityShortLabel(prop) {
+    const low = prop.toLowerCase();
+    if (low.includes('time')) return 'Time (s)';
+    if (low.includes('calc')) return 'Calculated';
+    if (low.includes('dqm')) return 'DQM System';
+    if (low.includes('diff')) return 'Difference';
+    if (low.includes('manual')) return 'Manual';
+    return formatLabel(prop.split('-').pop());
+}
+
 /**
  * Specialized Layout: Draghead Depth entries (typically Port/Center/Starboard).
  * Renders multiple measurements (1-3) in a columnar grid.
@@ -353,8 +371,12 @@ function renderCustomTableData(dataObj, overrideObj, parentDom, checkType, title
 function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx) {
     const wrap = document.createElement('div');
 
-    // 1. Static Configuration (Pipe Length, Method, Calibration Date)
-    const topKeys = ['velocity-pipe-length', 'velocity-method', 'velocity-cal-date'];
+    // Static Configuration: accept both legacy long-form and dqm-qa-app2 short-form keys
+    const topKeys = [
+        'velocity-pipe-length', 'vel-pipe-length',
+        'velocity-method',
+        'velocity-cal-date', 'vel-cal-date'
+    ];
     const topGrid = document.createElement('div');
     topGrid.className = 'form-grid';
     topGrid.style.marginBottom = '20px';

@@ -463,6 +463,7 @@ function renderSuctionTable(data, override) {
     let offset = parseFloat(getVal(data, override, 'suction-offset')) || 0;
 
     [1, 2, 3].forEach(num => {
+        // Accept 'suction-manual-N' (legacy) or 'suction-man-N' (dqm-qa-app2)
         let manual = getVal(data, override, `suction-manual-${num}`) || getVal(data, override, `suction-man-${num}`);
         let dqm = getVal(data, override, `suction-dqm-${num}`);
 
@@ -605,21 +606,28 @@ function renderHullStatus(data, override) {
  * Handles time-distance and direct comparison audits.
  */
 function renderVelocityTable(data, override) {
+    // Support both 'velocity-method' (legacy) and 'velocity-method' key (same) —
+    // method value is always stored under 'velocity-method' in both app versions.
     let method = getVal(data, override, 'velocity-method');
     let html = '';
 
-    if (method === 'dye') {
-        let pipeLength = getVal(data, override, 'velocity-pipe-length');
+    // Helper: accept both long-form (legacy) and short-form (dqm-qa-app2) key names
+    function getVelVal(d, o, longKey, shortKey) {
+        return getVal(d, o, longKey) !== undefined ? getVal(d, o, longKey) : getVal(d, o, shortKey);
+    }
+
+    if (method && method.toLowerCase().includes('dye')) {
+        let pipeLength = getVelVal(data, override, 'velocity-pipe-length', 'vel-pipe-length');
         if (pipeLength) {
             html += `<p style="margin-bottom: 5px; font-size: 10pt;"><strong>Pipeline Length:</strong> ${escapeHtml(pipeLength.toString())} ft</p>`;
         }
 
         let rows = '';
         [1, 2, 3].forEach(num => {
-            let time = getVal(data, override, `velocity-dye-time-${num}`);
-            let calc = getVal(data, override, `velocity-dye-calc-${num}`);
-            let dqm = getVal(data, override, `velocity-dye-dqm-${num}`);
-            let diff = getVal(data, override, `velocity-dye-diff-${num}`);
+            let time = getVelVal(data, override, `velocity-dye-time-${num}`, `vel-dye-time-${num}`);
+            let calc = getVelVal(data, override, `velocity-dye-calc-${num}`, `vel-dye-calc-${num}`);
+            let dqm  = getVelVal(data, override, `velocity-dye-dqm-${num}`,  `vel-dye-dqm-${num}`);
+            let diff = getVelVal(data, override, `velocity-dye-diff-${num}`, `vel-dye-diff-${num}`);
 
             if (time !== undefined || dqm !== undefined) {
                 rows += `
@@ -646,17 +654,18 @@ function renderVelocityTable(data, override) {
                 ${rows}
             </table>`;
         }
-    } else if (method === 'meter') {
-        let calDate = getVal(data, override, 'velocity-cal-date');
+    } else if (method && method.toLowerCase().includes('meter')) {
+        let calDate = getVelVal(data, override, 'velocity-cal-date', 'vel-cal-date');
         if (calDate) {
             html += `<p style="margin-bottom: 5px; font-size: 10pt;"><strong>Meter Calibration Date:</strong> ${escapeHtml(calDate)}</p>`;
         }
 
         let rows = '';
         [1, 2, 3].forEach(num => {
-            let manual = getVal(data, override, `velocity-meter-manual-${num}`);
-            let dqm = getVal(data, override, `velocity-meter-dqm-${num}`);
-            let diff = getVal(data, override, `velocity-meter-diff-${num}`);
+            // Accept 'velocity-meter-manual-N' (legacy) or 'vel-meter-man-N' (dqm-qa-app2)
+            let manual = getVelVal(data, override, `velocity-meter-manual-${num}`, `vel-meter-man-${num}`);
+            let dqm    = getVelVal(data, override, `velocity-meter-dqm-${num}`,    `vel-meter-dqm-${num}`);
+            let diff   = getVelVal(data, override, `velocity-meter-diff-${num}`,   `vel-meter-diff-${num}`);
 
             if (manual !== undefined || dqm !== undefined) {
                 rows += `
@@ -683,7 +692,7 @@ function renderVelocityTable(data, override) {
         }
     }
 
-    let remarks = getVal(data, override, 'velocity-remarks');
+    let remarks = getVal(data, override, 'velocity-remarks') || getVal(data, override, 'vel-remarks');
     if (remarks) html += `<p style="font-size: 10pt; font-style: italic;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
 
     return html || '<p>No velocity data recorded.</p>';
