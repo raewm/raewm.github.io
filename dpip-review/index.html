@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="description" content="USACE Dredging Quality Management DPIP Review Application">
+    <title>DQM DPIP Review</title>
+    <link rel="stylesheet" href="styles.css">
+    <style>
+        /* DPIP Review Specific Styles */
+        .checklist-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 1rem;
+            padding: 1rem;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            margin-bottom: 0.75rem;
+        }
+        .checklist-item input[type="checkbox"] {
+            margin-top: 0.25rem;
+            width: 1.25rem;
+            height: 1.25rem;
+            accent-color: var(--primary);
+        }
+        .checklist-text { flex: 1; }
+        .data-check-panel {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            padding: 1.5rem;
+            margin-bottom: 1.5rem;
+        }
+    </style>
+</head>
+
+<body>
+<div class="app-container">
+    <header class="app-header">
+        <div style="display: flex; align-items: center; gap: 15px; flex-shrink: 0;">
+            <img src="assets/logo.png" alt="DQM Logo" class="app-logo">
+            <div class="header-logo" style="margin: 0; white-space: nowrap;">
+                <span class="logo-text">DQM</span> DPIP Review
+            </div>
+        </div>
+
+        <nav class="app-tabs">
+            <button class="tab-btn active" data-tab="tab-review-info">1. Review Info</button>
+            <button class="tab-btn" data-tab="tab-checklist">2. Document Checklist</button>
+            <button class="tab-btn" data-tab="tab-data-check" id="nav-data-check" style="display: none;">3. Data Check</button>
+            <button class="tab-btn" data-tab="tab-report-preview">4. Preview &amp; Export</button>
+        </nav>
+
+        <div class="header-actions">
+            <button type="button" class="btn btn-secondary" id="export-json-btn">Export Draft</button>
+            <button type="button" class="btn btn-secondary" id="import-json-btn">Import Draft</button>
+            <button type="button" class="btn btn-danger" id="clear-btn">Clear All</button>
+            <input type="file" id="import-file" accept=".json" style="display: none;">
+        </div>
+    </header>
+
+        <main id="app">
+
+            <div class="tab-content active" id="tab-review-info">
+                <section class="card" id="metadata-section">
+                    <h2>Review Information</h2>
+
+                        <div class="form-group">
+                            <label for="reviewer-name">Reviewer Name</label>
+                            <input type="text" id="reviewer-name" placeholder="Name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="review-date">Review Date</label>
+                            <input type="date" id="review-date" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="plant-name">Plant Name</label>
+                            <input type="text" id="plant-name" placeholder="Plant Name" required>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="plant-type">Plant Type / Profile</label>
+                            <select id="plant-type" required>
+                                <option value="" disabled selected>Select Plant Type...</option>
+                                <option value="hopper">Hopper</option>
+                                <option value="mechanical">Mechanical</option>
+                                <option value="pipeline">Pipeline</option>
+                                <option value="scow">Scow</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="general-comments">General Comments</label>
+                            <textarea id="general-comments" rows="4" placeholder="Overall notes..."></textarea>
+                        </div>
+                    </section>
+            </div>
+
+            <div class="tab-content" id="tab-checklist">
+                <section class="card" id="checklist-section">
+                    <div class="card-header">
+                            <h2>Document Checklist</h2>
+                            <p class="text-muted" id="checklist-subtitle">Select a Plant Type to view required checklist items.</p>
+                        </div>
+                        <div id="checklist-container">
+                            <!-- Populated by JS -->
+                        </div>
+                </section>
+            </div>
+
+            <div class="tab-content" id="tab-data-check">
+                <section class="card mt-1" id="data-check-section" style="display: none;">
+                    <div class="card-header">
+                            <h2>Data Check</h2>
+                            <p class="text-muted">Verify displacement and volume where applicable.</p>
+                        </div>
+                        
+                        <div id="data-check-container">
+                            <!-- Populated dynamically based on plant type -->
+                        </div>
+                </section>
+            </div>
+
+            <div class="tab-content" id="tab-report-preview">
+                <section class="card" id="report-section">
+                    <div class="card-header" style="justify-content: space-between; align-items: center; display: flex;">
+                        <h2>Report Preview</h2>
+                        <button type="button" class="btn-primary" id="export-pdf-btn">📄 Generate PDF</button>
+                    </div>
+                    <div id="report-preview-container" style="background: var(--bg-primary); padding: 2rem; border: 1px solid var(--border); border-radius: var(--radius-md); min-height: 400px; color: var(--text-primary);">
+                        <p class="text-muted" style="text-align: center; margin-top: 2rem;">Preview will generate here.</p>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <footer>
+            <p>USACE National Dredging Quality Management Program</p>
+        </footer>
+</div>
+
+    <div id="print-container" class="print-only" style="display: none;"></div>
+
+    <!-- html2pdf/jspdf library for PDF export -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="app.js"></script>
+</body>
+
+</html>
