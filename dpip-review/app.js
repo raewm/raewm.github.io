@@ -10,16 +10,26 @@ const AppState = {
     checklist: {},
     dataCheck: {
         isUllageProfile: false,
-        displacement: {
-            reportedDraft: '',
-            reportedDisplacement: '',
+        displacementLight: {
+            reportedDraft: '', reportedDisplacement: '',
             method: 'table',
             tableParams: { x1: '', y1: '', x2: '', y2: '' },
             equationParams: { coefA: '', coefB: '', coefC: '' }
         },
-        volume: {
-            reportedUllage: '',
-            reportedVolume: '',
+        displacementLoaded: {
+            reportedDraft: '', reportedDisplacement: '',
+            method: 'table',
+            tableParams: { x1: '', y1: '', x2: '', y2: '' },
+            equationParams: { coefA: '', coefB: '', coefC: '' }
+        },
+        volumeLight: {
+            reportedUllage: '', reportedVolume: '',
+            method: 'table',
+            tableParams: { x1: '', y1: '', x2: '', y2: '' },
+            equationParams: { coefA: '', coefB: '', coefC: '' }
+        },
+        volumeLoaded: {
+            reportedUllage: '', reportedVolume: '',
             method: 'table',
             tableParams: { x1: '', y1: '', x2: '', y2: '' },
             equationParams: { coefA: '', coefB: '', coefC: '' }
@@ -73,15 +83,15 @@ function setupEventListeners() {
     });
     elements.generalComments.addEventListener('input', (e) => { AppState.metadata.generalComments = e.target.value; saveDraft(); });
 
-    elements.themeToggle.addEventListener('click', toggleTheme);
-    elements.clearBtn.addEventListener('click', clearAll);
-    elements.exportJsonBtn.addEventListener('click', exportJson);
-    elements.importJsonBtn.addEventListener('click', () => elements.importFile.click());
-    elements.importFile.addEventListener('change', importJson);
-    elements.exportPdfBtn.addEventListener('click', generatePdf);
+    if (elements.themeToggle) elements.themeToggle.addEventListener('click', toggleTheme);
+    if (elements.clearBtn) elements.clearBtn.addEventListener('click', clearAll);
+    if (elements.exportJsonBtn) elements.exportJsonBtn.addEventListener('click', exportJson);
+    if (elements.importJsonBtn) elements.importJsonBtn.addEventListener('click', () => elements.importFile && elements.importFile.click());
+    if (elements.importFile) elements.importFile.addEventListener('change', importJson);
+    if (elements.exportPdfBtn) elements.exportPdfBtn.addEventListener('click', generatePdf);
 
-    // Setup Tab Listeners
-    const tabBtns = document.querySelectorAll('.tab-btn');
+    // Setup Tab Listeners — only nav-level buttons with data-tab attribute
+    const tabBtns = document.querySelectorAll('.app-tabs .tab-btn[data-tab]');
     const tabContents = document.querySelectorAll('.tab-content');
     tabBtns.forEach(btn => {
         btn.addEventListener('click', () => {
@@ -89,7 +99,8 @@ function setupEventListeners() {
             tabBtns.forEach(b => b.classList.remove('active'));
             tabContents.forEach(c => c.classList.remove('active'));
             btn.classList.add('active');
-            document.getElementById(targetId).classList.add('active');
+            const target = document.getElementById(targetId);
+            if (target) target.classList.add('active');
             
             if (targetId === 'tab-report-preview') {
                 updateReportPreview();
@@ -100,63 +111,367 @@ function setupEventListeners() {
 
 const CHECKLISTS = {
     hopper: [
-        { id: 'h1', text: 'Cover Page: Dredge Name, Date, Photo of Plant' },
-        { id: 'h2', text: 'Table of Contents' },
-        { id: 'h3', text: 'Dredge Contacts: Dredging Company & System Provider (POC, Phone, Email)' },
-        { id: 'h4', text: 'Dredge Characteristics: Dimensions, Method, Capacity, Digging Depths, Drafts, RPM/Velocity, Pipe IDs' },
-        { id: 'h5', text: 'Sensor Data Collection Method: Averaging, Routing, Internet Connection' },
-        { id: 'h6', text: 'Sensors Descriptions/Calibrations: Positioning System & Heading' },
-        { id: 'h7', text: 'Sensors Descriptions/Calibrations: Hull Status, Draft, and Dragarm Depths' },
-        { id: 'h8', text: 'Sensors Descriptions/Calibrations: Density, Velocity, Pump RPM, Pumpout' },
-        { id: 'h9', text: 'Calculated Parameters: Displacement (Method & Tables)' },
-        { id: 'h10', text: 'Calculated Parameters: Hopper Volume (Method, Tables, Datum)' },
-        { id: 'h11', text: 'Calculated Parameters: Drag Head Position & Load Number Increment' },
-        { id: 'h12', text: 'Quality Control: QC Process and Calibration Log' },
-        { id: 'h13', text: 'Appendices: Hydrostatic Curves, Certified Tables, Dimensioned Drawings' },
-        { id: 'h14', text: 'Appendices: Sensor Manuals and Certificates of Calibration' }
+        // --- Deliverables ---
+        { id: 'h-s1', section: 'Deliverables' },
+        { id: 'h1',  text: 'Digital Copy of DPIP' },
+        { id: 'h2',  text: 'DPIP Onboard Dredge' },
+        // --- Table of Contents ---
+        { id: 'h-s2', section: 'Table of Contents' },
+        { id: 'h3',  text: 'Table of Contents' },
+        { id: 'h4',  text: 'Tabs Separating DPIP Sections' },
+        // --- Cover Page ---
+        { id: 'h-s3', section: 'Cover Page' },
+        { id: 'h5',  text: 'Dredge Name' },
+        { id: 'h6',  text: 'DPIP Date' },
+        { id: 'h7',  text: 'Dredge Photo' },
+        // --- Contact Information ---
+        { id: 'h-s4', section: 'Contact Information' },
+        { id: 'h8',  text: 'Dredge Contacts' },
+        { id: 'h9',  text: 'Dredging Company' },
+        { id: 'h10', text: 'Dredging Company Contact Information' },
+        { id: 'h11', text: 'Dredge Monitoring System Provider' },
+        { id: 'h12', text: 'Dredge Monitoring System Provider Contact Information' },
+        // --- Table of Dredge Characteristics ---
+        { id: 'h-s5', section: 'Table of Dredge Characteristics' },
+        { id: 'h13', text: 'Dredge Dimensions' },
+        { id: 'h14', text: 'Hopper Dimensions' },
+        { id: 'h15', text: 'Disposal Methods' },
+        { id: 'h16', text: 'Hopper Capacity' },
+        { id: 'h17', text: 'Minimum & Maximum Digging Depths' },
+        { id: 'h18', text: 'Minimum & Maximum Drafts & Displacements' },
+        { id: 'h19', text: 'Pump RPM & Slurry Velocity Ranges' },
+        { id: 'h20', text: 'Inner Diameters of Suction & Discharge Pipes' },
+        // --- Sensor Data Collection Methods ---
+        { id: 'h-s6', section: 'Sensor Data Collection Methods' },
+        { id: 'h21', text: 'Any Averaging Occurring In Data Collection' },
+        { id: 'h22', text: 'Data Route From Sensors to DQM Computer' },
+        { id: 'h23', text: 'Internet Connection Type & Provider' },
+        // --- Sensor Descriptions, Locations & Calibration Methods ---
+        { id: 'h-s7', section: 'Sensor Descriptions, Locations & Calibration Methods' },
+        { id: 'h24', text: 'Brand Name, Model & Accuracy', group: 'Positioning System' },
+        { id: 'h25', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h26', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'h27', text: 'Brand Name, Model & Accuracy', group: 'Dredge Heading' },
+        { id: 'h28', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h29', text: 'Brand Name, Model & Accuracy', group: 'Hull Status' },
+        { id: 'h30', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h31', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h32', text: 'Calibration Procedure', sub: true },
+        { id: 'h33', text: 'Brand Name, Model & Accuracy', group: 'Draft' },
+        { id: 'h34', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h35', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h36', text: 'Calibration Procedure', sub: true },
+        { id: 'h37', text: 'Brand Name, Model & Accuracy', group: 'Ullage' },
+        { id: 'h38', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h39', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h40', text: 'Calibration Procedure', sub: true },
+        { id: 'h41', text: 'Brand Name, Model & Accuracy', group: 'Draghead Depth' },
+        { id: 'h42', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h43', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h44', text: 'Calibration Procedure', sub: true },
+        { id: 'h45', text: 'Brand Name, Model & Accuracy', group: 'Density' },
+        { id: 'h46', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h47', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h48', text: 'Pipe Diameter at Density Instrumentation', sub: true },
+        { id: 'h49', text: 'Calibration Procedure', sub: true },
+        { id: 'h50', text: 'Brand Name, Model & Accuracy', group: 'Velocity' },
+        { id: 'h51', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h52', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h53', text: 'Pipe Diameter at Velocity Instrumentation', sub: true },
+        { id: 'h54', text: 'Calibration Procedure', sub: true },
+        { id: 'h55', text: 'Brand Name, Model & Accuracy', group: 'Pump RPM' },
+        { id: 'h56', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h57', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h58', text: 'Calibration Procedure', sub: true },
+        { id: 'h59', text: 'Brand Name, Model & Accuracy', group: 'Pumpout (If Instrumented)' },
+        { id: 'h60', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'h61', text: 'Sensor Locations with Referenced Dimensions', sub: true },
+        { id: 'h62', text: 'Calibration Procedure', sub: true },
+        // --- Calculated Parameters ---
+        { id: 'h-s8', section: 'Calculated Parameters' },
+        { id: 'h63', text: 'Method Used to Calculate Displacement', group: 'Displacement' },
+        { id: 'h64', text: 'Tables of Fresh & Salt Water Displacement (Long Tons) vs. Draft (feet & tenths of feet)', sub: true },
+        { id: 'h65', text: 'Method Used to Calculate Hopper Volume', group: 'Hopper Volume' },
+        { id: 'h66', text: 'Tables of Hopper Volume (Cubic Yards) vs. Hopper Ullage (Ft & Tenths of Feet)', sub: true },
+        { id: 'h67', text: 'Description of Datum for Ullage Measurements', sub: true },
+        { id: 'h68', text: 'Method Used to Calculate Draghead Position', group: 'Draghead Position' },
+        { id: 'h69', text: 'Method Used to Increment Load Number', group: 'Load Number' },
+        // --- Quality Control ---
+        { id: 'h-s9', section: 'Quality Control' },
+        { id: 'h70', text: 'Description of Quality Control Process' },
+        { id: 'h71', text: 'Log of Sensor Calibrations, Repairs & Modifications' },
+        // --- Appendices ---
+        { id: 'h-s10', section: 'Appendices' },
+        { id: 'h72', text: 'Hydrostatic Curves' },
+        { id: 'h73', text: 'Certified Displacement & Volume Tables' },
+        { id: 'h74', text: 'Overall Dredge & Hopper Dimensions', group: 'Typical Plan View Drawing of Dredge in Feet' },
+        { id: 'h75', text: 'Locations of Required Sensors Referenced to Uniform Longitudinal & Transverse Reference Points', sub: true },
+        { id: 'h76', text: 'Distance Between Draft Sensors', sub: true },
+        { id: 'h77', text: 'Distance Between Ullage Sensors', sub: true },
+        { id: 'h78', text: 'Dimensions of Dragarms', sub: true },
+        { id: 'h79', text: 'Overall Dredge & Hopper Dimensions', group: 'Typical Profile View Drawing of Dredge in Feet' },
+        { id: 'h80', text: 'Locations of Required Sensors Referenced to Uniform Vertical & Longitudinal Reference Points', sub: true },
+        { id: 'h81', text: 'Distance Between Draft Sensors & Draft Marks', sub: true },
+        { id: 'h82', text: 'Typical Vessel Cross Section Through the Hopper' },
+        { id: 'h83', text: 'Sensor Manuals & Certificates of Calibration' }
     ],
     pipeline: [
-        { id: 'p1', text: 'Cover Page: Dredge Name, Date, Photo of Plant' },
-        { id: 'p2', text: 'Table of Contents & Contact Information' },
-        { id: 'p3', text: 'Dredge Characteristics: Dimensions, Digging Depths, Ladder Length, Pumps, Pipe IDs, Advance Method' },
-        { id: 'p4', text: 'Sensor Data Collection: Transmission, Internet, Time Stamp, Repair Methods' },
-        { id: 'p5', text: 'Sensors: Cutter/Suction Head Positioning & Depth' },
-        { id: 'p6', text: 'Sensors: Dredge Heading, Slurry Velocity & Density' },
-        { id: 'p7', text: 'Sensors: Pump RPM, Vacuum, and Outlet Pressure' },
-        { id: 'p8', text: 'Manual/Calculated Parameters: Vertical Correction (Tidal/River)' },
-        { id: 'p9', text: 'Manual/Calculated Parameters: Pipeline Lengths, Booster Pumps, Dredge Advance' },
-        { id: 'p10', text: 'Manual/Calculated Parameters: Outfall Info & Positioning, Non-Effective Events' },
-        { id: 'p11', text: 'Quality Control Information: QC Manager, Process, Logs' },
-        { id: 'p12', text: 'Appendices: Typical Plan & Profile View Drawings (including Idler Barge if applicable)' },
-        { id: 'p13', text: 'Appendices: Sensor Manuals and Certificates of Calibration' }
+        // --- Deliverables ---
+        { id: 'p-s1', section: 'Deliverables' },
+        { id: 'p1',  text: 'Digital Copy of DPIP' },
+        { id: 'p2',  text: 'DPIP Onboard Dredge' },
+        // --- Table of Contents ---
+        { id: 'p-s2', section: 'Table of Contents' },
+        { id: 'p3',  text: 'Table of Contents' },
+        { id: 'p4',  text: 'Tabs Separating DPIP Sections' },
+        // --- Cover Page ---
+        { id: 'p-s3', section: 'Cover Page' },
+        { id: 'p5',  text: 'Dredge Name' },
+        { id: 'p6',  text: 'DPIP Date' },
+        { id: 'p7',  text: 'Dredge Photo' },
+        // --- Contact Information ---
+        { id: 'p-s4', section: 'Contact Information' },
+        { id: 'p8',  text: 'Dredge Contacts' },
+        { id: 'p9',  text: 'Dredging Company' },
+        { id: 'p10', text: 'Dredging Company Contact Information' },
+        { id: 'p11', text: 'Dredge Monitoring System Provider' },
+        { id: 'p12', text: 'Dredge Monitoring System Provider Contact Information' },
+        // --- Table of Dredge Characteristics ---
+        { id: 'p-s5', section: 'Table of Dredge Characteristics' },
+        { id: 'p13', text: 'Dredging Method (Cutter, Dustpan, etc.)' },
+        { id: 'p14', text: 'Dredge Dimensions (Length, Width & Draft) (with & without idler barge, if applicable)' },
+        { id: 'p15', text: 'Ladder Length' },
+        { id: 'p16', text: 'Minimum & Maximum Digging Depths' },
+        { id: 'p17', text: 'Minimum & Maximum Cut Width' },
+        { id: 'p18', text: 'Number & Types of Pumps' },
+        { id: 'p19', text: 'Minimum & Maximum Pump RPM' },
+        { id: 'p20', text: 'Minimum & Maximum Slurry Velocity' },
+        { id: 'p21', text: 'Inner Diameters of Suction & Discharge Pipes' },
+        { id: 'p22', text: 'Dredge Advance Mechanism' },
+        { id: 'p23', text: 'Cutter Spin Direction (if applicable)' },
+        // --- Sensor Data Collection & Transmission Methods ---
+        { id: 'p-s6', section: 'Sensor Data Collection & Transmission Methods' },
+        { id: 'p24', text: 'Any Averaging Occurring In Data Collection' },
+        { id: 'p25', text: 'Data Route From Sensors to DQM Computer' },
+        { id: 'p26', text: 'Internet Connection Type & Provider' },
+        { id: 'p27', text: 'Sensor Repair, Replacement, Installation, Modification or Calibration Methods' },
+        { id: 'p28', text: 'Procedure to Change Contract Number' },
+        { id: 'p29', text: 'Description of How the UTC Time Stamp Is Collected' },
+        // --- Sensor Descriptions, Locations & Calibration Methods ---
+        { id: 'p-s7', section: 'Sensor Descriptions, Locations & Calibration Methods' },
+        { id: 'p30', text: 'Brand Name, Model & Accuracy', group: 'Cutter/Suction Head Horizontal Positioning' },
+        { id: 'p31', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p32', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p33', text: 'Brand Name, Model & Accuracy', group: 'Dredge Heading' },
+        { id: 'p34', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p35', text: 'Brand Name, Model & Accuracy', group: 'Cutter/Suction Head Depth' },
+        { id: 'p36', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p37', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p38', text: 'Calibration Procedure', sub: true },
+        { id: 'p39', text: 'Brand Name, Model & Accuracy', group: 'Slurry Velocity' },
+        { id: 'p40', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p41', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p42', text: 'Pipe Diameter at Velocity Instrumentation', sub: true },
+        { id: 'p43', text: 'Calibration Procedure', sub: true },
+        { id: 'p44', text: 'Brand Name, Model & Accuracy', group: 'Slurry Density' },
+        { id: 'p45', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p46', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p47', text: 'Pipe Diameter at Density Instrumentation', sub: true },
+        { id: 'p48', text: 'Calibration Procedure', sub: true },
+        { id: 'p49', text: 'Brand Name, Model & Accuracy', group: 'Pump RPM' },
+        { id: 'p50', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p51', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p52', text: 'Calibration Procedure', sub: true },
+        { id: 'p53', text: 'Brand Name, Model & Accuracy', group: 'Pump Vacuum' },
+        { id: 'p54', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p55', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p56', text: 'Calibration Procedure', sub: true },
+        { id: 'p57', text: 'Brand Name, Model & Accuracy', group: 'Pump Outlet Pressure' },
+        { id: 'p58', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p59', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p60', text: 'Calibration Procedure', sub: true },
+        // --- Manual & Calculated Parameters ---
+        { id: 'p-s8', section: 'Manual & Calculated Parameters' },
+        { id: 'p61', text: 'Method of Obtaining Vertical Correction (Tidal or River Gauge)', group: 'Vertical Correction' },
+        { id: 'p62', text: 'Procedure for Updating Tide Station/River Stage Station Name', sub: true },
+        { id: 'p63', text: 'Method & Procedure for Measuring & Reporting Pipe Lengths', group: 'Pipeline Lengths' },
+        { id: 'p64', text: 'Method & Procedure for Reporting Booster Pumps Added or Removed from Service', group: 'Booster Pumps' },
+        { id: 'p65', text: 'Method & Procedure for Calculating & Reporting Daily Dredge Advance', group: 'Dredge Advance' },
+        { id: 'p66', text: 'Method Used to Report Outfall Position, Elevation & Heading', group: 'Outfall Information' },
+        { id: 'p67', text: 'Brand Name, Model & Accuracy', group: 'Outfall Positioning (If Instrumented)' },
+        { id: 'p68', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p69', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p70', text: 'Brand Name, Model & Accuracy', group: 'Outfall Heading (If Instrumented)' },
+        { id: 'p71', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p72', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p73', text: 'Brand Name, Model & Accuracy', group: 'Outfall Elevation (If Instrumented)' },
+        { id: 'p74', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'p75', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'p76', text: 'Method & Procedure for Reporting Non-Effective Events', group: 'Non-Effective Events' },
+        // --- Quality Control ---
+        { id: 'p-s9', section: 'Quality Control' },
+        { id: 'p77', text: 'Name of Quality Control Systems Manager' },
+        { id: 'p78', text: 'Description of Quality Control Process' },
+        { id: 'p79', text: 'Log of Sensor Calibrations, Repairs & Modifications' },
+        // --- Appendices ---
+        { id: 'p-s10', section: 'Appendices' },
+        { id: 'p80', text: 'Overall Dredge & Ladder Dimensions', group: 'Typical Plan View Drawing of Dredge in Feet (Incl. Idler Barge if Applicable)' },
+        { id: 'p81', text: 'Locations of Required Sensors Referenced to Uniform Longitudinal & Transverse Reference Points', sub: true },
+        { id: 'p82', text: 'Dimensions of Suction & Discharge Piping', sub: true },
+        { id: 'p83', text: 'Overall Dredge & Ladder Dimensions', group: 'Typical Profile View Drawing of Dredge in Feet (Incl. Idler Barge if Applicable)' },
+        { id: 'p84', text: 'Locations of Required Sensors Referenced to Uniform Vertical & Longitudinal Reference Points', sub: true },
+        { id: 'p85', text: 'Sensor Manuals & Certificates of Calibration' }
     ],
     mechanical: [
-        { id: 'm1', text: 'Cover Page: Dredge Name, Date, Photo of Plant' },
-        { id: 'm2', text: 'Table of Contents' },
-        { id: 'm3', text: 'Dredge Contacts: Dredging Company & System Provider' },
-        { id: 'm4', text: 'Dredge Characteristics: Lifting Capacity, Boom Length, Bucket Capacity, Digging Depths, Swing Radius' },
-        { id: 'm5', text: 'Sensor Data Collection Method' },
-        { id: 'm6', text: 'Sensors: Positioning System & Dredge Heading' },
-        { id: 'm7', text: 'Sensors: Boom Angle, Bucket Position, Heading, & Depth' },
-        { id: 'm8', text: 'Sensors: Vertical Correction (Tide)' },
-        { id: 'm9', text: 'Quality Control: Process & Calibration Logs' },
-        { id: 'm10', text: 'Appendices: Dimensioned Drawings of Dredge (Overall & Boom Dimensions)' },
-        { id: 'm11', text: 'Appendices: Sensor Manuals and Certificates of Calibration' }
+        // --- Deliverables ---
+        { id: 'm-s1', section: 'Deliverables' },
+        { id: 'm1',  text: 'Digital Copy of DPIP' },
+        { id: 'm2',  text: 'DPIP Onboard Dredge' },
+        // --- Table of Contents ---
+        { id: 'm-s2', section: 'Table of Contents' },
+        { id: 'm3',  text: 'Table of Contents' },
+        { id: 'm4',  text: 'Tabs Separating DPIP Sections' },
+        // --- Cover Page ---
+        { id: 'm-s3', section: 'Cover Page' },
+        { id: 'm5',  text: 'Dredge Name' },
+        { id: 'm6',  text: 'DPIP Date' },
+        { id: 'm7',  text: 'Dredge Photo' },
+        // --- Contact Information ---
+        { id: 'm-s4', section: 'Contact Information' },
+        { id: 'm8',  text: 'Dredge Contacts' },
+        { id: 'm9',  text: 'Dredging Company' },
+        { id: 'm10', text: 'Dredging Company Contact Information' },
+        { id: 'm11', text: 'Dredge Monitoring System Provider' },
+        { id: 'm12', text: 'Dredge Monitoring System Provider Contact Information' },
+        // --- Table of Dredge Characteristics ---
+        { id: 'm-s5', section: 'Table of Dredge Characteristics' },
+        { id: 'm13', text: 'Dredging Method (Clamshell, Excavator)' },
+        { id: 'm14', text: 'Dredge Dimensions (Length, Width & Draft)' },
+        { id: 'm15', text: 'Lifting Capacity' },
+        { id: 'm16', text: 'Boom (and Stick) Length' },
+        { id: 'm17', text: 'Bucket Capacity' },
+        { id: 'm18', text: 'Minimum & Maximum Digging Depth' },
+        { id: 'm19', text: 'Minimum & Maximum Swing Radius' },
+        { id: 'm20', text: 'Dredge Advance Mechanism' },
+        // --- Sensor Data Collection & Transmission Methods ---
+        { id: 'm-s6', section: 'Sensor Data Collection & Transmission Methods' },
+        { id: 'm21', text: 'Any Averaging Occurring In Data Collection' },
+        { id: 'm22', text: 'Data Route From Sensors to DQM Computer' },
+        { id: 'm23', text: 'Internet Connection Type & Provider' },
+        { id: 'm24', text: 'Sensor Repair, Replacement, Installation, Modification or Calibration Methods' },
+        { id: 'm25', text: 'Procedure to Change Contract Number' },
+        // --- Sensor Descriptions, Locations & Calibration Methods ---
+        { id: 'm-s7', section: 'Sensor Descriptions, Locations & Calibration Methods' },
+        { id: 'm26', text: 'Brand Name, Model & Accuracy', group: 'Dredge Positioning' },
+        { id: 'm27', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm28', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm29', text: 'Brand Name, Model & Accuracy', group: 'Dredge Heading' },
+        { id: 'm30', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm31', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm32', text: 'Brand Name, Model & Accuracy', group: 'Boom Angle' },
+        { id: 'm33', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm34', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm35', text: 'Calibration Procedure', sub: true },
+        { id: 'm36', text: 'Brand Name, Model & Accuracy', group: 'Bucket Position' },
+        { id: 'm37', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm38', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm39', text: 'Brand Name, Model & Accuracy', group: 'Bucket Heading' },
+        { id: 'm40', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm41', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm42', text: 'Brand Name, Model & Accuracy', group: 'Bucket Depth' },
+        { id: 'm43', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm44', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm45', text: 'Calibration Procedure', sub: true },
+        { id: 'm46', text: 'Brand Name, Model & Accuracy', group: 'Vertical Correction (Tide)' },
+        { id: 'm47', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 'm48', text: 'Sensor Location with Referenced Dimensions', sub: true },
+        { id: 'm49', text: 'Calibration Procedure', sub: true },
+        // --- Quality Control ---
+        { id: 'm-s8', section: 'Quality Control' },
+        { id: 'm50', text: 'Description of Quality Control Process' },
+        { id: 'm51', text: 'Log of Sensor Calibrations, Repairs & Modifications' },
+        // --- Appendices ---
+        { id: 'm-s9', section: 'Appendices' },
+        { id: 'm52', text: 'Overall Dredge & Boom Dimensions', group: 'Typical Plan View Drawing of Dredge in Feet' },
+        { id: 'm53', text: 'Locations of Required Sensors Referenced to Uniform Longitudinal & Transverse Reference Points', sub: true },
+        { id: 'm54', text: 'Overall Dredge & Boom Dimensions', group: 'Typical Profile View Drawing of Dredge in Feet' },
+        { id: 'm55', text: 'Locations of Required Sensors Referenced to Uniform Vertical & Longitudinal Reference Points', sub: true },
+        { id: 'm56', text: 'Sensor Manuals & Certificates of Calibration' }
     ],
     scow: [
-        { id: 's1', text: 'Contacts: Dredging Company & Scow Monitoring System Provider' },
-        { id: 's2', text: 'Scow Characteristics: Dimensions, Capacity, Min/Max Draft, Displacement, Ullage, Volume' },
-        { id: 's3', text: 'Sensor Repair/Installation Methods & Data-Reporting Equipment' },
-        { id: 's4', text: 'Procedure for Providing Data via Email' },
-        { id: 's5', text: 'System Power Supply, Battery Charge Method, & Telemetry' },
-        { id: 's6', text: 'Dimensioned Drawings (Plan/Profile, Bin cross sections, reference markers)' },
-        { id: 's7', text: 'Criteria to Increment Trip Number & UTC Time Stamp' },
-        { id: 's8', text: 'Sensors: Positioning System & Hull Status' },
-        { id: 's9', text: 'Sensors: Drafts & Bin Ullage' },
-        { id: 's10', text: 'Displacement (Method & Tables from marine surveyor)' },
-        { id: 's11', text: 'Volume (Method & Table from surveyor)' },
-        { id: 's12', text: 'Contractor Data (Backup Frequency/Method), Archive Capability' },
-        { id: 's13', text: 'Logs: Sensor Performance, Data Backup, QC Plan & Procedures' }
+        // --- Deliverables ---
+        { id: 's-s1', section: 'Deliverables' },
+        { id: 's1',  text: 'Digital Copy of DPIP' },
+        { id: 's2',  text: 'DPIP Onboard Scow' },
+        // --- Table of Contents ---
+        { id: 's-s2', section: 'Table of Contents' },
+        { id: 's3',  text: 'Table of Contents' },
+        // --- Contact Information ---
+        { id: 's-s3', section: 'Contact Information' },
+        { id: 's4',  text: 'Scow Name/ID' },
+        { id: 's5',  text: 'Dredging Company' },
+        { id: 's6',  text: 'Dredging Company Contact Information' },
+        { id: 's7',  text: 'Scow Monitoring System Provider' },
+        { id: 's8',  text: 'Scow Monitoring System Provider Contact Information' },
+        { id: 's9',  text: 'Sensor Repair, Replacement, Installation, Modification or Calibration Methods' },
+        { id: 's10', text: 'System Power Supply' },
+        { id: 's11', text: 'System Battery Charge Method' },
+        { id: 's12', text: 'Procedure to Change Contract Number If Left On Past Contract End' },
+        { id: 's13', text: 'System Telemetry' },
+        // --- Dimensioned Drawings of the Scow ---
+        { id: 's-s4', section: 'Dimensioned Drawings of the Scow' },
+        { id: 's14', text: 'Typical Bin Cross Section', group: 'Typical Plan & Profile Views of the Scow' },
+        { id: 's15', text: 'Overall Scow Dimensions', sub: true },
+        { id: 's16', text: 'Locations of Required Sensors: Fore & Aft Perpendicular', sub: true },
+        { id: 's17', text: 'Bin Length, Depth, Width & Zero Reference', sub: true },
+        { id: 's18', text: 'External Hull Markings', sub: true },
+        { id: 's19', text: 'Sensor Locations Referenced to Each Other', sub: true },
+        { id: 's20', text: 'Criteria & Method Used to Increment Trip Number' },
+        { id: 's21', text: 'Description of How the UTC Time Stamp Is Collected' },
+        // --- Sensor Descriptions, Locations & Calibration Methods ---
+        { id: 's-s5', section: 'Sensor Descriptions, Locations & Calibration Methods' },
+        { id: 's22', text: 'Brand Name & Specifications', group: 'Positioning System' },
+        { id: 's23', text: 'Sampling Rates For Data Acquisition', sub: true },
+        { id: 's24', text: 'Instrument Used to Calculate COG', sub: true },
+        { id: 's25', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 's26', text: 'Certificates of Calibration and/or Manufacturer Certificates of Compliance', sub: true },
+        { id: 's27', text: 'Description of How Scow Speed Is Determined', sub: true },
+        { id: 's28', text: 'Brand Name & Specifications', group: 'Hull Status' },
+        { id: 's29', text: 'Certificates of Calibration and/or Manufacturer Certificates of Compliance', sub: true },
+        { id: 's30', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 's31', text: 'Criteria for Determining Hull Open/Closed', sub: true },
+        { id: 's32', text: 'Brand Name & Specifications', group: 'Heading' },
+        { id: 's33', text: 'Certificates of Calibration and/or Manufacturer Certificates of Compliance', sub: true },
+        { id: 's34', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 's35', text: 'Criteria Used to Determine Heading', sub: true },
+        { id: 's36', text: 'Brand Name & Specifications', group: 'Draft' },
+        { id: 's37', text: 'Certificates of Calibration and/or Manufacturer Certificates of Compliance', sub: true },
+        { id: 's38', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 's39', text: 'Criteria Used to Determine Drafts', sub: true },
+        { id: 's40', text: 'Method Used To Calculate Displacement', group: 'Displacement' },
+        { id: 's41', text: 'Tables of Fresh & Salt Water Displacement (Long Tons) vs. Draft (feet & tenths of feet)', sub: true },
+        { id: 's42', text: 'Are Tables Accurate Reflection of Current Configuration?', sub: true },
+        { id: 's43', text: 'Brand Name & Specifications', group: 'Ullage' },
+        { id: 's44', text: 'Certificates of Calibration and/or Manufacturer Certificates of Compliance', sub: true },
+        { id: 's45', text: 'Calculations Done External to the Instrumentation', sub: true },
+        { id: 's46', text: 'Criteria Used to Determine Ullage Soundings', sub: true },
+        { id: 's47', text: 'Method Used To Calculate Bin Volume', group: 'Volume' },
+        { id: 's48', text: 'Table of Bin Volume (Cubic Yards) vs. Ullage Soundings (feet & tenths of feet)', sub: true },
+        { id: 's49', text: 'Are Tables Accurate Reflection of Current Configuration?', sub: true },
+        // --- Contractor Data ---
+        { id: 's-s6', section: 'Contractor Data' },
+        { id: 's50', text: 'Backup Frequency' },
+        { id: 's51', text: 'Backup Method' },
+        { id: 's52', text: 'Post Processing' },
+        { id: 's53', text: 'Archive Capability' },
+        { id: 's54', text: 'Verification That Reported Values are Applicable to Sensors & Applications' },
+        // --- Quality Control Plan ---
+        { id: 's-s7', section: 'Quality Control Plan' },
+        { id: 's55', text: 'Name of Quality Control Systems Manager' },
+        { id: 's56', text: 'Procedures for Checking Collected Data Against Known Values' },
+        { id: 's57', text: 'Procedures for Verifying Telemetry Is Functional' },
+        { id: 's58', text: 'Log of Sensor Performance & Modifications' },
+        { id: 's59', text: 'Log of Contractor Data Backup' }
     ]
 };
 
@@ -173,8 +488,17 @@ function renderChecklist() {
     const items = CHECKLISTS[type] || [];
     
     items.forEach(item => {
+        // Section header row
+        if (item.section) {
+            const header = document.createElement('div');
+            header.className = 'checklist-section-header';
+            header.textContent = item.section;
+            elements.checklistContainer.appendChild(header);
+            return;
+        }
+
         const div = document.createElement('div');
-        div.className = 'checklist-item';
+        div.className = 'checklist-item' + (item.sub ? ' checklist-item--sub' : '') + (item.group && !item.sub ? ' checklist-item--group' : '');
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -216,17 +540,21 @@ function renderDataCheck() {
             `;
         }
 
-        html += buildCalculatorSection('displacement', 'Displacement Check', 'Draft', 'Displacement');
+        html += buildCalculatorSection('displacementLight', 'Displacement Check — Light Ship', 'Draft', 'Displacement');
+        html += buildCalculatorSection('displacementLoaded', 'Displacement Check — Fully Loaded', 'Draft', 'Displacement');
         
         if (type === 'hopper' || (type === 'scow' && AppState.dataCheck.isUllageProfile)) {
-            html += buildCalculatorSection('volume', 'Volume Check', 'Ullage', 'Volume');
+            html += buildCalculatorSection('volumeLight', 'Volume Check — Light Ship', 'Ullage', 'Volume');
+            html += buildCalculatorSection('volumeLoaded', 'Volume Check — Fully Loaded', 'Ullage', 'Volume');
         }
 
         elements.dataCheckContainer.innerHTML = html;
-        attachCalculatorListeners('displacement', 'Draft', 'Displacement');
+        attachCalculatorListeners('displacementLight', 'Draft', 'Displacement');
+        attachCalculatorListeners('displacementLoaded', 'Draft', 'Displacement');
         
         if (type === 'hopper' || (type === 'scow' && AppState.dataCheck.isUllageProfile)) {
-            attachCalculatorListeners('volume', 'Ullage', 'Volume');
+            attachCalculatorListeners('volumeLight', 'Ullage', 'Volume');
+            attachCalculatorListeners('volumeLoaded', 'Ullage', 'Volume');
         }
 
         if (type === 'scow') {
@@ -249,17 +577,17 @@ function renderDataCheck() {
 }
 
 window.setCheckMethod = function(section, method) {
-    AppState.dataCheck[section].method = method;
+    if (AppState.dataCheck[section]) AppState.dataCheck[section].method = method;
     saveDraft();
     renderDataCheck();
 }
 
 function buildCalculatorSection(sectionKey, title, inputLabel, outputLabel) {
     const data = AppState.dataCheck[sectionKey];
-    const reportedInput = sectionKey === 'displacement' ? data.reportedDraft : data.reportedUllage;
-    const reportedOutput = sectionKey === 'displacement' ? data.reportedDisplacement : data.reportedVolume;
-    const inputKey = sectionKey === 'displacement' ? 'reportedDraft' : 'reportedUllage';
-    const outputKey = sectionKey === 'displacement' ? 'reportedDisplacement' : 'reportedVolume';
+    if (!data) return '';
+    const isDisp = sectionKey.startsWith('displacement');
+    const reportedInput = isDisp ? data.reportedDraft : data.reportedUllage;
+    const reportedOutput = isDisp ? data.reportedDisplacement : data.reportedVolume;
 
     let html = `
     <div class="data-check-panel">
@@ -339,8 +667,10 @@ function buildCalculatorSection(sectionKey, title, inputLabel, outputLabel) {
 
 function attachCalculatorListeners(sectionKey, inputLabel, outputLabel) {
     const data = AppState.dataCheck[sectionKey];
-    const inputKey = sectionKey === 'displacement' ? 'reportedDraft' : 'reportedUllage';
-    const outputKey = sectionKey === 'displacement' ? 'reportedDisplacement' : 'reportedVolume';
+    if (!data) return;
+    const isDisp = sectionKey.startsWith('displacement');
+    const inputKey = isDisp ? 'reportedDraft' : 'reportedUllage';
+    const outputKey = isDisp ? 'reportedDisplacement' : 'reportedVolume';
 
     const calcResult = () => {
         const x = parseFloat(data[inputKey]);
@@ -364,18 +694,18 @@ function attachCalculatorListeners(sectionKey, inputLabel, outputLabel) {
         
         const resultEl = document.getElementById(`${sectionKey}-result`);
         const matchEl = document.getElementById(`${sectionKey}-match`);
+        if (!resultEl || !matchEl) return;
         
         if (calculated !== null) {
             resultEl.value = calculated.toFixed(2);
             const reported = parseFloat(data[outputKey]);
-            if (!isNaN(reported)) {
-                // allow a small tolerance differences like 0.05
-                const diff = Math.abs(calculated - reported);
-                if (diff < 0.1) {
-                    matchEl.textContent = '✅ Matches';
+            if (!isNaN(reported) && reported !== 0) {
+                const pctDiff = Math.abs(calculated - reported) / Math.abs(reported) * 100;
+                if (pctDiff <= 1.0) {
+                    matchEl.textContent = `✅ Within 1% (${pctDiff.toFixed(2)}%)`;
                     matchEl.style.color = 'var(--success)';
                 } else {
-                    matchEl.textContent = '❌ Mismatch';
+                    matchEl.textContent = `❌ Mismatch (${pctDiff.toFixed(2)}%)`;
                     matchEl.style.color = 'var(--danger)';
                 }
             } else {
@@ -425,14 +755,24 @@ function loadDraft() {
         try {
             const parsed = JSON.parse(saved);
             
-            // Deep merge safety to not overwrite new nested props with old undefined ones if state shape changes
-            if (parsed.dataCheck && parsed.dataCheck.displacement) {
-                AppState.dataCheck.displacement = { ...AppState.dataCheck.displacement, ...parsed.dataCheck.displacement };
-                AppState.dataCheck.volume = { ...AppState.dataCheck.volume, ...parsed.dataCheck.volume };
-                AppState.dataCheck.isUllageProfile = parsed.dataCheck.isUllageProfile;
-                AppState.dataCheck.type = undefined; // cleanup old prop
+            // Merge new 2-point dataCheck keys safely (handles old single-point saves)
+            if (parsed.dataCheck) {
+                const dc = parsed.dataCheck;
+                const defaultSection = (old) => ({
+                    reportedDraft: '', reportedDisplacement: '',
+                    reportedUllage: '', reportedVolume: '',
+                    method: 'table',
+                    tableParams: { x1: '', y1: '', x2: '', y2: '' },
+                    equationParams: { coefA: '', coefB: '', coefC: '' },
+                    ...old
+                });
+                AppState.dataCheck.isUllageProfile = dc.isUllageProfile || false;
+                AppState.dataCheck.displacementLight  = defaultSection(dc.displacementLight  || dc.displacement || {});
+                AppState.dataCheck.displacementLoaded = defaultSection(dc.displacementLoaded || {});
+                AppState.dataCheck.volumeLight         = defaultSection(dc.volumeLight         || dc.volume || {});
+                AppState.dataCheck.volumeLoaded        = defaultSection(dc.volumeLoaded        || {});
             }
-            
+
             Object.assign(AppState.metadata, parsed.metadata);
             Object.assign(AppState.checklist, parsed.checklist);
             
@@ -441,11 +781,6 @@ function loadDraft() {
             elements.plantName.value = AppState.metadata.plantName;
             elements.plantType.value = AppState.metadata.plantType;
             elements.generalComments.value = AppState.metadata.generalComments;
-            
-            if (localStorage.getItem('theme') === 'light') {
-                document.body.classList.add('light-mode');
-                elements.themeToggle.querySelector('span').textContent = '☀️';
-            }
         } catch (e) {
             console.error('Error loading draft', e);
         }
@@ -511,39 +846,42 @@ function buildReportHtml() {
     const items = CHECKLISTS[md.plantType] || [];
     
     let checklistHtml = items.map(item => {
+        if (item.section) {
+            return `<tr><td colspan="2" style="background:#1a6aad;color:#fff;font-weight:700;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;padding:6px 10px;">${item.section}</td></tr>`;
+        }
         const isChecked = !!AppState.checklist[item.id];
+        const indent = item.sub ? 'padding-left: 2rem;' : '';
         return `<tr>
             <td style="width:5%; text-align:center; font-size:16px;">${isChecked ? '☑' : '☐'}</td>
-            <td>${item.text}</td>
+            <td style="${indent}">${item.text}</td>
         </tr>`;
     }).join('');
 
     let dataCheckHtml = '';
     if (md.plantType === 'hopper' || md.plantType === 'scow') {
         const dc = AppState.dataCheck;
-        const addSection = (title, data, inLabel, outLabel) => {
-            const inVal = document.getElementById(data===dc.displacement ? 'displacement-input' : 'volume-input')?.value || '-';
-            const outVal = document.getElementById(data===dc.displacement ? 'displacement-output' : 'volume-output')?.value || '-';
-            const calcVal = document.getElementById(data===dc.displacement ? 'displacement-result' : 'volume-result')?.value || '-';
-            const matchVal = document.getElementById(data===dc.displacement ? 'displacement-match' : 'volume-match')?.textContent || '';
+        const addSection = (sectionKey, title, inLabel, outLabel) => {
+            const inVal  = document.getElementById(`${sectionKey}-input`)?.value  || '-';
+            const outVal = document.getElementById(`${sectionKey}-output`)?.value || '-';
+            const calcVal = document.getElementById(`${sectionKey}-result`)?.value || '-';
+            const matchVal = document.getElementById(`${sectionKey}-match`)?.textContent || '';
             const matchColor = matchVal.includes('✅') ? 'green' : 'red';
-            
             return `
             <h4>${title}</h4>
             <table class="report-table">
-                <tr><th>Reported ${inLabel}</th><th>Reported ${outLabel}</th><th>Calculated Verification ${outLabel}</th><th>Status</th></tr>
+                <tr><th>Reported ${inLabel}</th><th>Reported ${outLabel}</th><th>Calculated ${outLabel}</th><th>Status</th></tr>
                 <tr>
-                    <td>${inVal}</td>
-                    <td>${outVal}</td>
-                    <td>${calcVal}</td>
+                    <td>${inVal}</td><td>${outVal}</td><td>${calcVal}</td>
                     <td style="color:${matchColor}; font-weight:bold;">${matchVal}</td>
                 </tr>
             </table>`;
         };
-        
-        dataCheckHtml += addSection('Displacement Integration Check', dc.displacement, 'Draft', 'Displacement');
+
+        dataCheckHtml += addSection('displacementLight',  'Displacement Check — Light Ship',     'Draft',  'Displacement');
+        dataCheckHtml += addSection('displacementLoaded', 'Displacement Check — Fully Loaded',   'Draft',  'Displacement');
         if (md.plantType === 'hopper' || (md.plantType === 'scow' && dc.isUllageProfile)) {
-            dataCheckHtml += addSection('Volume Integration Check', dc.volume, 'Ullage', 'Volume');
+            dataCheckHtml += addSection('volumeLight',  'Volume Check — Light Ship',   'Ullage', 'Volume');
+            dataCheckHtml += addSection('volumeLoaded', 'Volume Check — Fully Loaded', 'Ullage', 'Volume');
         }
     }
 
