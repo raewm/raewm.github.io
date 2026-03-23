@@ -9,6 +9,13 @@ const UNLOAD_RATE = 0.12;      // fraction per second (full unload ~8.5s)
 const DISPOSAL_ZONE_W = 160;
 const DISPOSAL_ZONE_H = 100;
 const WIND_CHANGE_RATE = 0.04; // how fast wind direction shifts
+const TRAFFIC_MAX = 4;         // max simultaneous traffic vessels
+const TRAFFIC_SPAWN_MIN = 4.5; // seconds between spawns (min)
+const TRAFFIC_SPAWN_MAX = 8.0; // seconds between spawns (max)
+const TRAFFIC_COLLISION_RADIUS = 38; // px — bounding half-size for hit detection
+const TRAFFIC_PUSH = 280;     // px/s impulse applied to dredge on collision
+const TRAFFIC_PENALTY = 100;  // score deduction per collision
+const TRAFFIC_COOLDOWN = 2.0; // seconds before same ship can hurt again
 
 // Colors
 const C = {
@@ -24,6 +31,10 @@ const C = {
     zoneInactive: 'rgba(200,200,200,0.06)',
     zoneBorderInactive: 'rgba(200,200,200,0.25)',
     bubbles: 'rgba(120,200,255,0.3)',
+    trafficHull: '#4a5060',
+    trafficDark: '#2a2e36',
+    trafficSuperstructure: '#d0d8e0',
+    trafficWake: 'rgba(160,210,255,0.35)',
 };
 
 export class LevelDisposal {
@@ -90,6 +101,11 @@ export class LevelDisposal {
 
         // Unloading effect particles
         this.unloadParticles = [];
+
+        // Traffic ships
+        this.trafficShips = [];
+        this.trafficSpawnTimer = 0;
+        this.trafficSpawnInterval = TRAFFIC_SPAWN_MIN + Math.random() * (TRAFFIC_SPAWN_MAX - TRAFFIC_SPAWN_MIN);
 
         // Score
         this.game.scoring.startDisposal();
@@ -233,6 +249,43 @@ export class LevelDisposal {
             return p.life > 0;
         });
 
+        // ── Traffic ships ──
+        this.trafficSpawnTimer += dt;
+        if (this.trafficSpawnTimer >= this.trafficSpawnInterval && this.trafficShips.length < TRAFFIC_MAX) {
+            this._spawnTrafficShip();
+            this.trafficSpawnTimer = 0;
+            this.trafficSpawnInterval = TRAFFIC_SPAWN_MIN + Math.random() * (TRAFFIC_SPAWN_MAX - TRAFFIC_SPAWN_MIN);
+        }
+
+        for (const t of this.trafficShips) {
+            t.x += t.vx * dt;
+            t.y += t.vy * dt;
+            if (t.cooldown > 0) t.cooldown -= dt;
+
+            // Collision with dredge
+            if (t.cooldown <= 0) {
+                const dx = this.shipX - t.x;
+                const dy = this.shipY - t.y;
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist < TRAFFIC_COLLISION_RADIUS) {
+                    // Impulse: push dredge away from vessel
+                    const nx = dx / Math.max(dist, 1);
+                    const ny = dy / Math.max(dist, 1);
+                    this.vx += nx * TRAFFIC_PUSH;
+                    this.vy += ny * TRAFFIC_PUSH;
+                    t.cooldown = TRAFFIC_COOLDOWN;
+                    this.game.score = Math.max(0, this.game.score - TRAFFIC_PENALTY);
+                    this.game.hud.flash(`VESSEL COLLISION! −${TRAFFIC_PENALTY}`, '#ff8c00');
+                    this.game.hud.flashPenalty();
+                }
+            }
+        }
+
+        // Remove off-screen traffic ships
+        this.trafficShips = this.trafficShips.filter(t =>
+            t.x > -200 && t.x < this.W + 200 && t.y > -200 && t.y < this.H + 200
+        );
+
         // Done unloading
         if (this.game.hopperFill <= 0 && !this.transitioned) {
             this.transitioned = true;
@@ -300,6 +353,9 @@ export class LevelDisposal {
             ctx.fill();
             ctx.restore();
         }
+
+        // ── Traffic vessels (behind the dredge) ──
+        for (const t of this.trafficShips) this._drawTrafficShip(t);
 
         // ── Ship (top-down view) ──
         this._drawShipTopDown();
@@ -530,6 +586,114 @@ export class LevelDisposal {
     _roundRect(x, y, w, h, r) {
         const ctx = this.ctx;
         roundRect(ctx, x, y, w, h, r);
+    }
+
+    // ── Traffic ship spawner ────────────────────────────────────────────────
+    _spawnTrafficShip() {
+        // Choose a crossing path: enter from one edge, exit the opposite (or adjacent)
+        // Bias toward horizontal crossings (left↔right) since those cut across the dredge path
+        const side = Math.floor(Math.random() * 4); // 0=left, 1=right, 2=top, 3=bottom
+        let x, y, vx, vy;
+        const speed = 65 + Math.random() * 80; // px/s
+        // Slight diagonal so ships don't always go perfectly straight
+        const drift = (Math.random() - 0.5) * 40;
+
+        switch (side) {
+            case 0: // enter from left
+                x = -100; y = this.H * (0.25 + Math.random() * 0.55);
+                vx = speed; vy = drift;
+                break;
+            case 1: // enter from right
+                x = this.W + 100; y = this.H * (0.25 + Math.random() * 0.55);
+                vx = -speed; vy = drift;
+                break;
+            case 2: // enter from top
+                x = this.W * (0.1 + Math.random() * 0.8); y = -100;
+                vx = drift; vy = speed;
+                break;
+            default: // enter from bottom
+                x = this.W * (0.1 + Math.random() * 0.8); y = this.H + 100;
+                vx = drift; vy = -speed;
+                break;
+        }
+
+        this.trafficShips.push({
+            x, y, vx, vy,
+            heading: Math.atan2(vy, vx),
+            cooldown: 0,
+            // random vessel size variation
+            scale: 0.8 + Math.random() * 0.5,
+        });
+    }
+
+    // ── Traffic ship renderer (top-down freighter) ──────────────────────────
+    _drawTrafficShip(ship) {
+        const ctx = this.ctx;
+        const s = ship.scale;
+
+        // Wake trail behind the vessel
+        const wakeLen = 55 * s;
+        const bx = -Math.cos(ship.heading) * wakeLen;
+        const by = -Math.sin(ship.heading) * wakeLen;
+        const wakeGrad = ctx.createLinearGradient(ship.x, ship.y, ship.x + bx, ship.y + by);
+        wakeGrad.addColorStop(0, C.trafficWake);
+        wakeGrad.addColorStop(1, 'rgba(160,210,255,0)');
+        ctx.save();
+        ctx.strokeStyle = wakeGrad;
+        ctx.lineWidth = 14 * s;
+        ctx.lineCap = 'round';
+        ctx.beginPath();
+        ctx.moveTo(ship.x, ship.y);
+        ctx.lineTo(ship.x + bx, ship.y + by);
+        ctx.stroke();
+        ctx.restore();
+
+        // Hull
+        ctx.save();
+        ctx.translate(ship.x, ship.y);
+        ctx.rotate(ship.heading + Math.PI / 2);
+
+        const hw = 18 * s, hl = 48 * s;
+
+        // Hull body
+        ctx.fillStyle = C.trafficHull;
+        ctx.strokeStyle = C.trafficDark;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(0, -hl);           // bow
+        ctx.bezierCurveTo(hw, -hl * 0.6, hw, hl * 0.5, hw * 0.7, hl);  // starboard
+        ctx.lineTo(-hw * 0.7, hl);                                        // stern
+        ctx.bezierCurveTo(-hw, hl * 0.5, -hw, -hl * 0.6, 0, -hl);      // port
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+
+        // Deck stripe
+        ctx.fillStyle = '#5a6070';
+        ctx.beginPath();
+        ctx.moveTo(0, -hl * 0.85);
+        ctx.bezierCurveTo(hw * 0.7, -hl * 0.5, hw * 0.7, hl * 0.3, hw * 0.55, hl * 0.85);
+        ctx.lineTo(-hw * 0.55, hl * 0.85);
+        ctx.bezierCurveTo(-hw * 0.7, hl * 0.3, -hw * 0.7, -hl * 0.5, 0, -hl * 0.85);
+        ctx.closePath();
+        ctx.fill();
+
+        // Superstructure (white block near stern)
+        ctx.fillStyle = C.trafficSuperstructure;
+        ctx.strokeStyle = C.trafficDark;
+        ctx.lineWidth = 1.5;
+        roundRect(ctx, -hw * 0.45, hl * 0.2, hw * 0.9, hl * 0.38, 3 * s);
+        ctx.fill();
+        ctx.stroke();
+
+        // Cargo hatches (simple dark rectangles)
+        ctx.fillStyle = C.trafficDark;
+        for (let i = 0; i < 2; i++) {
+            roundRect(ctx, -hw * 0.32, -hl * 0.45 + i * hl * 0.32, hw * 0.64, hl * 0.22, 2 * s);
+            ctx.fill();
+        }
+
+        ctx.restore();
     }
 }
 

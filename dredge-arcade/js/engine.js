@@ -160,14 +160,26 @@ function startFade(nextLevelKey) {
 }
 
 // ── Exported level-transition hooks (called by level modules) ───────────────
-export function transitionToDisposal() { startFade('DISPOSING'); }
-export function transitionToLoading() { game.round++; startFade('LOADING'); }
-export function transitionToTransport() { startFade('TRANSPORTING'); }
-export function transitionToDigging() { game.round++; startFade('DIGGING'); }
+export function transitionToDisposal() { submitCurrentScore(); startFade('DISPOSING'); }
+export function transitionToLoading() { submitCurrentScore(); game.round++; startFade('LOADING'); }
+export function transitionToTransport() { submitCurrentScore(); startFade('TRANSPORTING'); }
+export function transitionToDigging() { submitCurrentScore(); game.round++; startFade('DIGGING'); }
 export function transitionNextCutterRound() {
+    submitCurrentScore();
     game.round++;
     if (game.levelCutting) { game.levelCutting.transitioned = false; game.levelCutting.reset(); }
     startFade('CUTTING');
+}
+
+// ── Submit current score to leaderboard (safe to call at any time) ───────────
+// Dreamlo keeps only the best score per name, so mid-game submissions only
+// improve the record — they never overwrite a higher score with a lower one.
+export function submitCurrentScore() {
+    if (!game.activeGame || game.score <= 0) return;
+    const initialsInput = document.getElementById('playerInitials');
+    let initials = initialsInput ? initialsInput.value.trim() : '';
+    if (!initials) initials = localStorage.getItem('dredge_initials') || 'AAA';
+    submitScore(game.activeGame, initials, game.score); // fire-and-forget
 }
 
 // ── Show game-over overlay ──────────────────────────────────────────────────
@@ -179,29 +191,30 @@ export async function showGameOver() {
     const penLabel = isHopper ? 'Turtle penalties' : isCutter ? 'Cavitations' : 'Piling penalties';
     const penValue = isHopper ? (game.penalties + game.turtlePenalties) : game.penalties;
 
-    if (game.score > game[hsField]) {
+    // Capture previous high score BEFORE updating, so we can accurately detect a new best
+    const prevHs = game[hsField];
+    const isNewHs = game.score > prevHs;
+    if (isNewHs) {
         game[hsField] = game.score;
-        localStorage.setItem(hsKey, game[hsField]);
+        localStorage.setItem(hsKey, game.score.toString());
     }
-
     const hs = game[hsField];
+
     document.getElementById('goStats').innerHTML = `
         <div>Score: <strong>${game.score.toLocaleString()}</strong></div>
         <div>Rounds: <strong>${game.round - 1}</strong></div>
         <div>${penLabel}: <strong>${penValue}</strong></div>
-        ${game.score >= hs && hs > 0
+        ${isNewHs
             ? '<div style="color:#f5a623;font-weight:700;">🏆 New High Score!</div>'
             : `<div>Best: ${hs.toLocaleString()}</div>`}
     `;
     document.getElementById('gameOverOverlay').classList.remove('hidden');
     game.state = STATE.ARCADE_MENU;
 
-    // Submit score to global leaderboard
+    // Submit final score to global leaderboard
     const initialsInput = document.getElementById('playerInitials');
     let initials = initialsInput ? initialsInput.value.trim() : '';
     if (!initials) initials = localStorage.getItem('dredge_initials') || 'AAA';
-
-    // Save initials for next time
     if (initialsInput) localStorage.setItem('dredge_initials', initials);
 
     await submitScore(game.activeGame, initials, game.score);
