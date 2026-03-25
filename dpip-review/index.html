@@ -11,48 +11,80 @@
         /* DPIP Review Specific Styles */
         .checklist-item {
             display: flex;
-            align-items: flex-start;
-            gap: 1rem;
-            padding: 1rem;
+            align-items: center;
+            gap: 0.6rem;
+            padding: 0.25rem 0.75rem;
             background: var(--bg-secondary);
             border: 1px solid var(--border);
             border-radius: var(--radius-md);
-            margin-bottom: 0.75rem;
+            margin-bottom: 0.3rem;
         }
         .checklist-item input[type="checkbox"] {
-            margin-top: 0.25rem;
-            width: 1.25rem;
-            height: 1.25rem;
+            margin-top: 0.2rem;
+            width: 1.1rem;
+            height: 1.1rem;
+            flex-shrink: 0;
             accent-color: var(--primary);
         }
-        .checklist-text { flex: 1; font-size: 0.9rem; }
+        .checklist-item-main { display: flex; align-items: flex-start; gap: 0.6rem; flex: 1; min-width: 0; }
+        .checklist-text { flex: 1; font-size: 0.85rem; line-height: 1.35; }
+        .checklist-comment {
+            flex: 0 0 36%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            color: var(--text-secondary);
+            font-family: inherit;
+            font-size: 0.75rem;
+            padding: 0.15rem 0.4rem;
+            resize: none;
+            height: 1.5rem;
+            line-height: 1.4;
+            overflow: hidden;
+        }
+        .checklist-comment:focus {
+            outline: none;
+            border-color: var(--border-focus);
+            height: auto;
+            min-height: 1.5rem;
+            overflow: auto;
+            resize: vertical;
+        }
+        .checklist-comment::placeholder { color: var(--text-muted); font-style: italic; }
         .checklist-section-header {
             background: var(--primary);
             color: #fff;
             font-weight: 700;
-            font-size: 0.8rem;
+            font-size: 0.78rem;
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            padding: 0.45rem 1rem;
+            padding: 0.35rem 0.75rem;
             border-radius: var(--radius-md);
-            margin-bottom: 0.4rem;
-            margin-top: 1.1rem;
+            margin-bottom: 0.25rem;
+            margin-top: 0.9rem;
         }
         .checklist-section-header:first-child { margin-top: 0; }
-        .checklist-item--group {
-            background: var(--bg-secondary);
+        .checklist-group-label {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            background: var(--bg-card);
             border-left: 3px solid var(--primary);
-            font-weight: 600;
+            padding: 0.2rem 0.75rem;
+            margin-bottom: 0.15rem;
+            margin-top: 0.35rem;
+            border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+            letter-spacing: 0.02em;
         }
         .checklist-item--sub {
             background: transparent;
             border: 1px solid var(--border);
-            margin-left: 1.75rem;
-            margin-bottom: 0.35rem;
-            padding: 0.55rem 1rem;
+            margin-left: 3.5rem;
+            margin-bottom: 0.2rem;
+            padding: 0.25rem 0.75rem;
             border-left: 3px solid var(--border);
         }
-        .checklist-item--sub .checklist-text { font-size: 0.85rem; color: var(--text-muted, var(--text-secondary)); }
+        .checklist-item--sub .checklist-text { font-size: 0.8rem; color: var(--text-muted, var(--text-secondary)); }
         .data-check-panel {
             background: var(--bg-secondary);
             border: 1px solid var(--border);

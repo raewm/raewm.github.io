@@ -497,16 +497,31 @@ function renderChecklist() {
             return;
         }
 
+        // Group label row (sensor name) — non-checkable
+        if (item.group && !item.sub) {
+            const groupRow = document.createElement('div');
+            groupRow.className = 'checklist-group-label';
+            groupRow.textContent = item.group;
+            elements.checklistContainer.appendChild(groupRow);
+            return;
+        }
+
+        const stateEntry = AppState.checklist[item.id] || {};
+        const isChecked = typeof stateEntry === 'boolean' ? stateEntry : !!stateEntry.checked;
+        const commentVal = typeof stateEntry === 'object' && stateEntry !== null ? (stateEntry.comment || '') : '';
+
         const div = document.createElement('div');
-        div.className = 'checklist-item' + (item.sub ? ' checklist-item--sub' : '') + (item.group && !item.sub ? ' checklist-item--group' : '');
+        // Items with group+sub are sub-items under a group; items without group are top-level
+        div.className = 'checklist-item' + (item.sub ? ' checklist-item--sub' : '');
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
         checkbox.id = `check-${item.id}`;
-        checkbox.checked = !!AppState.checklist[item.id];
+        checkbox.checked = isChecked;
         
         checkbox.addEventListener('change', (e) => {
-            AppState.checklist[item.id] = e.target.checked;
+            const cur = AppState.checklist[item.id] || {};
+            AppState.checklist[item.id] = { checked: e.target.checked, comment: typeof cur === 'object' ? (cur.comment || '') : '' };
             saveDraft();
         });
         
@@ -514,9 +529,21 @@ function renderChecklist() {
         label.htmlFor = `check-${item.id}`;
         label.className = 'checklist-text';
         label.textContent = item.text;
-        
+
+        const comment = document.createElement('textarea');
+        comment.className = 'checklist-comment';
+        comment.placeholder = 'Note...';
+        comment.value = commentVal;
+        comment.rows = 1;
+        comment.addEventListener('input', (e) => {
+            const cur = AppState.checklist[item.id] || {};
+            AppState.checklist[item.id] = { checked: typeof cur === 'object' ? !!cur.checked : !!cur, comment: e.target.value };
+            saveDraft();
+        });
+
         div.appendChild(checkbox);
         div.appendChild(label);
+        div.appendChild(comment);
         elements.checklistContainer.appendChild(div);
     });
 }
@@ -774,7 +801,16 @@ function loadDraft() {
             }
 
             Object.assign(AppState.metadata, parsed.metadata);
-            Object.assign(AppState.checklist, parsed.checklist);
+            // Migrate old checklist: boolean values -> {checked, comment}
+            if (parsed.checklist) {
+                for (const [k, v] of Object.entries(parsed.checklist)) {
+                    if (typeof v === 'boolean') {
+                        AppState.checklist[k] = { checked: v, comment: '' };
+                    } else {
+                        AppState.checklist[k] = v;
+                    }
+                }
+            }
             
             elements.reviewerName.value = AppState.metadata.reviewerName;
             elements.reviewDate.value = AppState.metadata.reviewDate;
@@ -847,13 +883,20 @@ function buildReportHtml() {
     
     let checklistHtml = items.map(item => {
         if (item.section) {
-            return `<tr><td colspan="2" style="background:#1a6aad;color:#fff;font-weight:700;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;padding:6px 10px;">${item.section}</td></tr>`;
+            return `<tr><td colspan="3" style="background:#1a6aad;color:#fff;font-weight:700;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;padding:5px 8px;">${item.section}</td></tr>`;
         }
-        const isChecked = !!AppState.checklist[item.id];
-        const indent = item.sub ? 'padding-left: 2rem;' : '';
+        // Group label row (sensor name) — non-checkable
+        if (item.group && !item.sub) {
+            return `<tr><td colspan="3" style="padding-left:0.75rem;font-weight:600;font-size:0.82rem;background:var(--bg-secondary, #f5f5f5);border-left:3px solid #1a6aad;color:#1a1a1a;padding:4px 8px 4px 10px;">${item.group}</td></tr>`;
+        }
+        const stateEntry = AppState.checklist[item.id] || {};
+        const isChecked = typeof stateEntry === 'boolean' ? stateEntry : !!stateEntry.checked;
+        const comment = typeof stateEntry === 'object' && stateEntry !== null ? (stateEntry.comment || '') : '';
+        const indentStyle = item.sub ? 'padding-left: 3.5rem;' : '';
         return `<tr>
-            <td style="width:5%; text-align:center; font-size:16px;">${isChecked ? '☑' : '☐'}</td>
-            <td style="${indent}">${item.text}</td>
+            <td style="width:4%; text-align:center; font-size:15px; vertical-align:top;">${isChecked ? '☑' : '☐'}</td>
+            <td style="${indentStyle} vertical-align:top;">${item.text}</td>
+            <td style="color:#555; font-size:0.82rem; vertical-align:top;">${comment ? comment.replace(/\n/g,'<br>') : '<span style="color:#bbb;">—</span>'}</td>
         </tr>`;
     }).join('');
 
@@ -915,7 +958,8 @@ function buildReportHtml() {
 
         <h3>Document Checklist</h3>
         <table class="report-table">
-            ${checklistHtml || '<tr><td>No checklist items available.</td></tr>'}
+            <tr><th style="width:4%;"></th><th>Item</th><th style="width:28%;">Notes / Comments</th></tr>
+            ${checklistHtml || '<tr><td colspan="3">No checklist items available.</td></tr>'}
         </table>
 
         ${dataCheckHtml ? `<h3>Integration Verification Data Check</h3>${dataCheckHtml}` : ''}
