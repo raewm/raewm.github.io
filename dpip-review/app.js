@@ -497,13 +497,13 @@ function renderChecklist() {
             return;
         }
 
-        // Group label row (sensor name) — non-checkable
+        // Group label row (sensor name) — renders label then falls through to render checkbox
         if (item.group && !item.sub) {
             const groupRow = document.createElement('div');
             groupRow.className = 'checklist-group-label';
             groupRow.textContent = item.group;
             elements.checklistContainer.appendChild(groupRow);
-            return;
+            // Do NOT return — fall through to render the checkbox for this item
         }
 
         const stateEntry = AppState.checklist[item.id] || {};
@@ -883,11 +883,20 @@ function buildReportHtml() {
     
     let checklistHtml = items.map(item => {
         if (item.section) {
-            return `<tr><td colspan="3" style="background:#1a6aad;color:#fff;font-weight:700;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;padding:5px 8px;">${item.section}</td></tr>`;
+            return `<tr><td colspan="3" style="background:#1a6aad;color:#fff;font-weight:700;font-size:0.8rem;letter-spacing:0.05em;text-transform:uppercase;padding:5px 8px;print-color-adjust:exact;-webkit-print-color-adjust:exact;">${item.section}</td></tr>`;
         }
-        // Group label row (sensor name) — non-checkable
+        // Group label row (sensor name) — renders label AND the item's checkbox row
         if (item.group && !item.sub) {
-            return `<tr><td colspan="3" style="padding-left:0.75rem;font-weight:600;font-size:0.82rem;background:var(--bg-secondary, #f5f5f5);border-left:3px solid #1a6aad;color:#1a1a1a;padding:4px 8px 4px 10px;">${item.group}</td></tr>`;
+            const groupLabelRow = `<tr><td colspan="3" style="font-weight:600;font-size:0.82rem;background:#dce8f5;border-left:3px solid #1a6aad;color:#0d2a45;padding:4px 8px 4px 10px;print-color-adjust:exact;-webkit-print-color-adjust:exact;">${item.group}</td></tr>`;
+            const stateEntry = AppState.checklist[item.id] || {};
+            const isChecked = typeof stateEntry === 'boolean' ? stateEntry : !!stateEntry.checked;
+            const comment = typeof stateEntry === 'object' && stateEntry !== null ? (stateEntry.comment || '') : '';
+            const itemRow = `<tr>
+                <td style="width:4%; text-align:center; font-size:15px; vertical-align:top;">${isChecked ? '☑' : '☐'}</td>
+                <td style="vertical-align:top;">${item.text}</td>
+                <td style="color:#555; font-size:0.82rem; vertical-align:top;">${comment ? comment.replace(/\n/g,'<br>') : '<span style="color:#bbb;">—</span>'}</td>
+            </tr>`;
+            return groupLabelRow + itemRow;
         }
         const stateEntry = AppState.checklist[item.id] || {};
         const isChecked = typeof stateEntry === 'boolean' ? stateEntry : !!stateEntry.checked;
@@ -930,6 +939,8 @@ function buildReportHtml() {
 
     return `
     <style>
+        /* Force background colors in preview and print (fixes blacked-out section headers) */
+        * { -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; color-adjust: exact !important; }
         .report-table { width: 100%; border-collapse: collapse; margin-bottom: 20px; color: black; }
         .report-table th, .report-table td { border: 1px solid #ddd; padding: 8px; text-align: left; }
         .report-table th { background-color: #f2f2f2; font-weight: bold; }
@@ -940,7 +951,7 @@ function buildReportHtml() {
         @media print {
             body * { visibility: hidden; }
             .container { display: none !important; }
-            #print-container, #print-container * { visibility: visible; }
+            #print-container, #print-container * { visibility: visible; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
             #print-container { position: absolute; left: 0; top: 0; width: 100%; display: block !important; padding: 20px; font-family: sans-serif; color: black; background: white; }
         }
     </style>
