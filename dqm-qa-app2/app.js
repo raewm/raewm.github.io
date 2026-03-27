@@ -513,6 +513,7 @@ function restoreCheckData(checkType, data) {
     if (checkType === 'dragheadDepth') toggleDragheadSections();
     if (checkType === 'draftSensorLight') toggleDraftLightMethod();
     if (checkType === 'draftSensorLoaded') toggleDraftLoadedMethod();
+    if (checkType === 'positionCheck') togglePosFormat();
 }
 
 // ===== Timeline & Logging =====
@@ -754,24 +755,100 @@ function getCheckContent(type) {
 }
 
 /**
+ * Generates the coordinate sub-inputs (used for both Handheld and DQM rows).
+ * Uses CSS grid for DMS/DDM so each field fills its column naturally.
+ * @param {string} prefix - e.g. 'handheld' or 'dqm'
+ */
+function coordInputsHTML(prefix) {
+    return `
+        <div class="coord-set" id="${prefix}-dd" style="display:flex; gap:6px;">
+            <input type="number" id="${prefix}-dd-lat" step="0.000001" placeholder="Lat (DD)" style="flex:1">
+            <input type="number" id="${prefix}-dd-lon" step="0.000001" placeholder="Lon (DD)" style="flex:1">
+        </div>
+
+        <div class="coord-set hidden" id="${prefix}-dms">
+            <!-- Column headers -->
+            <div style="display:grid; grid-template-columns:3fr 3fr 4fr 2fr; gap:6px; margin-bottom:3px;">
+                <small style="color:var(--text-muted); padding-left:2px;">Deg (°)</small>
+                <small style="color:var(--text-muted); padding-left:2px;">Min (')</small>
+                <small style="color:var(--text-muted); padding-left:2px;">Sec (")</small>
+                <small style="color:var(--text-muted); padding-left:2px;">Hem</small>
+            </div>
+            <!-- Lat row -->
+            <div style="display:grid; grid-template-columns:3fr 3fr 4fr 2fr; gap:6px; align-items:center;">
+                <input type="number" id="${prefix}-dms-lat-d" placeholder="0" min="0" max="90" style="width:100%">
+                <input type="number" id="${prefix}-dms-lat-m" placeholder="0" min="0" max="59" style="width:100%">
+                <input type="number" id="${prefix}-dms-lat-s" placeholder="0.000" step="0.001" min="0" max="60" style="width:100%">
+                <select id="${prefix}-dms-lat-hem" style="width:100%"><option value="N">N</option><option value="S">S</option></select>
+            </div>
+            <!-- Lon row -->
+            <div style="display:grid; grid-template-columns:3fr 3fr 4fr 2fr; gap:6px; align-items:center; margin-top:6px;">
+                <input type="number" id="${prefix}-dms-lon-d" placeholder="0" min="0" max="180" style="width:100%">
+                <input type="number" id="${prefix}-dms-lon-m" placeholder="0" min="0" max="59" style="width:100%">
+                <input type="number" id="${prefix}-dms-lon-s" placeholder="0.000" step="0.001" min="0" max="60" style="width:100%">
+                <select id="${prefix}-dms-lon-hem" style="width:100%"><option value="W">W</option><option value="E">E</option></select>
+            </div>
+            <div style="display:grid; grid-template-columns:3fr 3fr 4fr 2fr; gap:6px; margin-top:2px;">
+                <small style="color:var(--text-muted); padding-left:2px;">Lat</small>
+                <small></small><small></small><small></small>
+            </div>
+            <div style="display:grid; grid-template-columns:3fr 3fr 4fr 2fr; gap:6px;">
+                <small style="color:var(--text-muted); padding-left:2px;">Lon</small>
+            </div>
+        </div>
+
+        <div class="coord-set hidden" id="${prefix}-ddm">
+            <!-- Column headers -->
+            <div style="display:grid; grid-template-columns:3fr 5fr 2fr; gap:6px; margin-bottom:3px;">
+                <small style="color:var(--text-muted); padding-left:2px;">Deg (°)</small>
+                <small style="color:var(--text-muted); padding-left:2px;">Dec. Min (')</small>
+                <small style="color:var(--text-muted); padding-left:2px;">Hem</small>
+            </div>
+            <!-- Lat row -->
+            <div style="display:grid; grid-template-columns:3fr 5fr 2fr; gap:6px; align-items:center;">
+                <input type="number" id="${prefix}-ddm-lat-d" placeholder="0" min="0" max="90" style="width:100%">
+                <input type="number" id="${prefix}-ddm-lat-dm" placeholder="0.00000" step="0.00001" min="0" max="60" style="width:100%">
+                <select id="${prefix}-ddm-lat-hem" style="width:100%"><option value="N">N</option><option value="S">S</option></select>
+            </div>
+            <!-- Lon row -->
+            <div style="display:grid; grid-template-columns:3fr 5fr 2fr; gap:6px; align-items:center; margin-top:6px;">
+                <input type="number" id="${prefix}-ddm-lon-d" placeholder="0" min="0" max="180" style="width:100%">
+                <input type="number" id="${prefix}-ddm-lon-dm" placeholder="0.00000" step="0.00001" min="0" max="60" style="width:100%">
+                <select id="${prefix}-ddm-lon-hem" style="width:100%"><option value="W">W</option><option value="E">E</option></select>
+            </div>
+            <div style="display:grid; grid-template-columns:3fr 5fr 2fr; gap:6px; margin-top:2px;">
+                <small style="color:var(--text-muted); padding-left:2px;">Lat</small>
+            </div>
+            <div style="display:grid; grid-template-columns:3fr 5fr 2fr; gap:6px;">
+                <small style="color:var(--text-muted); padding-left:2px;">Lon</small>
+            </div>
+        </div>
+    `;
+}
+
+/**
  * Generates HTML for GPS Position Check.
  */
 function createPositionCheckForm() {
     return `
         <div class="form-group">
+            <label>Coordinate Format</label>
+            <select id="pos-format" onchange="togglePosFormat()">
+                <option value="dd">Decimal Degrees (DD)</option>
+                <option value="dms">Degrees Minutes Seconds (DMS)</option>
+                <option value="ddm">Degrees Decimal Minutes (DDM)</option>
+            </select>
+        </div>
+        <div class="form-group">
             <label>Handheld GPS Position</label>
             <button type="button" class="gps-button" onclick="captureGPS()">📡 Capture Device GPS</button>
-            <div class="input-row mt-1">
-                <input type="number" id="handheld-lat" step="0.000001" placeholder="Lat">
-                <input type="number" id="handheld-lon" step="0.000001" placeholder="Lon">
+            <div class="mt-1">
+                ${coordInputsHTML('handheld')}
             </div>
         </div>
         <div class="form-group">
             <label>DQM System Position</label>
-            <div class="input-row">
-                <input type="number" id="dqm-lat" step="0.000001" placeholder="Lat">
-                <input type="number" id="dqm-lon" step="0.000001" placeholder="Lon">
-            </div>
+            ${coordInputsHTML('dqm')}
         </div>
         <div class="input-row">
             <div class="form-group">
@@ -784,6 +861,67 @@ function createPositionCheckForm() {
             <textarea id="position-remarks" rows="2"></textarea>
         </div>
     `;
+}
+
+/**
+ * Shows/hides the correct coordinate sub-inputs based on the selected format.
+ */
+window.togglePosFormat = () => {
+    const fmt = document.getElementById('pos-format')?.value || 'dd';
+    ['handheld', 'dqm'].forEach(prefix => {
+        document.getElementById(`${prefix}-dd`).classList.toggle('hidden', fmt !== 'dd');
+        document.getElementById(`${prefix}-dms`).classList.toggle('hidden', fmt !== 'dms');
+        document.getElementById(`${prefix}-ddm`).classList.toggle('hidden', fmt !== 'ddm');
+    });
+    calculatePositionDifference();
+};
+
+/**
+ * Parses a coordinate pair from the form for a given prefix and format.
+ * Returns { lat, lon } in decimal degrees, or null if any field is empty/invalid.
+ * @param {string} prefix - 'handheld' or 'dqm'
+ * @param {string} fmt    - 'dd', 'dms', or 'ddm'
+ */
+function parsePosCoords(prefix, fmt) {
+    const g = id => document.getElementById(id);
+    const pf = v => parseFloat(v);
+
+    if (fmt === 'dd') {
+        const lat = pf(g(`${prefix}-dd-lat`)?.value);
+        const lon = pf(g(`${prefix}-dd-lon`)?.value);
+        if (isNaN(lat) || isNaN(lon)) return null;
+        return { lat, lon };
+    }
+
+    if (fmt === 'dms') {
+        const latD = pf(g(`${prefix}-dms-lat-d`)?.value);
+        const latM = pf(g(`${prefix}-dms-lat-m`)?.value);
+        const latS = pf(g(`${prefix}-dms-lat-s`)?.value);
+        const latH = g(`${prefix}-dms-lat-hem`)?.value || 'N';
+        const lonD = pf(g(`${prefix}-dms-lon-d`)?.value);
+        const lonM = pf(g(`${prefix}-dms-lon-m`)?.value);
+        const lonS = pf(g(`${prefix}-dms-lon-s`)?.value);
+        const lonH = g(`${prefix}-dms-lon-hem`)?.value || 'W';
+        if ([latD, latM, latS, lonD, lonM, lonS].some(isNaN)) return null;
+        const lat = (latD + latM / 60 + latS / 3600) * (latH === 'S' ? -1 : 1);
+        const lon = (lonD + lonM / 60 + lonS / 3600) * (lonH === 'W' ? -1 : 1);
+        return { lat, lon };
+    }
+
+    if (fmt === 'ddm') {
+        const latD  = pf(g(`${prefix}-ddm-lat-d`)?.value);
+        const latDm = pf(g(`${prefix}-ddm-lat-dm`)?.value);
+        const latH  = g(`${prefix}-ddm-lat-hem`)?.value || 'N';
+        const lonD  = pf(g(`${prefix}-ddm-lon-d`)?.value);
+        const lonDm = pf(g(`${prefix}-ddm-lon-dm`)?.value);
+        const lonH  = g(`${prefix}-ddm-lon-hem`)?.value || 'W';
+        if ([latD, latDm, lonD, lonDm].some(isNaN)) return null;
+        const lat = (latD + latDm / 60) * (latH === 'S' ? -1 : 1);
+        const lon = (lonD + lonDm / 60) * (lonH === 'W' ? -1 : 1);
+        return { lat, lon };
+    }
+
+    return null;
 }
 
 /**
@@ -1275,20 +1413,19 @@ function calcBucketPos() {
 
 /**
  * Position check (GPS) difference calculation.
+ * Reads whichever format is currently selected and converts to DD for haversine.
  */
 function calculatePositionDifference() {
-    const lat1 = parseFloat(document.getElementById('handheld-lat')?.value);
-    const lon1 = parseFloat(document.getElementById('handheld-lon')?.value);
-    const lat2 = parseFloat(document.getElementById('dqm-lat')?.value);
-    const lon2 = parseFloat(document.getElementById('dqm-lon')?.value);
-
-    if (isNaN(lat1) || isNaN(lon1) || isNaN(lat2) || isNaN(lon2)) return;
+    const fmt = document.getElementById('pos-format')?.value || 'dd';
+    const hh = parsePosCoords('handheld', fmt);
+    const dqm = parsePosCoords('dqm', fmt);
+    if (!hh || !dqm) return;
 
     const R = 20902231; // Earth radius in feet
-    const dLat = (lat2 - lat1) * Math.PI / 180;
-    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const dLat = (dqm.lat - hh.lat) * Math.PI / 180;
+    const dLon = (dqm.lon - hh.lon) * Math.PI / 180;
     const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+        Math.cos(hh.lat * Math.PI / 180) * Math.cos(dqm.lat * Math.PI / 180) *
         Math.sin(dLon / 2) * Math.sin(dLon / 2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     const dist = R * c;
@@ -1299,20 +1436,63 @@ function calculatePositionDifference() {
 
 /**
  * Uses browser GeoLocation API to capture current Lat/Lon.
+ * Fills handheld fields in whichever format is currently selected.
  */
 function captureGPS() {
-    if ("geolocation" in navigator) {
-        navigator.geolocation.getCurrentPosition(pos => {
-            const latEl = document.getElementById('handheld-lat');
-            const lonEl = document.getElementById('handheld-lon');
-            if (latEl && lonEl) {
-                latEl.value = pos.coords.latitude.toFixed(6);
-                lonEl.value = pos.coords.longitude.toFixed(6);
-                calculatePositionDifference();
-                saveCheckData('positionCheck');
-            }
-        });
-    } else {
+    if (!("geolocation" in navigator)) {
         alert("Geolocation not supported");
+        return;
     }
+    navigator.geolocation.getCurrentPosition(pos => {
+        const fmt = document.getElementById('pos-format')?.value || 'dd';
+        const rawLat = pos.coords.latitude;
+        const rawLon = pos.coords.longitude;
+        const g = id => document.getElementById(id);
+
+        if (fmt === 'dd') {
+            if (g('handheld-dd-lat')) g('handheld-dd-lat').value = rawLat.toFixed(6);
+            if (g('handheld-dd-lon')) g('handheld-dd-lon').value = rawLon.toFixed(6);
+
+        } else if (fmt === 'dms') {
+            const toDMS = (val) => {
+                const abs = Math.abs(val);
+                const d = Math.floor(abs);
+                const mFull = (abs - d) * 60;
+                const m = Math.floor(mFull);
+                const s = ((mFull - m) * 60);
+                return { d, m, s };
+            };
+            const latDMS = toDMS(rawLat);
+            const lonDMS = toDMS(rawLon);
+            if (g('handheld-dms-lat-d')) g('handheld-dms-lat-d').value = latDMS.d;
+            if (g('handheld-dms-lat-m')) g('handheld-dms-lat-m').value = latDMS.m;
+            if (g('handheld-dms-lat-s')) g('handheld-dms-lat-s').value = latDMS.s.toFixed(3);
+            if (g('handheld-dms-lat-hem')) g('handheld-dms-lat-hem').value = rawLat >= 0 ? 'N' : 'S';
+            if (g('handheld-dms-lon-d')) g('handheld-dms-lon-d').value = lonDMS.d;
+            if (g('handheld-dms-lon-m')) g('handheld-dms-lon-m').value = lonDMS.m;
+            if (g('handheld-dms-lon-s')) g('handheld-dms-lon-s').value = lonDMS.s.toFixed(3);
+            if (g('handheld-dms-lon-hem')) g('handheld-dms-lon-hem').value = rawLon >= 0 ? 'E' : 'W';
+
+        } else if (fmt === 'ddm') {
+            const toDDM = (val) => {
+                const abs = Math.abs(val);
+                const d = Math.floor(abs);
+                const dm = (abs - d) * 60;
+                return { d, dm };
+            };
+            const latDDM = toDDM(rawLat);
+            const lonDDM = toDDM(rawLon);
+            if (g('handheld-ddm-lat-d'))  g('handheld-ddm-lat-d').value  = latDDM.d;
+            if (g('handheld-ddm-lat-dm')) g('handheld-ddm-lat-dm').value = latDDM.dm.toFixed(5);
+            if (g('handheld-ddm-lat-hem')) g('handheld-ddm-lat-hem').value = rawLat >= 0 ? 'N' : 'S';
+            if (g('handheld-ddm-lon-d'))  g('handheld-ddm-lon-d').value  = lonDDM.d;
+            if (g('handheld-ddm-lon-dm')) g('handheld-ddm-lon-dm').value = lonDDM.dm.toFixed(5);
+            if (g('handheld-ddm-lon-hem')) g('handheld-ddm-lon-hem').value = rawLon >= 0 ? 'E' : 'W';
+        }
+
+        calculatePositionDifference();
+        saveCheckData('positionCheck');
+    }, () => {
+        alert('Could not get GPS position. Check browser permissions.');
+    });
 }
