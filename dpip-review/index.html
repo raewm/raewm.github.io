@@ -76,22 +76,7 @@
             border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
             letter-spacing: 0.02em;
         }
-        .checklist-item--sub {
-            background: transparent;
-            border: 1px solid var(--border);
-            margin-left: 3.5rem;
-            margin-bottom: 0.2rem;
-            padding: 0.25rem 0.75rem;
-            border-left: 3px solid var(--border);
-        }
         .checklist-item--sub .checklist-text { font-size: 0.8rem; color: var(--text-primary); }
-        .data-check-panel {
-            background: var(--bg-secondary);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-md);
-            padding: 1.5rem;
-            margin-bottom: 1.5rem;
-        }
     </style>
 </head>
 
@@ -108,8 +93,7 @@
         <nav class="app-tabs">
             <button class="tab-btn active" data-tab="tab-review-info">1. Review Info</button>
             <button class="tab-btn" data-tab="tab-checklist">2. Document Checklist</button>
-            <button class="tab-btn" data-tab="tab-data-check" id="nav-data-check" style="display: none;">3. Data Check</button>
-            <button class="tab-btn" data-tab="tab-report-preview">4. Preview &amp; Export</button>
+            <button class="tab-btn" data-tab="tab-report-preview">3. Preview &amp; Export</button>
         </nav>
 
         <div class="header-actions">
@@ -167,19 +151,6 @@
                         </div>
                         <div id="checklist-container">
                             <!-- Populated by JS -->
-                        </div>
-                </section>
-            </div>
-
-            <div class="tab-content" id="tab-data-check">
-                <section class="card mt-1" id="data-check-section" style="display: none;">
-                    <div class="card-header">
-                            <h2>Data Check</h2>
-                            <p class="text-muted">Verify displacement and volume where applicable.</p>
-                        </div>
-                        
-                        <div id="data-check-container">
-                            <!-- Populated dynamically based on plant type -->
                         </div>
                 </section>
             </div>

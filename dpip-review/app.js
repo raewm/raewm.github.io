@@ -7,34 +7,7 @@ const AppState = {
         plantType: '',
         generalComments: ''
     },
-    checklist: {},
-    dataCheck: {
-        isUllageProfile: false,
-        displacementLight: {
-            reportedDraft: '', reportedDisplacement: '',
-            method: 'table',
-            tableParams: { x1: '', y1: '', x2: '', y2: '' },
-            equationParams: { coefA: '', coefB: '', coefC: '' }
-        },
-        displacementLoaded: {
-            reportedDraft: '', reportedDisplacement: '',
-            method: 'table',
-            tableParams: { x1: '', y1: '', x2: '', y2: '' },
-            equationParams: { coefA: '', coefB: '', coefC: '' }
-        },
-        volumeLight: {
-            reportedUllage: '', reportedVolume: '',
-            method: 'table',
-            tableParams: { x1: '', y1: '', x2: '', y2: '' },
-            equationParams: { coefA: '', coefB: '', coefC: '' }
-        },
-        volumeLoaded: {
-            reportedUllage: '', reportedVolume: '',
-            method: 'table',
-            tableParams: { x1: '', y1: '', x2: '', y2: '' },
-            equationParams: { coefA: '', coefB: '', coefC: '' }
-        }
-    }
+    checklist: {}
 };
 
 const DQM_DPIP_STORAGE_KEY = 'dqm_dpip_draft';
@@ -55,9 +28,7 @@ const elements = {
     clearBtn: document.getElementById('clear-btn'),
     
     checklistSubtitle: document.getElementById('checklist-subtitle'),
-    checklistContainer: document.getElementById('checklist-container'),
-    dataCheckSection: document.getElementById('data-check-section'),
-    dataCheckContainer: document.getElementById('data-check-container')
+    checklistContainer: document.getElementById('checklist-container')
 };
 
 function init() {
@@ -67,7 +38,6 @@ function init() {
     loadDraft();
     setupEventListeners();
     renderChecklist();
-    renderDataCheck();
 }
 
 function setupEventListeners() {
@@ -79,7 +49,6 @@ function setupEventListeners() {
         AppState.checklist = {}; 
         saveDraft(); 
         renderChecklist();
-        renderDataCheck();
     });
     elements.generalComments.addEventListener('input', (e) => { AppState.metadata.generalComments = e.target.value; saveDraft(); });
 
@@ -511,8 +480,7 @@ function renderChecklist() {
         const commentVal = typeof stateEntry === 'object' && stateEntry !== null ? (stateEntry.comment || '') : '';
 
         const div = document.createElement('div');
-        // Items with group+sub are sub-items under a group; items without group are top-level
-        div.className = 'checklist-item' + (item.sub ? ' checklist-item--sub' : '');
+        div.className = 'checklist-item';
         
         const checkbox = document.createElement('input');
         checkbox.type = 'checkbox';
@@ -548,230 +516,6 @@ function renderChecklist() {
     });
 }
 
-function renderDataCheck() {
-    const type = AppState.metadata.plantType;
-    const navBtn = document.getElementById('nav-data-check');
-    if (type === 'hopper' || type === 'scow') {
-        if (navBtn) navBtn.style.display = 'block';
-        elements.dataCheckSection.style.display = 'block';
-        
-        let html = '';
-        if (type === 'scow') {
-            html += `
-                <div class="form-group" style="margin-bottom: 1.5rem;">
-                    <label style="display:flex; align-items:center; gap:0.5rem; font-size:0.9rem;">
-                        <input type="checkbox" id="is-ullage-profile" ${AppState.dataCheck.isUllageProfile ? 'checked' : ''} style="width:1.2rem; height:1.2rem;">
-                        Is this an Ullage Profile Scow? (Requires Volume Check)
-                    </label>
-                </div>
-            `;
-        }
-
-        html += buildCalculatorSection('displacementLight', 'Displacement Check — Light Ship', 'Draft', 'Displacement');
-        html += buildCalculatorSection('displacementLoaded', 'Displacement Check — Fully Loaded', 'Draft', 'Displacement');
-        
-        if (type === 'hopper' || (type === 'scow' && AppState.dataCheck.isUllageProfile)) {
-            html += buildCalculatorSection('volumeLight', 'Volume Check — Light Ship', 'Ullage', 'Volume');
-            html += buildCalculatorSection('volumeLoaded', 'Volume Check — Fully Loaded', 'Ullage', 'Volume');
-        }
-
-        elements.dataCheckContainer.innerHTML = html;
-        attachCalculatorListeners('displacementLight', 'Draft', 'Displacement');
-        attachCalculatorListeners('displacementLoaded', 'Draft', 'Displacement');
-        
-        if (type === 'hopper' || (type === 'scow' && AppState.dataCheck.isUllageProfile)) {
-            attachCalculatorListeners('volumeLight', 'Ullage', 'Volume');
-            attachCalculatorListeners('volumeLoaded', 'Ullage', 'Volume');
-        }
-
-        if (type === 'scow') {
-            document.getElementById('is-ullage-profile').addEventListener('change', (e) => {
-                AppState.dataCheck.isUllageProfile = e.target.checked;
-                saveDraft();
-                renderDataCheck();
-            });
-        }
-    } else {
-        elements.dataCheckSection.style.display = 'none';
-        const navBtn = document.getElementById('nav-data-check');
-        if (navBtn) {
-            navBtn.style.display = 'none';
-            if (navBtn.classList.contains('active')) {
-                document.querySelector('.tab-btn[data-tab="tab-review-info"]').click();
-            }
-        }
-    }
-}
-
-window.setCheckMethod = function(section, method) {
-    if (AppState.dataCheck[section]) AppState.dataCheck[section].method = method;
-    saveDraft();
-    renderDataCheck();
-}
-
-function buildCalculatorSection(sectionKey, title, inputLabel, outputLabel) {
-    const data = AppState.dataCheck[sectionKey];
-    if (!data) return '';
-    const isDisp = sectionKey.startsWith('displacement');
-    const reportedInput = isDisp ? data.reportedDraft : data.reportedUllage;
-    const reportedOutput = isDisp ? data.reportedDisplacement : data.reportedVolume;
-
-    let html = `
-    <div class="data-check-panel">
-        <h3 style="border-bottom: 2px solid var(--border); padding-bottom: 0.5rem;">${title}</h3>
-        <div class="input-row" style="margin-top: 1rem;">
-            <div class="form-group">
-                <label>Reported ${inputLabel}</label>
-                <input type="number" step="any" id="${sectionKey}-input" value="${reportedInput}">
-            </div>
-            <div class="form-group">
-                <label>Reported ${outputLabel}</label>
-                <input type="number" step="any" id="${sectionKey}-output" value="${reportedOutput}">
-            </div>
-        </div>
-        <h4 style="margin: 1rem 0 0.5rem 0; font-size: 0.9rem;">DPIP Verification Method</h4>
-        <div class="tab-group">
-            <button class="tab-btn ${data.method === 'table' ? 'active' : ''}" onclick="setCheckMethod('${sectionKey}', 'table')">Table Interpolation</button>
-            <button class="tab-btn ${data.method === 'equation' ? 'active' : ''}" onclick="setCheckMethod('${sectionKey}', 'equation')">Equation Solver</button>
-        </div>
-    `;
-
-    if (data.method === 'table') {
-        html += `
-            <div class="input-row-3">
-                <div class="form-group">
-                    <label>x1 (Smaller ${inputLabel})</label>
-                    <input type="number" step="any" id="${sectionKey}-x1" value="${data.tableParams.x1}">
-                </div>
-                <div class="form-group">
-                    <label>y1 (Smaller ${outputLabel})</label>
-                    <input type="number" step="any" id="${sectionKey}-y1" value="${data.tableParams.y1}">
-                </div>
-            </div>
-            <div class="input-row-3">
-                <div class="form-group">
-                    <label>x2 (Larger ${inputLabel})</label>
-                    <input type="number" step="any" id="${sectionKey}-x2" value="${data.tableParams.x2}">
-                </div>
-                <div class="form-group">
-                    <label>y2 (Larger ${outputLabel})</label>
-                    <input type="number" step="any" id="${sectionKey}-y2" value="${data.tableParams.y2}">
-                </div>
-            </div>
-        `;
-    } else {
-        html += `
-            <p class="text-muted">Equation: y = Ax² + Bx + C (where x = Reported ${inputLabel})</p>
-            <div class="input-row-3">
-                <div class="form-group">
-                    <label>Coefficient A</label>
-                    <input type="number" step="any" id="${sectionKey}-a" value="${data.equationParams.coefA}">
-                </div>
-                <div class="form-group">
-                    <label>Coefficient B</label>
-                    <input type="number" step="any" id="${sectionKey}-b" value="${data.equationParams.coefB}">
-                </div>
-                <div class="form-group">
-                    <label>Coefficient C</label>
-                    <input type="number" step="any" id="${sectionKey}-c" value="${data.equationParams.coefC}">
-                </div>
-            </div>
-        `;
-    }
-
-    html += `
-        <div class="input-row mt-1" style="background: var(--bg-primary); padding: 1rem; border-radius: var(--radius-md); align-items: center;">
-            <div class="form-group" style="margin: 0; flex: 2;">
-                <label>Calculated Verification ${outputLabel}</label>
-                <input type="text" readonly id="${sectionKey}-result" style="font-size: 1.1rem; font-weight: bold; background: transparent; border: none; padding: 0;">
-            </div>
-            <div id="${sectionKey}-match" style="flex: 1; text-align: right; font-weight: bold; font-size: 1.1rem;"></div>
-        </div>
-    </div>`;
-    
-    return html;
-}
-
-function attachCalculatorListeners(sectionKey, inputLabel, outputLabel) {
-    const data = AppState.dataCheck[sectionKey];
-    if (!data) return;
-    const isDisp = sectionKey.startsWith('displacement');
-    const inputKey = isDisp ? 'reportedDraft' : 'reportedUllage';
-    const outputKey = isDisp ? 'reportedDisplacement' : 'reportedVolume';
-
-    const calcResult = () => {
-        const x = parseFloat(data[inputKey]);
-        let calculated = null;
-        if (!isNaN(x)) {
-            if (data.method === 'table') {
-                const x1 = parseFloat(data.tableParams.x1);
-                const y1 = parseFloat(data.tableParams.y1);
-                const x2 = parseFloat(data.tableParams.x2);
-                const y2 = parseFloat(data.tableParams.y2);
-                if (!isNaN(x1) && !isNaN(y1) && !isNaN(x2) && !isNaN(y2) && x1 !== x2) {
-                    calculated = y1 + (x - x1) * ((y2 - y1) / (x2 - x1));
-                }
-            } else {
-                const a = parseFloat(data.equationParams.coefA) || 0;
-                const b = parseFloat(data.equationParams.coefB) || 0;
-                const c = parseFloat(data.equationParams.coefC) || 0;
-                calculated = (a * x * x) + (b * x) + c;
-            }
-        }
-        
-        const resultEl = document.getElementById(`${sectionKey}-result`);
-        const matchEl = document.getElementById(`${sectionKey}-match`);
-        if (!resultEl || !matchEl) return;
-        
-        if (calculated !== null) {
-            resultEl.value = calculated.toFixed(2);
-            const reported = parseFloat(data[outputKey]);
-            if (!isNaN(reported) && reported !== 0) {
-                const pctDiff = Math.abs(calculated - reported) / Math.abs(reported) * 100;
-                if (pctDiff <= 1.0) {
-                    matchEl.textContent = `✅ Within 1% (${pctDiff.toFixed(2)}%)`;
-                    matchEl.style.color = 'var(--success)';
-                } else {
-                    matchEl.textContent = `❌ Mismatch (${pctDiff.toFixed(2)}%)`;
-                    matchEl.style.color = 'var(--danger)';
-                }
-            } else {
-                matchEl.textContent = '';
-            }
-        } else {
-            resultEl.value = 'Incomplete parameters';
-            matchEl.textContent = '';
-        }
-    };
-
-    const bindInput = (id, obj, key) => {
-        const el = document.getElementById(id);
-        if (el) {
-            el.addEventListener('input', (e) => {
-                obj[key] = e.target.value;
-                calcResult();
-                saveDraft();
-            });
-        }
-    };
-
-    bindInput(`${sectionKey}-input`, data, inputKey);
-    bindInput(`${sectionKey}-output`, data, outputKey);
-
-    if (data.method === 'table') {
-        bindInput(`${sectionKey}-x1`, data.tableParams, 'x1');
-        bindInput(`${sectionKey}-y1`, data.tableParams, 'y1');
-        bindInput(`${sectionKey}-x2`, data.tableParams, 'x2');
-        bindInput(`${sectionKey}-y2`, data.tableParams, 'y2');
-    } else {
-        bindInput(`${sectionKey}-a`, data.equationParams, 'coefA');
-        bindInput(`${sectionKey}-b`, data.equationParams, 'coefB');
-        bindInput(`${sectionKey}-c`, data.equationParams, 'coefC');
-    }
-
-    calcResult();
-}
-
 function saveDraft() {
     localStorage.setItem(DQM_DPIP_STORAGE_KEY, JSON.stringify(AppState));
 }
@@ -782,24 +526,6 @@ function loadDraft() {
         try {
             const parsed = JSON.parse(saved);
             
-            // Merge new 2-point dataCheck keys safely (handles old single-point saves)
-            if (parsed.dataCheck) {
-                const dc = parsed.dataCheck;
-                const defaultSection = (old) => ({
-                    reportedDraft: '', reportedDisplacement: '',
-                    reportedUllage: '', reportedVolume: '',
-                    method: 'table',
-                    tableParams: { x1: '', y1: '', x2: '', y2: '' },
-                    equationParams: { coefA: '', coefB: '', coefC: '' },
-                    ...old
-                });
-                AppState.dataCheck.isUllageProfile = dc.isUllageProfile || false;
-                AppState.dataCheck.displacementLight  = defaultSection(dc.displacementLight  || dc.displacement || {});
-                AppState.dataCheck.displacementLoaded = defaultSection(dc.displacementLoaded || {});
-                AppState.dataCheck.volumeLight         = defaultSection(dc.volumeLight         || dc.volume || {});
-                AppState.dataCheck.volumeLoaded        = defaultSection(dc.volumeLoaded        || {});
-            }
-
             Object.assign(AppState.metadata, parsed.metadata);
             // Migrate old checklist: boolean values -> {checked, comment}
             if (parsed.checklist) {
@@ -901,41 +627,12 @@ function buildReportHtml() {
         const stateEntry = AppState.checklist[item.id] || {};
         const isChecked = typeof stateEntry === 'boolean' ? stateEntry : !!stateEntry.checked;
         const comment = typeof stateEntry === 'object' && stateEntry !== null ? (stateEntry.comment || '') : '';
-        const indentStyle = item.sub ? 'padding-left: 3.5rem;' : '';
         return `<tr>
             <td style="width:4%; text-align:center; font-size:15px; vertical-align:top;">${isChecked ? '☑' : '☐'}</td>
-            <td style="${indentStyle} vertical-align:top;">${item.text}</td>
+            <td style="vertical-align:top;">${item.text}</td>
             <td style="color:#555; font-size:0.82rem; vertical-align:top;">${comment ? comment.replace(/\n/g,'<br>') : '<span style="color:#bbb;">—</span>'}</td>
         </tr>`;
     }).join('');
-
-    let dataCheckHtml = '';
-    if (md.plantType === 'hopper' || md.plantType === 'scow') {
-        const dc = AppState.dataCheck;
-        const addSection = (sectionKey, title, inLabel, outLabel) => {
-            const inVal  = document.getElementById(`${sectionKey}-input`)?.value  || '-';
-            const outVal = document.getElementById(`${sectionKey}-output`)?.value || '-';
-            const calcVal = document.getElementById(`${sectionKey}-result`)?.value || '-';
-            const matchVal = document.getElementById(`${sectionKey}-match`)?.textContent || '';
-            const matchColor = matchVal.includes('✅') ? 'green' : 'red';
-            return `
-            <h4>${title}</h4>
-            <table class="report-table">
-                <tr><th>Reported ${inLabel}</th><th>Reported ${outLabel}</th><th>Calculated ${outLabel}</th><th>Status</th></tr>
-                <tr>
-                    <td>${inVal}</td><td>${outVal}</td><td>${calcVal}</td>
-                    <td style="color:${matchColor}; font-weight:bold;">${matchVal}</td>
-                </tr>
-            </table>`;
-        };
-
-        dataCheckHtml += addSection('displacementLight',  'Displacement Check — Light Ship',     'Draft',  'Displacement');
-        dataCheckHtml += addSection('displacementLoaded', 'Displacement Check — Fully Loaded',   'Draft',  'Displacement');
-        if (md.plantType === 'hopper' || (md.plantType === 'scow' && dc.isUllageProfile)) {
-            dataCheckHtml += addSection('volumeLight',  'Volume Check — Light Ship',   'Ullage', 'Volume');
-            dataCheckHtml += addSection('volumeLoaded', 'Volume Check — Fully Loaded', 'Ullage', 'Volume');
-        }
-    }
 
     return `
     <style>
@@ -973,7 +670,6 @@ function buildReportHtml() {
             ${checklistHtml || '<tr><td colspan="3">No checklist items available.</td></tr>'}
         </table>
 
-        ${dataCheckHtml ? `<h3>Integration Verification Data Check</h3>${dataCheckHtml}` : ''}
     </div>
     `;
 }
