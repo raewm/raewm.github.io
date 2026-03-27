@@ -142,14 +142,15 @@ h3 {
 
 /* ===== Tabs ===== */
 .tab-btn {
-    padding: 10px 20px;
+    padding: 7px 13px;
     background: transparent;
     border: none;
     color: var(--text-muted);
-    font-size: 1rem;
+    font-size: 0.875rem;
     font-weight: 600;
     cursor: pointer;
     border-bottom: 3px solid transparent;
+    white-space: nowrap;
 }
 
 .tab-btn:hover {
@@ -368,6 +369,20 @@ h3 {
 .editor-section.open .editor-section-header::after {
     content: "▲";
 }
+
+/* ===== Data Check Panels ===== */
+.data-check-panel {
+    background-color: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.p-4 {
+    padding: 1.5rem;
+}
+
 
 /* ===== Printing Rules ===== */
 @media print {

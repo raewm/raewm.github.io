@@ -18,11 +18,12 @@
                     <span class="logo-text">DQM</span> Report Generator
                 </div>
             </div>
-            <nav class="app-tabs">
+            <nav class="app-tabs" style="gap: 4px;">
                 <button class="tab-btn active" data-tab="load-tab">1. Load Data</button>
                 <button class="tab-btn" data-tab="meta-tab">2. Report Info</button>
                 <button class="tab-btn" data-tab="edit-tab">3. Edit Checks</button>
-                <button class="tab-btn" data-tab="preview-tab">4. Preview & Print</button>
+                <button class="tab-btn" data-tab="data-check-tab">4. Data Check</button>
+                <button class="tab-btn" data-tab="preview-tab">5. Preview &amp; Print</button>
             </nav>
             <div class="header-actions" style="display: flex; flex-direction: column; gap: 8px;">
                 <button id="save-draft-btn" class="btn btn-secondary" style="width: 110px;">Save Draft</button>
@@ -133,12 +134,31 @@
                 </div>
 
                 <div class="mt-4 flex-end">
+                    <button class="btn btn-primary next-tab-btn" data-next="data-check-tab">Continue to Data Check
+                        &rarr;</button>
+                </div>
+            </section>
+
+            <!-- TAB 4: DATA CHECK -->
+            <section id="data-check-tab" class="tab-pane">
+                <div class="card mb-4">
+                    <h2>Integration Verification Data Check</h2>
+                    <p class="text-muted">Verify that displacement and volume values are consistent with the
+                        DPIP documentation for each qualifying vessel (Hopper and Scow types).</p>
+                </div>
+
+                <div id="data-check-container">
+                    <!-- Populated by data-check.js when a qualifying file is loaded -->
+                    <div class="text-center text-muted p-4">Please load a JSON file first.</div>
+                </div>
+
+                <div class="mt-4 flex-end">
                     <button class="btn btn-primary next-tab-btn" data-next="preview-tab">Continue to Preview
                         &rarr;</button>
                 </div>
             </section>
 
-            <!-- TAB 4: PREVIEW & PRINT -->
+            <!-- TAB 5: PREVIEW &amp; PRINT -->
             <section id="preview-tab" class="tab-pane">
                 <div class="preview-toolbar mb-4">
                     <h2>Report Preview</h2>
@@ -166,6 +186,7 @@
     <script src="js/ui-tabs.js"></script>
     <script src="js/file-loader.js"></script>
     <script src="js/editor.js"></script>
+    <script src="js/data-check.js"></script>
     <script src="js/report-renderer.js"></script>
     <script src="js/app.js"></script>
 </body>

@@ -193,12 +193,16 @@ function renderChecks(state) {
                 }
             });
 
-            if (plantHtml) {
+            // Append the Integration Verification Data Check section for qualifying vessels
+            const dcHtml = renderDataCheckSection(state, plant, pIdx);
+
+            if (plantHtml || dcHtml) {
                 // Wrap each plant's data in a distinct visual card
                 html += `
                     <div class="vessel-checks-section" style="margin-top: 30px; border: 1px solid #ccc; padding: 15px; border-radius: 8px; background: #fafafa;">
                         <h3 style="margin-top: 0; color: #2c3e50; border-bottom: 2px solid #2c3e50;">${escapeHtml(plant.name || `Vessel #${pIdx + 1}`)} (${escapeHtml(plant.vesselType)})</h3>
                         ${plantHtml}
+                        ${dcHtml}
                     </div>
                 `;
             }
@@ -232,6 +236,98 @@ function renderChecks(state) {
     }
 
     return html;
+}
+
+/**
+ * Renders the Integration Verification Data Check section for a single plant.
+ * Reads from appState.dataCheck[pIdx] — no DOM dependency.
+ * Returns an empty string if the plant type does not qualify or no data present.
+ *
+ * @param {Object} state  - Global appState
+ * @param {Object} plant  - The plant object (vesselType, profile, name)
+ * @param {number} pIdx   - Array index into state.plants
+ * @returns {string} HTML fragment
+ */
+function renderDataCheckSection(state, plant, pIdx) {
+    const vType   = (plant.vesselType || '').toLowerCase();
+    const isHopp  = vType.includes('hopper');
+    const isScow  = vType === 'scow';
+
+    // Only hoppers and scows get this section
+    if (!isHopp && !isScow) return '';
+
+    const dc = state.dataCheck && state.dataCheck[pIdx];
+
+    // Determine volume eligibility
+    const profile      = (plant.profile || '').toLowerCase();
+    const isUllageAuto = profile === 'ullage';
+    const showVol      = isHopp || (isScow && (isUllageAuto || (dc && dc.isUllageProfile)));
+
+    // Helper: render one row of the verification table
+    function dcRow(label, reportedInput, reportedOutput, sectionKey, inputUnit, outputUnit) {
+        if (!dc || !dc[sectionKey]) {
+            return `
+            <tr>
+                <td>${escapeHtml(label)}</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+                <td class="text-center">-</td>
+            </tr>`;
+        }
+        const data        = dc[sectionKey];
+        const repIn       = data[reportedInput]  !== undefined ? escapeHtml(String(data[reportedInput]))  : '-';
+        const repOut      = data[reportedOutput] !== undefined ? escapeHtml(String(data[reportedOutput])) : '-';
+        const calcVal     = (typeof computeVerificationValue === 'function')
+                              ? computeVerificationValue(data, sectionKey)
+                              : null;
+        let calcStr = '-';
+        let statusStr = '-';
+
+        if (calcVal !== null) {
+            calcStr = calcVal.toFixed(2);
+            const rep = parseFloat(data[reportedOutput]);
+            if (!isNaN(rep) && rep !== 0) {
+                const pctDiff = Math.abs(calcVal - rep) / Math.abs(rep) * 100;
+                statusStr = pctDiff <= 1.0
+                    ? `✅ ${pctDiff.toFixed(2)}%`
+                    : `❌ ${pctDiff.toFixed(2)}%`;
+            }
+        }
+
+        return `
+            <tr>
+                <td>${escapeHtml(label)}</td>
+                <td class="text-center">${repIn} ${escapeHtml(inputUnit)}</td>
+                <td class="text-center">${repOut} ${escapeHtml(outputUnit)}</td>
+                <td class="text-center">${calcStr}${calcVal !== null ? ' ' + escapeHtml(outputUnit) : ''}</td>
+                <td class="text-center">${statusStr}</td>
+            </tr>`;
+    }
+
+    let rows = '';
+    rows += dcRow('Displacement — Light Ship',  'reportedDraft', 'reportedDisplacement', 'displacementLight',  'ft', 'LT');
+    rows += dcRow('Displacement — Fully Loaded', 'reportedDraft', 'reportedDisplacement', 'displacementLoaded', 'ft', 'LT');
+    if (showVol) {
+        rows += dcRow('Volume — Light Ship',  'reportedUllage', 'reportedVolume', 'volumeLight',  'ft', 'cy');
+        rows += dcRow('Volume — Fully Loaded', 'reportedUllage', 'reportedVolume', 'volumeLoaded', 'ft', 'cy');
+    }
+
+    return `
+        <div style="margin-top: 20px; border-top: 1px dashed #aaa; padding-top: 15px;">
+            <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 11pt;">Integration Verification Data Check</h4>
+            <table class="report-table" style="margin-bottom: 0;">
+                <tr>
+                    <th width="28%">Check</th>
+                    <th width="18%" class="text-center">Reported Input</th>
+                    <th width="18%" class="text-center">Reported Output</th>
+                    <th width="18%" class="text-center">Calculated Output</th>
+                    <th width="18%" class="text-center">Status (±1%)</th>
+                </tr>
+                ${rows}
+            </table>
+        </div>
+    `;
 }
 
 /**

@@ -35,7 +35,12 @@ const defaultState = {
     },
 
     // Catch-all for logic overrides or temporary UI states
-    overrides: {}
+    overrides: {},
+
+    // Per-plant Integration Verification Data Check state.
+    // Keyed by plant array index (0, 1, 2…) matching appState.plants.
+    // Each value is an object returned by getDefaultDataCheckState() in data-check.js.
+    dataCheck: {}
 };
 
 /**
@@ -78,6 +83,11 @@ function loadDraft() {
                 if (window.appState.meta.preparedBy === window.appState.originalQaTeam) {
                     window.appState.meta.preparedBy = '';
                 }
+            }
+
+            // Migration: Ensure dataCheck map exists (absent in older drafts).
+            if (!window.appState.dataCheck) {
+                window.appState.dataCheck = {};
             }
 
             console.log("Draft loaded from localStorage.");

@@ -65,6 +65,8 @@ document.addEventListener('DOMContentLoaded', () => {
             if (typeof updateLoadSummaryUI === 'function') updateLoadSummaryUI();
             // Re-initializes the global metadata form with saved values
             if (typeof initMetaForm === 'function') initMetaForm();
+            // Rebuild data-check panels from restored state
+            if (typeof renderDataCheck === 'function') renderDataCheck();
         }
     }
 });

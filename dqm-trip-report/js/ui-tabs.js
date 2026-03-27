@@ -44,6 +44,8 @@ function initTabs() {
         // Ensure the visual state is refreshed when moving to core logic tabs.
         if (targetId === 'edit-tab') {
             if (typeof renderEditor === 'function') renderEditor();
+        } else if (targetId === 'data-check-tab') {
+            if (typeof renderDataCheck === 'function') renderDataCheck();
         } else if (targetId === 'preview-tab') {
             if (typeof renderReport === 'function') renderReport();
         }

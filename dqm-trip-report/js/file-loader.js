@@ -86,6 +86,11 @@ function initFileLoader() {
                     initMetaForm();
                 }
 
+                // Initialize the Data Check panels for any qualifying plants
+                if (typeof renderDataCheck === 'function') {
+                    renderDataCheck();
+                }
+
                 showStatus('File loaded successfully!', 'success');
                 displaySummary(data);
 
