@@ -26,7 +26,7 @@
                 <button class="tab-btn" data-tab="preview-tab">5. Preview &amp; Print</button>
             </nav>
             <div class="header-actions" style="display: flex; flex-direction: column; gap: 8px;">
-                <button id="save-draft-btn" class="btn btn-secondary" style="width: 110px;">Save Draft</button>
+                <button id="save-draft-btn" class="btn btn-secondary" style="width: 140px;">💾 Save & Download</button>
                 <button id="clear-data-btn" class="btn btn-danger" style="width: 110px;">Clear All</button>
             </div>
         </header>
@@ -39,6 +39,9 @@
                         <div class="upload-icon">📄</div>
                         <h2>Drop DQM QA App JSON here</h2>
                         <p>or click to select file</p>
+                        <p style="font-size: 0.8rem; margin-top: 10px; color: var(--text-muted); opacity: 0.8;">
+                            Accepts QA App exports (.json) or previously saved Trip Report drafts (.json)
+                        </p>
                         <input type="file" id="file-input" accept=".json" hidden>
                     </div>
                 </div>

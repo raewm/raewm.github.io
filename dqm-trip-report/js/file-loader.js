@@ -57,12 +57,14 @@ function initFileLoader() {
 
     /**
      * Validates and reads the JSON file contents.
-     * Triggers state updates and UI transitions upon success.
+     * Accepts two file types — dispatched by the 'action' field:
+     *   'dqmTripReportDraft' → portable draft saved via downloadDraft()
+     *   anything else        → QA App export (existing path via setSourceData)
      * @param {File} file - The raw browser File object.
      */
     function processFile(file) {
         if (!file.name.endsWith('.json')) {
-            showStatus('Error: Please upload a valid .json file from the DQM QA App.', 'error');
+            showStatus('Error: Please upload a valid .json file.', 'error');
             return;
         }
 
@@ -71,25 +73,34 @@ function initFileLoader() {
             try {
                 const data = JSON.parse(e.target.result);
 
-                // Sanity check to ensure the file originated from our QA Apps
+                // --- Branch: portable Trip Report draft ---
+                if (data.action === 'dqmTripReportDraft') {
+                    const ok = (typeof loadDraftFile === 'function') && loadDraftFile(data);
+                    if (!ok) {
+                        showStatus('Error: Could not restore draft. File may be corrupted.', 'error');
+                        return;
+                    }
+
+                    // Refresh all UI components from the restored state
+                    if (typeof updateLoadSummaryUI === 'function') updateLoadSummaryUI();
+                    if (typeof initMetaForm      === 'function') initMetaForm();
+                    if (typeof renderDataCheck   === 'function') renderDataCheck();
+
+                    showStatus('Draft restored successfully!', 'success');
+
+                    // Re-display summary using the embedded sourceJson
+                    if (window.appState.sourceJson) displaySummary(window.appState.sourceJson);
+                    return;
+                }
+
+                // --- Branch: QA App export (original path) ---
                 if (data.action !== 'dqmQaLogExport') {
                     showStatus('Warning: This file might not be a valid DQM QA App export.', 'warning');
                 }
 
-                // Inject data into the global appState
-                if (typeof setSourceData === 'function') {
-                    setSourceData(data);
-                }
-
-                // Refresh the metadata form (Report Info tab)
-                if (typeof initMetaForm === 'function') {
-                    initMetaForm();
-                }
-
-                // Initialize the Data Check panels for any qualifying plants
-                if (typeof renderDataCheck === 'function') {
-                    renderDataCheck();
-                }
+                if (typeof setSourceData === 'function') setSourceData(data);
+                if (typeof initMetaForm  === 'function') initMetaForm();
+                if (typeof renderDataCheck === 'function') renderDataCheck();
 
                 showStatus('File loaded successfully!', 'success');
                 displaySummary(data);

@@ -4,9 +4,66 @@
  * Coordinates between UI tabs, file loading, and state persistence.
  */
 
+/**
+ * Displays a non-blocking toast notification in the top-right corner.
+ * @param {string} message - Text to show.
+ * @param {string} type    - 'success' | 'error' | 'warning'
+ * @param {number} duration - Auto-dismiss after this many ms (default 3500).
+ */
+function showToast(message, type = 'success', duration = 3500) {
+    // Reuse an existing container or create one
+    let container = document.getElementById('toast-container');
+    if (!container) {
+        container = document.createElement('div');
+        container.id = 'toast-container';
+        container.style.cssText = [
+            'position:fixed', 'top:1rem', 'right:1rem', 'z-index:9999',
+            'display:flex', 'flex-direction:column', 'gap:0.5rem',
+            'pointer-events:none'
+        ].join(';');
+        document.body.appendChild(container);
+    }
+
+    const colors = {
+        success: { bg: '#1a7a4a', border: '#22c55e' },
+        error:   { bg: '#7a1a1a', border: '#ef4444' },
+        warning: { bg: '#7a5a1a', border: '#f59e0b' }
+    };
+    const c = colors[type] || colors.success;
+
+    const toast = document.createElement('div');
+    toast.style.cssText = [
+        `background:${c.bg}`,
+        `border-left:4px solid ${c.border}`,
+        'color:#fff', 'padding:0.65rem 1rem',
+        'border-radius:6px', 'font-size:0.9rem',
+        'box-shadow:0 4px 12px rgba(0,0,0,0.4)',
+        'opacity:0', 'transform:translateX(20px)',
+        'transition:opacity 0.2s ease, transform 0.2s ease',
+        'pointer-events:auto'
+    ].join(';');
+    toast.textContent = message;
+
+    container.appendChild(toast);
+
+    // Trigger entrance animation
+    requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+            toast.style.opacity = '1';
+            toast.style.transform = 'translateX(0)';
+        });
+    });
+
+    // Auto-dismiss
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateX(20px)';
+        setTimeout(() => toast.remove(), 250);
+    }, duration);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
     // 1. Component Initialization
-    // Each component attaches its own globally-scoped logic and listeners.
     if (typeof initTabs === 'function') initTabs();
     if (typeof initFileLoader === 'function') initFileLoader();
     if (typeof initMetaForm === 'function') initMetaForm();
@@ -14,20 +71,24 @@ document.addEventListener('DOMContentLoaded', () => {
     // 2. Global Tool-bar Event Listeners
 
     /**
-     * Handle Manual Save to LocalStorage.
-     * Provides user feedback via alert on success.
+     * Save & Download Draft.
+     * Writes to localStorage (silent auto-save) AND downloads a portable .json file.
      */
     const saveBtn = document.getElementById('save-draft-btn');
     if (saveBtn) {
         saveBtn.addEventListener('click', () => {
-            if (typeof saveDraft === 'function') saveDraft();
-            alert('Draft saved successfully to local storage.');
+            if (!window.appState.sourceJson) {
+                showToast('Nothing to save — load a QA file first.', 'warning');
+                return;
+            }
+            if (typeof saveDraft     === 'function') saveDraft();
+            if (typeof downloadDraft === 'function') downloadDraft();
+            showToast('Draft saved & downloaded!', 'success');
         });
     }
 
     /**
      * Handle Session Reset.
-     * Clears LocalStorage and reloads the browser to return to zero-state.
      */
     const clearBtn = document.getElementById('clear-data-btn');
     if (clearBtn) {
@@ -41,32 +102,24 @@ document.addEventListener('DOMContentLoaded', () => {
 
     /**
      * Handle Report Generation / Printing.
-     * Triggers a final render pass before invoking the browser print dialog.
      */
     const printBtn = document.getElementById('print-btn');
     if (printBtn) {
         printBtn.addEventListener('click', () => {
-            // Ensure the report snapshot reflects current state modifications
             if (typeof renderReport === 'function') renderReport();
             window.print();
         });
     }
 
-    // 3. Automated State Restoration
-    /**
-     * Attempts to resume previous session from LocalStorage.
-     * If a source JSON is found, it automatically transitions the UI to the editor/summary view.
-     */
+    // 3. Automated State Restoration from localStorage
     if (typeof loadDraft === 'function') {
         const restored = loadDraft();
         if (restored && window.appState.sourceJson) {
             console.log("Found existing draft, populating UI...");
-            // Transitions the file upload tab to show metadata summary
             if (typeof updateLoadSummaryUI === 'function') updateLoadSummaryUI();
-            // Re-initializes the global metadata form with saved values
-            if (typeof initMetaForm === 'function') initMetaForm();
-            // Rebuild data-check panels from restored state
-            if (typeof renderDataCheck === 'function') renderDataCheck();
+            if (typeof initMetaForm        === 'function') initMetaForm();
+            if (typeof renderDataCheck     === 'function') renderDataCheck();
         }
     }
 });
+

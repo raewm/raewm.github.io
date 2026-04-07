@@ -109,6 +109,75 @@ function clearState() {
 }
 
 /**
+ * Downloads the current appState as a portable draft .json file.
+ * The file can be re-uploaded on any machine to resume work.
+ */
+function downloadDraft() {
+    const envelope = {
+        action:  'dqmTripReportDraft',
+        version: 1,
+        savedAt: new Date().toISOString(),
+        state:   window.appState
+    };
+
+    const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+
+    // Derive a meaningful filename from report date or fall back to today
+    const dateStr = (window.appState.meta && window.appState.meta.reportDate)
+        ? window.appState.meta.reportDate
+        : new Date().toISOString().split('T')[0];
+    const filename = `dqm-draft-${dateStr}.json`;
+
+    const a = document.createElement('a');
+    a.href     = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    console.log(`Draft downloaded as ${filename}.`);
+}
+
+/**
+ * Rehydrates appState from a portable draft envelope object.
+ * Called by file-loader.js when it detects action === 'dqmTripReportDraft'.
+ * @param {Object} envelope - The parsed draft JSON (must include .state).
+ * @returns {boolean} True if successfully loaded.
+ */
+function loadDraftFile(envelope) {
+    if (!envelope || !envelope.state) {
+        console.error('loadDraftFile: invalid envelope — missing .state');
+        return false;
+    }
+
+    try {
+        window.appState = envelope.state;
+
+        // --- Migration guards (same as loadDraft) ---
+        if (window.appState.meta && window.appState.meta.qaTeam === undefined) {
+            window.appState.meta.qaTeam = window.appState.originalQaTeam || '';
+            if (window.appState.meta.preparedBy === window.appState.originalQaTeam) {
+                window.appState.meta.preparedBy = '';
+            }
+        }
+        if (!window.appState.dataCheck) {
+            window.appState.dataCheck = {};
+        }
+
+        // Also persist to localStorage so the session survives a refresh
+        saveDraft();
+
+        console.log(`Draft file loaded (saved at ${envelope.savedAt || 'unknown'}).`);
+        return true;
+    } catch (e) {
+        console.error('loadDraftFile: failed to rehydrate state', e);
+        return false;
+    }
+}
+
+/**
  * Normalizes and imports raw JSON data exported from the QA App.
  * Handles both Single-Plant (Legacy) and Multi-Plant (New) schemas.
  * @param {Object} jsonData - The raw export from dqm-qa-app.
