@@ -23,8 +23,8 @@
 function getDefaultDataCheckState() {
     const defaultSection = (isVolume) => ({
         ...(isVolume
-            ? { reportedUllage: '', reportedVolume: '' }
-            : { reportedDraft: '', reportedDisplacement: '' }),
+            ? { reportedUllageFwd: '', reportedUllageAft: '', reportedVolume: '' }
+            : { reportedDraftFwd: '', reportedDraftAft: '', reportedDisplacement: '' }),
         method: 'table',
         tableParams: { x1: '', y1: '', x2: '', y2: '' },
         equationParams: { coefA: '', coefB: '', coefC: '' }
@@ -48,7 +48,13 @@ function getDefaultDataCheckState() {
  */
 function computeVerificationValue(data, sectionKey) {
     const isDisp = sectionKey.startsWith('displacement');
-    const x = parseFloat(isDisp ? data.reportedDraft : data.reportedUllage);
+    const fwd = parseFloat(isDisp ? data.reportedDraftFwd : data.reportedUllageFwd);
+    const aft = parseFloat(isDisp ? data.reportedDraftAft : data.reportedUllageAft);
+    // Require at least one valid value; average the two if both present
+    const hasFwd = !isNaN(fwd);
+    const hasAft = !isNaN(aft);
+    if (!hasFwd && !hasAft) return null;
+    const x = (hasFwd && hasAft) ? (fwd + aft) / 2 : (hasFwd ? fwd : aft);
     if (isNaN(x)) return null;
 
     if (data.method === 'table') {
@@ -229,17 +235,39 @@ function buildCalculatorSection(dc, sectionKey, title, inputLabel, outputLabel, 
 
     const uid    = `${sectionKey}-p${pIdx}`;
     const isDisp = sectionKey.startsWith('displacement');
-    const repIn  = isDisp ? data.reportedDraft      : data.reportedUllage;
+    const repFwd = isDisp ? data.reportedDraftFwd   : data.reportedUllageFwd;
+    const repAft = isDisp ? data.reportedDraftAft   : data.reportedUllageAft;
     const repOut = isDisp ? data.reportedDisplacement : data.reportedVolume;
+
+    // Compute average for display in the avg field (may be empty if both blank)
+    const fwdVal = parseFloat(repFwd);
+    const aftVal = parseFloat(repAft);
+    let avgDisplay = '';
+    if (!isNaN(fwdVal) && !isNaN(aftVal)) avgDisplay = ((fwdVal + aftVal) / 2).toFixed(4);
+    else if (!isNaN(fwdVal))              avgDisplay = fwdVal.toFixed(4);
+    else if (!isNaN(aftVal))              avgDisplay = aftVal.toFixed(4);
 
     let html = `
         <div class="data-check-panel">
             <h3 style="border-bottom:2px solid var(--border); padding-bottom:0.5rem;
                         font-size:1rem; margin-bottom:1rem;">${title}</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:0.5rem;">
+                <div class="form-group" style="margin:0;">
+                    <label>Reported ${inputLabel} Forward</label>
+                    <input type="number" step="any" id="${uid}-fwd" value="${repFwd}">
+                </div>
+                <div class="form-group" style="margin:0;">
+                    <label>Reported ${inputLabel} Aft</label>
+                    <input type="number" step="any" id="${uid}-aft" value="${repAft}">
+                </div>
+            </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:1rem;">
                 <div class="form-group" style="margin:0;">
-                    <label>Reported ${inputLabel}</label>
-                    <input type="number" step="any" id="${uid}-input" value="${repIn}">
+                    <label style="font-size:0.8rem; color:var(--text-muted);">Averaged ${inputLabel}</label>
+                    <input type="text" readonly id="${uid}-avg"
+                           value="${avgDisplay}"
+                           style="background:transparent; border:1px dashed var(--border);
+                                  color:var(--text-muted); font-style:italic;">
                 </div>
                 <div class="form-group" style="margin:0;">
                     <label>Reported ${outputLabel}</label>
@@ -332,8 +360,21 @@ function attachCalculatorListeners(dc, sectionKey, inputLabel, outputLabel, pIdx
 
     const uid      = `${sectionKey}-p${pIdx}`;
     const isDisp   = sectionKey.startsWith('displacement');
-    const inputKey = isDisp ? 'reportedDraft'         : 'reportedUllage';
+    const fwdKey   = isDisp ? 'reportedDraftFwd'      : 'reportedUllageFwd';
+    const aftKey   = isDisp ? 'reportedDraftAft'      : 'reportedUllageAft';
     const outKey   = isDisp ? 'reportedDisplacement'  : 'reportedVolume';
+
+    // Helper: update the averaged display field
+    const updateAvg = () => {
+        const avgEl = document.getElementById(`${uid}-avg`);
+        if (!avgEl) return;
+        const fVal = parseFloat(data[fwdKey]);
+        const aVal = parseFloat(data[aftKey]);
+        if (!isNaN(fVal) && !isNaN(aVal)) avgEl.value = ((fVal + aVal) / 2).toFixed(4);
+        else if (!isNaN(fVal))            avgEl.value = fVal.toFixed(4);
+        else if (!isNaN(aVal))            avgEl.value = aVal.toFixed(4);
+        else                              avgEl.value = '';
+    };
 
     const calcResult = () => {
         const calculated = computeVerificationValue(data, sectionKey);
@@ -346,8 +387,8 @@ function attachCalculatorListeners(dc, sectionKey, inputLabel, outputLabel, pIdx
             const reported = parseFloat(data[outKey]);
             if (!isNaN(reported) && reported !== 0) {
                 const pctDiff = Math.abs(calculated - reported) / Math.abs(reported) * 100;
-                if (pctDiff <= 1.0) {
-                    matchEl.textContent = `✅ Within 1% (${pctDiff.toFixed(2)}%)`;
+                if (pctDiff <= 3.0) {
+                    matchEl.textContent = `✅ Within 3% (${pctDiff.toFixed(2)}%)`;
                     matchEl.style.color = 'var(--success)';
                 } else {
                     matchEl.textContent = `❌ Mismatch (${pctDiff.toFixed(2)}%)`;
@@ -373,8 +414,22 @@ function attachCalculatorListeners(dc, sectionKey, inputLabel, outputLabel, pIdx
         }
     };
 
-    bindInput(`${uid}-input`,  data,             inputKey);
-    bindInput(`${uid}-output`, data,             outKey);
+    // Wrap bindInput for Fwd/Aft so avg updates too
+    const bindFwdAft = (id, obj, key) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.addEventListener('input', (e) => {
+                obj[key] = e.target.value;
+                updateAvg();
+                calcResult();
+                if (typeof saveDraft === 'function') saveDraft();
+            });
+        }
+    };
+
+    bindFwdAft(`${uid}-fwd`,    data, fwdKey);
+    bindFwdAft(`${uid}-aft`,    data, aftKey);
+    bindInput(`${uid}-output`,  data, outKey);
 
     if (data.method === 'table') {
         bindInput(`${uid}-x1`, data.tableParams, 'x1');
