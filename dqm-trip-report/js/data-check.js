@@ -291,21 +291,21 @@ function buildCalculatorSection(dc, sectionKey, title, inputLabel, outputLabel, 
         html += `
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:0.75rem;">
                 <div class="form-group" style="margin:0;">
-                    <label>x1 (Smaller ${inputLabel})</label>
+                    <label>x1 (Smaller ${inputLabel} From Table)</label>
                     <input type="number" step="any" id="${uid}-x1" value="${data.tableParams.x1}">
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label>y1 (Smaller ${outputLabel})</label>
+                    <label>y1 (Smaller ${outputLabel} From Table)</label>
                     <input type="number" step="any" id="${uid}-y1" value="${data.tableParams.y1}">
                 </div>
             </div>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem; margin-bottom:0.75rem;">
                 <div class="form-group" style="margin:0;">
-                    <label>x2 (Larger ${inputLabel})</label>
+                    <label>x2 (Larger ${inputLabel} From Table)</label>
                     <input type="number" step="any" id="${uid}-x2" value="${data.tableParams.x2}">
                 </div>
                 <div class="form-group" style="margin:0;">
-                    <label>y2 (Larger ${outputLabel})</label>
+                    <label>y2 (Larger ${outputLabel} From Table)</label>
                     <input type="number" step="any" id="${uid}-y2" value="${data.tableParams.y2}">
                 </div>
             </div>`;
