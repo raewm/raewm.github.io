@@ -264,7 +264,9 @@ function renderDataCheckSection(state, plant, pIdx) {
     const showVol      = isHopp || (isScow && (isUllageAuto || (dc && dc.isUllageProfile)));
 
     // Helper: render one row of the verification table
-    function dcRow(label, reportedInput, reportedOutput, sectionKey, inputUnit, outputUnit) {
+    // reportedOutputKey: the key for the reported output (e.g. 'reportedDisplacement')
+    // isDisp: true for displacement rows, false for volume rows
+    function dcRow(label, isDisp, reportedOutputKey, sectionKey, inputUnit, outputUnit) {
         if (!dc || !dc[sectionKey]) {
             return `
             <tr>
@@ -275,21 +277,33 @@ function renderDataCheckSection(state, plant, pIdx) {
                 <td class="text-center">-</td>
             </tr>`;
         }
-        const data        = dc[sectionKey];
-        const repIn       = data[reportedInput]  !== undefined ? escapeHtml(String(data[reportedInput]))  : '-';
-        const repOut      = data[reportedOutput] !== undefined ? escapeHtml(String(data[reportedOutput])) : '-';
-        const calcVal     = (typeof computeVerificationValue === 'function')
-                              ? computeVerificationValue(data, sectionKey)
-                              : null;
+        const data = dc[sectionKey];
+
+        // Compute the averaged input (Fwd/Aft) — matches live UI logic
+        const fwdVal = parseFloat(isDisp ? data.reportedDraftFwd   : data.reportedUllageFwd);
+        const aftVal = parseFloat(isDisp ? data.reportedDraftAft   : data.reportedUllageAft);
+        const hasFwd = !isNaN(fwdVal);
+        const hasAft = !isNaN(aftVal);
+        let repInStr = '-';
+        if (hasFwd && hasAft)    repInStr = ((fwdVal + aftVal) / 2).toFixed(4);
+        else if (hasFwd)         repInStr = fwdVal.toFixed(4);
+        else if (hasAft)         repInStr = aftVal.toFixed(4);
+
+        const repOutRaw = data[reportedOutputKey];
+        const repOut    = (repOutRaw !== undefined && repOutRaw !== '') ? escapeHtml(String(repOutRaw)) : '-';
+
+        const calcVal = (typeof computeVerificationValue === 'function')
+                          ? computeVerificationValue(data, sectionKey)
+                          : null;
         let calcStr = '-';
         let statusStr = '-';
 
         if (calcVal !== null) {
             calcStr = calcVal.toFixed(2);
-            const rep = parseFloat(data[reportedOutput]);
+            const rep = parseFloat(repOutRaw);
             if (!isNaN(rep) && rep !== 0) {
                 const pctDiff = Math.abs(calcVal - rep) / Math.abs(rep) * 100;
-                statusStr = pctDiff <= 1.0
+                statusStr = pctDiff <= 3.0
                     ? `✅ ${pctDiff.toFixed(2)}%`
                     : `❌ ${pctDiff.toFixed(2)}%`;
             }
@@ -298,7 +312,7 @@ function renderDataCheckSection(state, plant, pIdx) {
         return `
             <tr>
                 <td>${escapeHtml(label)}</td>
-                <td class="text-center">${repIn} ${escapeHtml(inputUnit)}</td>
+                <td class="text-center">${repInStr} ${escapeHtml(inputUnit)}</td>
                 <td class="text-center">${repOut} ${escapeHtml(outputUnit)}</td>
                 <td class="text-center">${calcStr}${calcVal !== null ? ' ' + escapeHtml(outputUnit) : ''}</td>
                 <td class="text-center">${statusStr}</td>
@@ -306,11 +320,11 @@ function renderDataCheckSection(state, plant, pIdx) {
     }
 
     let rows = '';
-    rows += dcRow('Displacement — Light Ship',  'reportedDraft', 'reportedDisplacement', 'displacementLight',  'ft', 'LT');
-    rows += dcRow('Displacement — Fully Loaded', 'reportedDraft', 'reportedDisplacement', 'displacementLoaded', 'ft', 'LT');
+    rows += dcRow('Displacement — Light Ship',  true,  'reportedDisplacement', 'displacementLight',  'ft', 'LT');
+    rows += dcRow('Displacement — Fully Loaded', true,  'reportedDisplacement', 'displacementLoaded', 'ft', 'LT');
     if (showVol) {
-        rows += dcRow('Volume — Light Ship',  'reportedUllage', 'reportedVolume', 'volumeLight',  'ft', 'cy');
-        rows += dcRow('Volume — Fully Loaded', 'reportedUllage', 'reportedVolume', 'volumeLoaded', 'ft', 'cy');
+        rows += dcRow('Volume — Light Ship',  false, 'reportedVolume', 'volumeLight',  'ft', 'cy');
+        rows += dcRow('Volume — Fully Loaded', false, 'reportedVolume', 'volumeLoaded', 'ft', 'cy');
     }
 
     return `
@@ -322,7 +336,7 @@ function renderDataCheckSection(state, plant, pIdx) {
                     <th width="18%" class="text-center">Reported Input</th>
                     <th width="18%" class="text-center">Reported Output</th>
                     <th width="18%" class="text-center">Calculated Output</th>
-                    <th width="18%" class="text-center">Status (±1%)</th>
+                    <th width="18%" class="text-center">Status (±3%)</th>
                 </tr>
                 ${rows}
             </table>
