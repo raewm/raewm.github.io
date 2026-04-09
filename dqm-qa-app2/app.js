@@ -828,26 +828,33 @@ function coordInputsHTML(prefix) {
 
 /**
  * Generates HTML for GPS Position Check.
+ * Each source (Handheld, DQM) has its own independent format selector.
  */
 function createPositionCheckForm() {
     return `
         <div class="form-group">
-            <label>Coordinate Format</label>
-            <select id="pos-format" onchange="togglePosFormat()">
-                <option value="dd">Decimal Degrees (DD)</option>
-                <option value="dms">Degrees Minutes Seconds (DMS)</option>
-                <option value="ddm">Degrees Decimal Minutes (DDM)</option>
-            </select>
-        </div>
-        <div class="form-group">
             <label>Handheld GPS Position</label>
-            <button type="button" class="gps-button" onclick="captureGPS()">📡 Capture Device GPS</button>
+            <button type="button" class="gps-button" onclick="captureGPS()" style="width:100%; margin-bottom:8px;">📡 Capture Device GPS</button>
+            <div style="margin-bottom:6px;">
+                <select id="handheld-format" style="width:100%;" onchange="togglePosFormat()">
+                    <option value="dd">Decimal Degrees (DD)</option>
+                    <option value="dms">Degrees Minutes Seconds (DMS)</option>
+                    <option value="ddm">Degrees Decimal Minutes (DDM)</option>
+                </select>
+            </div>
             <div class="mt-1">
                 ${coordInputsHTML('handheld')}
             </div>
         </div>
         <div class="form-group">
             <label>DQM System Position</label>
+            <div style="margin-bottom:6px;">
+                <select id="dqm-format" style="width:100%;" onchange="togglePosFormat()">
+                    <option value="dd">Decimal Degrees (DD)</option>
+                    <option value="dms">Degrees Minutes Seconds (DMS)</option>
+                    <option value="ddm">Degrees Decimal Minutes (DDM)</option>
+                </select>
+            </div>
             ${coordInputsHTML('dqm')}
         </div>
         <div class="input-row">
@@ -864,11 +871,12 @@ function createPositionCheckForm() {
 }
 
 /**
- * Shows/hides the correct coordinate sub-inputs based on the selected format.
+ * Shows/hides the correct coordinate sub-inputs based on each source's own format selector.
+ * Handheld and DQM are controlled independently.
  */
 window.togglePosFormat = () => {
-    const fmt = document.getElementById('pos-format')?.value || 'dd';
     ['handheld', 'dqm'].forEach(prefix => {
+        const fmt = document.getElementById(`${prefix}-format`)?.value || 'dd';
         document.getElementById(`${prefix}-dd`).classList.toggle('hidden', fmt !== 'dd');
         document.getElementById(`${prefix}-dms`).classList.toggle('hidden', fmt !== 'dms');
         document.getElementById(`${prefix}-ddm`).classList.toggle('hidden', fmt !== 'ddm');
@@ -1413,12 +1421,13 @@ function calcBucketPos() {
 
 /**
  * Position check (GPS) difference calculation.
- * Reads whichever format is currently selected and converts to DD for haversine.
+ * Reads each source's own format selector independently and converts both to DD for haversine.
  */
 function calculatePositionDifference() {
-    const fmt = document.getElementById('pos-format')?.value || 'dd';
-    const hh = parsePosCoords('handheld', fmt);
-    const dqm = parsePosCoords('dqm', fmt);
+    const hhFmt  = document.getElementById('handheld-format')?.value || 'dd';
+    const dqmFmt = document.getElementById('dqm-format')?.value || 'dd';
+    const hh  = parsePosCoords('handheld', hhFmt);
+    const dqm = parsePosCoords('dqm', dqmFmt);
     if (!hh || !dqm) return;
 
     const R = 20902231; // Earth radius in feet
@@ -1436,7 +1445,7 @@ function calculatePositionDifference() {
 
 /**
  * Uses browser GeoLocation API to capture current Lat/Lon.
- * Fills handheld fields in whichever format is currently selected.
+ * Fills handheld fields in whichever format the handheld selector is set to.
  */
 function captureGPS() {
     if (!("geolocation" in navigator)) {
@@ -1444,7 +1453,7 @@ function captureGPS() {
         return;
     }
     navigator.geolocation.getCurrentPosition(pos => {
-        const fmt = document.getElementById('pos-format')?.value || 'dd';
+        const fmt = document.getElementById('handheld-format')?.value || 'dd';
         const rawLat = pos.coords.latitude;
         const rawLon = pos.coords.longitude;
         const g = id => document.getElementById(id);
