@@ -185,8 +185,8 @@ function renderChecks(state) {
                         plantHtml += renderSuctionTable(data, override);
                     } else if (type === 'bucketDepth') {
                         plantHtml += renderBucketTable(data, override);
-                    } else if (type === 'velocity') {
-                        plantHtml += renderVelocityTable(data, override);
+                    } else if (type === 'positionCheck') {
+                        plantHtml += renderPositionCheck(data, override);
                     } else {
                         plantHtml += renderGenericTable(data, override);
                     }
@@ -967,6 +967,89 @@ function formatLabel(prop) {
             return txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase();
         }
     );
+}
+
+/**
+ * Specialized Renderer: GPS Position Check.
+ * Cleanly displays only the relevant coordinate fields based on the selected formats.
+ * Supports legacy single-format or new independent-format data structures.
+ */
+function renderPositionCheck(data, override) {
+    const getFmt = (prefix) => {
+        return getVal(data, override, `${prefix}-format`) || getVal(data, override, 'pos-format') || 'dd';
+    };
+
+    const hhFmt = getFmt('handheld');
+    const dqmFmt = getFmt('dqm');
+
+    function formatCoord(prefix, fmt) {
+        if (fmt === 'dd') {
+            const lat = getVal(data, override, `${prefix}-dd-lat`);
+            const lon = getVal(data, override, `${prefix}-dd-lon`);
+            if (lat === undefined || lon === undefined) return 'N/A';
+            return `Lat: ${Number(lat).toFixed(6)}°, Lon: ${Number(lon).toFixed(6)}°`;
+        }
+        if (fmt === 'dms') {
+            const latD = getVal(data, override, `${prefix}-dms-lat-d`);
+            const latM = getVal(data, override, `${prefix}-dms-lat-m`);
+            const latS = getVal(data, override, `${prefix}-dms-lat-s`);
+            const latH = getVal(data, override, `${prefix}-dms-lat-hem`) || 'N';
+            const lonD = getVal(data, override, `${prefix}-dms-lon-d`);
+            const lonM = getVal(data, override, `${prefix}-dms-lon-m`);
+            const lonS = getVal(data, override, `${prefix}-dms-lon-s`);
+            const lonH = getVal(data, override, `${prefix}-dms-lon-hem`) || 'W';
+            
+            if ([latD, latM, latS, lonD, lonM, lonS].some(v => v === undefined)) return 'N/A';
+            return `${latD}° ${latM}' ${Number(latS).toFixed(2)}" ${latH} / ${lonD}° ${lonM}' ${Number(lonS).toFixed(2)}" ${lonH}`;
+        }
+        if (fmt === 'ddm') {
+            const latD  = getVal(data, override, `${prefix}-ddm-lat-d`);
+            const latDm = getVal(data, override, `${prefix}-ddm-lat-dm`);
+            const latH  = getVal(data, override, `${prefix}-ddm-lat-hem`) || 'N';
+            const lonD  = getVal(data, override, `${prefix}-ddm-lon-d`);
+            const lonDm = getVal(data, override, `${prefix}-ddm-lon-dm`);
+            const lonH  = getVal(data, override, `${prefix}-ddm-lon-hem`) || 'W';
+
+            if ([latD, latDm, lonD, lonDm].some(v => v === undefined)) return 'N/A';
+            return `${latD}° ${Number(latDm).toFixed(4)}' ${latH} / ${lonD}° ${Number(lonDm).toFixed(4)}' ${lonH}`;
+        }
+        return 'N/A';
+    }
+
+    const hhDisplay = formatCoord('handheld', hhFmt);
+    const dqmDisplay = formatCoord('dqm', dqmFmt);
+    const diff = getVal(data, override, 'position-diff');
+    const remarks = getVal(data, override, 'position-remarks') || getVal(data, override, 'remarks');
+
+    let html = `
+    <table class="report-table">
+        <tr>
+            <th width="30%">Source</th>
+            <th width="15%" class="text-center">Format</th>
+            <th width="55%">Coordinates</th>
+        </tr>
+        <tr>
+            <td><strong>Handheld GPS</strong></td>
+            <td class="text-center">${hhFmt.toUpperCase()}</td>
+            <td>${hhDisplay}</td>
+        </tr>
+        <tr>
+            <td><strong>DQM System</strong></td>
+            <td class="text-center">${dqmFmt.toUpperCase()}</td>
+            <td>${dqmDisplay}</td>
+        </tr>
+        <tr>
+            <td colspan="2"><strong>Distance Difference</strong></td>
+            <td><strong>${diff ? diff + ' ft' : '-'}</strong></td>
+        </tr>
+    </table>
+    `;
+
+    if (remarks) {
+        html += `<p style="font-size: 10pt; font-style: italic; margin-top: 10px;">Remarks: ${escapeHtml(remarks.toString())}</p>`;
+    }
+
+    return html;
 }
 
 /**
