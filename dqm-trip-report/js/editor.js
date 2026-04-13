@@ -92,7 +92,7 @@ function renderEditor() {
  */
 function renderSection(checkType, data, overrideObj, container, plantIdx) {
     const section = document.createElement('div');
-    section.className = 'editor-section open'; // Start expanded so checks are immediately visible
+    section.className = 'editor-section'; // Default to collapsed
 
     const header = document.createElement('div');
     header.className = 'editor-section-header';
@@ -104,6 +104,8 @@ function renderSection(checkType, data, overrideObj, container, plantIdx) {
     // Heuristics to choose specialized layout renderers
     if (checkType.startsWith('draftSensor') || checkType.startsWith('ullage')) {
         renderCustomShipData(data, overrideObj, body, checkType, plantIdx);
+    } else if (checkType === 'hullStatus') {
+        renderHullStatusData(data, overrideObj, body, checkType, plantIdx);
     } else if (checkType === 'dragheadDepth') {
         renderCustomTableData(data, overrideObj, body, checkType, 'Draghead Depth', plantIdx);
     } else if (checkType === 'velocity') {
@@ -430,6 +432,37 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx
 }
 
 /**
+ * Specialized Layout: Hull Status.
+ * Ensures mandatory fields like photos are ALWAYS visible even if missing from JSON.
+ */
+function renderHullStatusData(data, overrideObj, parentDom, checkType, plantIdx) {
+    const grid = document.createElement('div');
+    grid.className = 'form-grid';
+
+    // 1. Mandatory Fields: These must always appear so users can add them if missed in field
+    const mandatory = [
+        { key: 'hull-opened', label: 'Hull Opened Status' },
+        { key: 'hull-open-photo', label: 'Photo: Closed to Open' },
+        { key: 'hull-close-photo', label: 'Photo: Open to Closed' },
+        { key: 'remarks', label: 'Remarks' }
+    ];
+
+    mandatory.forEach(f => {
+        buildSingleInput(f.key, data[f.key], overrideObj[f.key], grid, checkType, f.key, f.label, plantIdx);
+    });
+
+    // 2. Secondary/Legacy Fields: Add anything else found in the data (e.g. photo-fwd, photo-aft)
+    const mandatoryKeys = mandatory.map(m => m.key);
+    Object.keys(data).forEach(k => {
+        if (!mandatoryKeys.includes(k)) {
+            buildSingleInput(k, data[k], overrideObj[k], grid, checkType, k, null, plantIdx);
+        }
+    });
+
+    parentDom.appendChild(grid);
+}
+
+/**
  * Generic Recursive Builder.
  * Used for deeply nested check objects or simple grids.
  * @param {Object} dataObj - The raw data to render.
@@ -635,7 +668,7 @@ function renderTimelineEditor(parentDom) {
         // Initial creation of the timeline container
         section = document.createElement('div');
         section.id = 'timeline-editor-section';
-        section.className = 'editor-section mb-4 open'; // Default to open
+        section.className = 'editor-section mb-4'; // Default to collapsed
         parentDom.appendChild(section);
     }
 

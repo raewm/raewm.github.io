@@ -1,0 +1,22 @@
+{
+  "plants": [
+    {
+      "name": "Test Vessel",
+      "vesselType": "Hopper Dredge",
+      "profile": "Standard",
+      "checks": {
+        "hullStatus": {
+          "hull-opened": "yes"
+        },
+        "positionCheck": {
+          "handheld-dd-lat": 30.0,
+          "handheld-dd-lon": -80.0
+        }
+      }
+    }
+  ],
+  "timeline": [
+    { "time": "12:00", "activity": "Test Start", "details": "Started verification" }
+  ],
+  "checkDate": "2026-04-13"
+}
