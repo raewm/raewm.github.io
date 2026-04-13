@@ -132,6 +132,11 @@ function initializeApp() {
         showToast('Draft Saved');
     });
     document.getElementById('export-btn').addEventListener('click', exportJSON);
+    document.getElementById('import-btn').addEventListener('click', () => {
+        document.getElementById('import-file-input').value = ''; // Reset so same file can be re-selected
+        document.getElementById('import-file-input').click();
+    });
+    document.getElementById('import-file-input').addEventListener('change', importJSON);
     document.getElementById('clear-btn').addEventListener('click', () => {
         if (confirm('Clear all data?')) {
             window.removeEventListener('beforeunload', handleBeforeUnload);
@@ -726,6 +731,103 @@ function exportJSON() {
     a.href = url;
     a.download = filename;
     a.click();
+}
+
+/**
+ * Handles importing a previously exported JSON file back into the app.
+ * Supports both the export format ({ metadata: {...} }) and raw appState format.
+ * @param {Event} event - The file input change event.
+ */
+function importJSON(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function (e) {
+        try {
+            const parsed = JSON.parse(e.target.result);
+
+            // Normalize: handle both export format and raw appState format
+            let importedState;
+            if (parsed.metadata) {
+                // Export format: { metadata: { plants, checkDate, weather, qaTeamMembers, systemProvider, timeline, generalComments } }
+                const m = parsed.metadata;
+                importedState = {
+                    plants: m.plants || [],
+                    checkDate: m.checkDate || '',
+                    weatherConditions: m.weather || '',
+                    // qaTeamMembers is an array in export; join it back to a string for the form
+                    qaTeam: Array.isArray(m.qaTeamMembers) ? m.qaTeamMembers.join(', ') : (m.qaTeam || ''),
+                    systemProvider: m.systemProvider || '',
+                    timeline: m.timeline || [],
+                    generalComments: m.generalComments || ''
+                };
+            } else if (Array.isArray(parsed.plants) || parsed.checkDate !== undefined) {
+                // Raw appState format (e.g., from a manual draft backup)
+                importedState = parsed;
+            } else {
+                throw new Error('Unrecognized JSON format.');
+            }
+
+            // Confirm before overwriting current session
+            if (!confirm('Import this file? This will replace your current session data.')) return;
+
+            // Apply to appState
+            isRestoring = true;
+            try {
+                Object.assign(appState, {
+                    plants: [],
+                    checkDate: '',
+                    weatherConditions: '',
+                    qaTeam: '',
+                    systemProvider: '',
+                    timeline: [],
+                    generalComments: '',
+                    activeCheckType: null,
+                    activePlantIndex: null
+                }, importedState);
+
+                // Restore Global Header UI
+                document.getElementById('check-date').value = appState.checkDate || '';
+                document.getElementById('weather-conditions').value = appState.weatherConditions || '';
+                document.getElementById('qa-team').value = appState.qaTeam || '';
+                document.getElementById('system-provider').value = appState.systemProvider || '';
+                document.getElementById('general-comments').value = appState.generalComments || '';
+
+                // Reconstruct Plant Rows
+                document.getElementById('plants-container').innerHTML = '';
+                plantCounter = 0;
+                if (appState.plants.length > 0) {
+                    appState.plants.forEach(p => {
+                        addPlant();
+                        const last = document.querySelector('.plant-entry:last-child');
+                        last.querySelector('.plant-name').value = p.name || '';
+                        last.querySelector('.vessel-type').value = p.vesselType || '';
+                        updateProfileOptions(last.querySelector('.vessel-type'));
+                        last.querySelector('.vessel-profile').value = p.profile || '';
+                    });
+                } else {
+                    addPlant(); // Always have at least one plant row
+                }
+
+                renderTimeline();
+            } finally {
+                isRestoring = false;
+            }
+
+            // Persist the imported state to localStorage
+            saveDraft();
+            showToast('✅ Import Successful');
+
+        } catch (err) {
+            console.error('Import failed:', err);
+            showToast('❌ Import Failed – Invalid JSON');
+        }
+    };
+    reader.onerror = function () {
+        showToast('❌ Failed to read file');
+    };
+    reader.readAsText(file);
 }
 
 // ===== Form Generators (Ported from dqm-qa-app) =====
