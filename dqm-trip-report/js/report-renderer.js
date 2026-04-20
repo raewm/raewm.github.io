@@ -187,6 +187,8 @@ function renderChecks(state) {
                         plantHtml += renderBucketTable(data, override);
                     } else if (type === 'positionCheck') {
                         plantHtml += renderPositionCheck(data, override);
+                    } else if (type === 'velocity') {
+                        plantHtml += renderVelocityTable(data, override);
                     } else {
                         plantHtml += renderGenericTable(data, override);
                     }
@@ -716,9 +718,8 @@ function renderHullStatus(data, override) {
  * Handles time-distance and direct comparison audits.
  */
 function renderVelocityTable(data, override) {
-    // Support both 'velocity-method' (legacy) and 'velocity-method' key (same) —
-    // method value is always stored under 'velocity-method' in both app versions.
-    let method = getVal(data, override, 'velocity-method');
+    // Support both 'velocity-method' (legacy long-form) and 'vel-method' (dqm-qa-app2 short-form).
+    let method = getVal(data, override, 'velocity-method') || getVal(data, override, 'vel-method');
     let html = '';
 
     // Helper: accept both long-form (legacy) and short-form (dqm-qa-app2) key names
