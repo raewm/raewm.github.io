@@ -156,6 +156,23 @@ function renderChecks(state) {
         return Object.values(obj).some(v => v !== '' && v !== null && v !== undefined && v !== false);
     }
 
+    /**
+     * Returns the display label for a section.
+     * For velocity, appends " — Meter" or " — Dye" when the method is known.
+     */
+    function getSectionLabel(type, data, override) {
+        const base = labels[type] || type;
+        if (type === 'velocity') {
+            const method = (override && (override['velocity-method'] || override['vel-method']))
+                        || (data && (data['velocity-method'] || data['vel-method']))
+                        || '';
+            const m = method.toString().toLowerCase();
+            if (m.includes('meter')) return base + ' \u2014 Meter';
+            if (m.includes('dye'))   return base + ' \u2014 Dye';
+        }
+        return base;
+    }
+
     if (plants.length > 0) {
         // Multi-Plant rendering logic
         plants.forEach((plant, pIdx) => {
@@ -164,13 +181,13 @@ function renderChecks(state) {
 
             order.forEach(type => {
                 if (plantChecks[type] && hasAnyValue(plantChecks[type])) {
-                    plantHtml += `<h4 style="margin-top: 20px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 5px;">${labels[type]}</h4>`;
-
                     const data = plantChecks[type];
                     // Merged Override Logic: 
                     // 1. Try plant-specific override [pIdx][type]
                     // 2. Fallback to generic override [type] (for legacy data)
                     const override = (overrides[pIdx] && overrides[pIdx][type]) || overrides[type] || {};
+
+                    plantHtml += `<h4 style="margin-top: 20px; color: #444; border-bottom: 1px solid #ddd; padding-bottom: 5px;">${getSectionLabel(type, data, override)}</h4>`;
 
                     // Choose appropriate table engine
                     if (type === 'draftSensorSimulated') {
@@ -214,9 +231,9 @@ function renderChecks(state) {
         const checks = state.qaChecks || {};
         order.forEach(type => {
             if (checks[type] && hasAnyValue(checks[type])) {
-                html += `<h3>${labels[type]}</h3>`;
                 const data = checks[type];
                 const override = overrides[type] || {};
+                html += `<h3>${getSectionLabel(type, data, override)}</h3>`;
 
                 if (type === 'draftSensorSimulated') {
                     html += renderSimulatedDraft(data, override);
