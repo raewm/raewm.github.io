@@ -388,7 +388,15 @@ function renderVelocityData(dataObj, overrideObj, parentDom, checkType, plantIdx
     if (topGrid.children.length > 0) wrap.appendChild(topGrid);
 
     // 2. Test Trials (Dye results or External Meter comparisons)
+    // Determine selected method so we can hide irrelevant trial fields in the editor,
+    // mirroring the existing preview/print behaviour in renderVelocityTable().
+    const selectedMethod = (overrideObj['velocity-method'] || dataObj['velocity-method'] || '').toString().toLowerCase();
+
     ['dye', 'meter'].forEach(method => {
+        // If a method has been chosen, skip the block that doesn't match.
+        // When no method is selected yet (empty string), fall back to showing all data.
+        if (selectedMethod && !selectedMethod.includes(method)) return;
+
         [1, 2, 3].forEach(num => {
             const numKeys = Object.keys(dataObj).filter(k => k.includes(`-${method}-`) && k.includes(`-${num}`));
             if (numKeys.length > 0) {
