@@ -719,11 +719,12 @@ function exportJSON() {
             exportedAt: new Date().toISOString()
         }
     };
-    // Construct filename from plant names and date
-    const plantNames = appState.plants.map(p => p.name.trim()).filter(n => n).join(' ');
-    const displayPlantNames = plantNames || 'Unnamed Plants';
-    const dateStr = appState.checkDate || new Date().toISOString().split('T')[0];
-    const filename = `DQM QA ${displayPlantNames} ${dateStr}.json`;
+    // Construct filename: app name + plant names + live timestamp (HH-MM, colon-safe for Windows/iOS)
+    const plantNames = appState.plants.map(p => p.name.trim()).filter(n => n).join('_');
+    const displayPlantNames = (plantNames || 'Unnamed-Plants').replace(/\s+/g, '_');
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+    const filename = `DQM-QA_${displayPlantNames}_${ts}.json`;
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);

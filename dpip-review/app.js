@@ -564,11 +564,23 @@ function toggleTheme() {
 }
 
 function exportJson() {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(AppState, null, 2));
+    // Use Blob + createObjectURL instead of data: URI — required for iOS Safari compatibility
+    // (iOS Safari does not honor the `download` attribute on data: URIs; it opens inline instead)
+    const blob = new Blob([JSON.stringify(AppState, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    // Standardized filename: app name + plant name + live timestamp (HH-MM, colon-safe)
+    const plantName = (AppState.metadata.plantName || 'Unnamed-Plant').trim().replace(/\s+/g, '_');
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+
     const dlAnchorElem = document.createElement('a');
-    dlAnchorElem.setAttribute("href", dataStr);
-    dlAnchorElem.setAttribute("download", `dpip_review_${AppState.metadata.plantName || 'draft'}.json`);
+    dlAnchorElem.setAttribute('href', url);
+    dlAnchorElem.setAttribute('download', `DPIP-Review_${plantName}_${ts}.json`);
+    document.body.appendChild(dlAnchorElem);
     dlAnchorElem.click();
+    document.body.removeChild(dlAnchorElem);
+    URL.revokeObjectURL(url);
 }
 
 function importJson(e) {

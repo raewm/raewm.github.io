@@ -123,11 +123,12 @@ function downloadDraft() {
     const blob = new Blob([JSON.stringify(envelope, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
 
-    // Derive a meaningful filename from report date or fall back to today
-    const dateStr = (window.appState.meta && window.appState.meta.reportDate)
-        ? window.appState.meta.reportDate
-        : new Date().toISOString().split('T')[0];
-    const filename = `dqm-draft-${dateStr}.json`;
+    // Derive filename: app name + plant names + live timestamp (HH-MM, colon-safe for Windows/iOS)
+    const plantNames = (window.appState.plants || [])
+        .map(p => (p.name || '').trim()).filter(n => n).join('_') || 'Unnamed-Plants';
+    const now = new Date();
+    const ts = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}_${String(now.getHours()).padStart(2, '0')}-${String(now.getMinutes()).padStart(2, '0')}`;
+    const filename = `DQM-TripReport_${plantNames}_${ts}.json`;
 
     const a = document.createElement('a');
     a.href     = url;
