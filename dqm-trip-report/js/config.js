@@ -6,6 +6,15 @@
  */
 
 /**
+ * App version — increment on EVERY change:
+ *   MAJOR: breaking change or new major workflow
+ *   MINOR: new feature or UI section (non-breaking)
+ *   PATCH: bug fix, style tweak, copy change
+ */
+const APP_VERSION = '1.0.1';
+
+
+/**
  * Global Mapping of Methods.
  * Uses backticks to allow multiline strings for easier formatting.
  */

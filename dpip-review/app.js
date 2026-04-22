@@ -38,6 +38,10 @@ function init() {
     loadDraft();
     setupEventListeners();
     renderChecklist();
+
+    // Inject version
+    const versionEl = document.getElementById('app-version');
+    if (versionEl && typeof APP_VERSION !== 'undefined') versionEl.textContent = `v${APP_VERSION}`;
 }
 
 function setupEventListeners() {
@@ -669,7 +673,7 @@ function buildReportHtml() {
             .app-container { display: none !important; }
             /* Let the print container flow statically so it reflows correctly across ALL pages.
                position:absolute only covers the first page's viewport. */
-            #print-container { display: block !important; position: static !important; width: 100%; padding: 0.75in; font-family: sans-serif; color: black; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            #print-container { display: block !important; position: static !important; width: 100%; padding: 1in; font-family: sans-serif; color: black; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
     <div class="preview-wrapper">

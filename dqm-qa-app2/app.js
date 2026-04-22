@@ -64,6 +64,10 @@ const checkNames = {
 
 document.addEventListener('DOMContentLoaded', () => {
     initTheme();
+    
+    // Inject version
+    const versionEl = document.getElementById('app-version');
+    if (versionEl && typeof APP_VERSION !== 'undefined') versionEl.textContent = `v${APP_VERSION}`;
 
     // 1. Load data FIRST before doing ANY initialization that might trigger a save
     loadDraft();

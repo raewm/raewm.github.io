@@ -68,6 +68,10 @@ document.addEventListener('DOMContentLoaded', () => {
     if (typeof initFileLoader === 'function') initFileLoader();
     if (typeof initMetaForm === 'function') initMetaForm();
 
+    // Inject version
+    const versionEl = document.getElementById('app-version');
+    if (versionEl && typeof APP_VERSION !== 'undefined') versionEl.textContent = `v${APP_VERSION}`;
+
     // 2. Global Tool-bar Event Listeners
 
     /**
