@@ -5,4 +5,4 @@
  *   MINOR: new feature or UI section (non-breaking)
  *   PATCH: bug fix, style tweak, copy change
  */
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';

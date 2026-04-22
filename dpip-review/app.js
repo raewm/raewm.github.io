@@ -662,18 +662,14 @@ function buildReportHtml() {
         .preview-wrapper h2 { border-bottom: 2px solid black; padding-bottom: 5px; margin-top: 0; }
         .preview-wrapper h3 { border-bottom: 2px solid black; padding-bottom: 5px; margin-top: 20px; }
         @media print {
-            /* Zero out @page margins to suppress browser-injected headers/footers
-               (URL, date, page number). Padding on #print-container replaces the margin. */
-            @page { margin: 0; size: letter portrait; }
-            /* Force the body background white — without this the dark app theme (#121212)
-               bleeds through as a black box on any page beyond page 1. */
+            /* Standard @page margin — handled by the browser print engine directly,
+               not affected by CSS resets. 1in gives proper physical margins and
+               keeps content within the printer's printable area. Browser-injected
+               headers/footers (URL, date) will appear in this margin space. */
+            @page { margin: 1in; size: letter portrait; }
             body { background: white !important; margin: 0 !important; padding: 0 !important; }
-            /* Hide the app shell cleanly via display:none rather than visibility:hidden.
-               visibility:hidden leaves the body background painted, causing the black box. */
             .app-container { display: none !important; }
-            /* Let the print container flow statically so it reflows correctly across ALL pages.
-               position:absolute only covers the first page's viewport. */
-            #print-container { display: block !important; position: static !important; width: 100%; padding: 1in; font-family: sans-serif; color: black; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
+            #print-container { display: block !important; position: static !important; width: 100%; padding: 0; font-family: sans-serif; color: black; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
     <div class="preview-wrapper">
