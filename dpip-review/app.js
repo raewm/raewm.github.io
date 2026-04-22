@@ -658,10 +658,18 @@ function buildReportHtml() {
         .preview-wrapper h2 { border-bottom: 2px solid black; padding-bottom: 5px; margin-top: 0; }
         .preview-wrapper h3 { border-bottom: 2px solid black; padding-bottom: 5px; margin-top: 20px; }
         @media print {
-            body * { visibility: hidden; }
-            .container { display: none !important; }
-            #print-container, #print-container * { visibility: visible; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
-            #print-container { position: absolute; left: 0; top: 0; width: 100%; display: block !important; padding: 20px; font-family: sans-serif; color: black; background: white; }
+            /* Zero out @page margins to suppress browser-injected headers/footers
+               (URL, date, page number). Padding on #print-container replaces the margin. */
+            @page { margin: 0; size: letter portrait; }
+            /* Force the body background white — without this the dark app theme (#121212)
+               bleeds through as a black box on any page beyond page 1. */
+            body { background: white !important; margin: 0 !important; padding: 0 !important; }
+            /* Hide the app shell cleanly via display:none rather than visibility:hidden.
+               visibility:hidden leaves the body background painted, causing the black box. */
+            .app-container { display: none !important; }
+            /* Let the print container flow statically so it reflows correctly across ALL pages.
+               position:absolute only covers the first page's viewport. */
+            #print-container { display: block !important; position: static !important; width: 100%; padding: 0.75in; font-family: sans-serif; color: black; background: white; -webkit-print-color-adjust: exact !important; print-color-adjust: exact !important; }
         }
     </style>
     <div class="preview-wrapper">
