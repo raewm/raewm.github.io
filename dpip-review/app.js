@@ -36,6 +36,14 @@ function init() {
         elements.reviewDate.valueAsDate = new Date();
     }
     loadDraft();
+
+    // Ensure AppState is synced with the actual values in the UI (either defaults or loaded)
+    AppState.metadata.reviewerName = elements.reviewerName.value;
+    AppState.metadata.reviewDate = elements.reviewDate.value;
+    AppState.metadata.plantName = elements.plantName.value;
+    AppState.metadata.plantType = elements.plantType.value;
+    AppState.metadata.generalComments = elements.generalComments.value;
+
     setupEventListeners();
     renderChecklist();
 
