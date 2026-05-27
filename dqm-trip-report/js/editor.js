@@ -708,6 +708,20 @@ function renderTimelineEditor(parentDom) {
     sortBtn.onclick = (e) => {
         e.stopPropagation();
         window.appState.timeline.sort((a, b) => {
+            const dateA = new Date(a.time || a.timestamp);
+            const dateB = new Date(b.time || b.timestamp);
+            
+            // 1. If both parse to valid Dates, sort chronologically
+            if (!isNaN(dateA.getTime()) && !isNaN(dateB.getTime())) {
+                return dateA - dateB;
+            }
+            
+            // 2. Fall back to raw ISO timestamp sorting if present
+            if (a.timestamp && b.timestamp) {
+                return a.timestamp.localeCompare(b.timestamp);
+            }
+            
+            // 3. Fall back to standard string-based comparison of user inputs
             const timeA = (a.time || '').trim();
             const timeB = (b.time || '').trim();
             return timeA.localeCompare(timeB);
@@ -726,10 +740,13 @@ function renderTimelineEditor(parentDom) {
     addBtn.onclick = (e) => {
         e.stopPropagation();
         const now = new Date();
-        const hours = now.getHours().toString().padStart(2, '0');
-        const minutes = now.getMinutes().toString().padStart(2, '0');
-        const timeStr = `${hours}:${minutes}`;
-        window.appState.timeline.push({ time: timeStr, activity: '', details: '' });
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const clockTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        const timeStr = `${year}-${month}-${day} ${clockTime}`;
+        
+        window.appState.timeline.push({ time: timeStr, activity: '', details: '', timestamp: now.toISOString() });
         renderTimelineEditor(parentDom);
         if (typeof window.updatePreview === 'function') window.updatePreview();
     };
@@ -754,7 +771,7 @@ function renderTimelineEditor(parentDom) {
     thead.style.backgroundColor = 'rgba(255,255,255,0.05)';
     thead.innerHTML = `
         <tr>
-            <th id="timeline-time-header" style="padding: 10px; text-align: left; width: 100px; border-bottom: 1px solid var(--border); cursor: pointer;" title="Click to sort chronologically">TIME ⇅</th>
+            <th id="timeline-time-header" style="padding: 10px; text-align: left; width: 150px; border-bottom: 1px solid var(--border); cursor: pointer;" title="Click to sort chronologically">TIME ⇅</th>
             <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">ACTIVITY</th>
             <th style="padding: 10px; text-align: left; border-bottom: 1px solid var(--border);">DETAILS</th>
             <th style="padding: 10px; text-align: center; width: 50px; border-bottom: 1px solid var(--border);"></th>
