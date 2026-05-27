@@ -1320,30 +1320,81 @@ window.toggleVelocityMethod = () => {
 };
 
 /**
- * Converts a browser File to a DataURL and updates the preview <img>.
- * Persists the DataURL to the application state.
+ * Compresses and resizes an image file to a maximum dimension using HTML5 Canvas.
+ * Keeps aspect ratio intact. Returns a promise that resolves with compressed JPEG DataURL.
+ * @param {File} file - The uploaded image file.
+ * @param {number} maxDim - Maximum width or height of the compressed image.
+ * @param {number} quality - Image quality between 0.0 and 1.0.
+ * @returns {Promise<string>} Resolves with the compressed JPEG Base64 DataURL.
+ */
+function compressAndResizeImage(file, maxDim = 1280, quality = 0.75) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Scale down if larger than maxDim
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to compressed JPEG data URL
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = (err) => reject(new Error('Failed to load image element: ' + err));
+            img.src = e.target.result;
+        };
+        reader.onerror = (err) => reject(new Error('Failed to read file: ' + err));
+        reader.readAsDataURL(file);
+    });
+}
+
+/**
+ * Converts a browser File, compresses/resizes it, updates the preview <img>,
+ * and persists the compressed JPEG DataURL to the application state.
  * @param {HTMLInputElement} input - The file input element.
  * @param {string} previewId - The ID of the image element to display the preview.
  */
-window.handleHullPhoto = (input, previewId) => {
+window.handleHullPhoto = async (input, previewId) => {
     const file = input.files[0];
     if (file) {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const dataUrl = e.target.result;
+        try {
+            const compressedDataUrl = await compressAndResizeImage(file, 1280, 0.75);
             const preview = document.getElementById(previewId);
-            preview.src = dataUrl;
-            preview.style.display = 'block';
+            if (preview) {
+                preview.src = compressedDataUrl;
+                preview.style.display = 'block';
+            }
 
             // Persist the binary data to the application state
             const plant = appState.plants[appState.activePlantIndex];
-            if (!plant.checks.hullStatus) plant.checks.hullStatus = {};
-            const stateKey = previewId === 'hull-open-preview' ? 'hull-open-photo' : 'hull-close-photo';
-            plant.checks.hullStatus[stateKey] = dataUrl;
-
-            saveDraft();
-        };
-        reader.readAsDataURL(file);
+            if (plant) {
+                if (!plant.checks.hullStatus) plant.checks.hullStatus = {};
+                const stateKey = previewId === 'hull-open-preview' ? 'hull-open-photo' : 'hull-close-photo';
+                plant.checks.hullStatus[stateKey] = compressedDataUrl;
+                saveDraft();
+            }
+        } catch (err) {
+            console.error('Image compression failed:', err);
+            alert('Failed to process and compress image. Please try again.');
+        }
     }
 };
 
