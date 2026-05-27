@@ -376,7 +376,7 @@ textarea {
     color: var(--accent-primary);
     font-family: monospace;
     font-weight: 600;
-    width: 100px;
+    width: 140px;
 }
 
 .timeline-activity {
@@ -667,7 +667,7 @@ footer {
     }
 
     .timeline-time {
-        width: 80px;
+        width: 130px;
     }
 
     .card-header {

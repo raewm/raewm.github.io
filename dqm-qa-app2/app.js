@@ -218,11 +218,18 @@ function showToast(message) {
 function addTimelineComment() {
     const notes = prompt('Enter timeline comment:');
     if (notes && notes.trim()) {
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const clockTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+        const timeStr = `${year}-${month}-${day} ${clockTime}`;
+
         const entry = {
-            time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+            time: timeStr,
             activity: 'Comment',
             notes: notes.trim(),
-            timestamp: new Date().toISOString()
+            timestamp: now.toISOString()
         };
         appState.timeline.push(entry);
         renderTimeline();
@@ -564,11 +571,18 @@ function logActiveCheckToTimeline() {
         }
     }
 
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const day = String(now.getDate()).padStart(2, '0');
+    const clockTime = now.toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' });
+    const timeStr = `${year}-${month}-${day} ${clockTime}`;
+
     const entry = {
-        time: new Date().toLocaleTimeString('en-US', { hour12: false, hour: '2-digit', minute: '2-digit' }),
+        time: timeStr,
         activity: activityText,
         notes: '',
-        timestamp: new Date().toISOString(),
+        timestamp: now.toISOString(),
         plantIdx: appState.activePlantIndex,
         checkType: type,
         data: JSON.parse(JSON.stringify(plant.checks[type])) // Capture a snapshot of the data
