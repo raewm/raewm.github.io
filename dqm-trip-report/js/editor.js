@@ -560,18 +560,19 @@ function buildSingleInput(displayPath, originalValue, overrideValue, parentGrid,
         clearBtn.style.fontSize = '12px';
         clearBtn.style.display = hasImage ? 'block' : 'none';
 
-        fileInput.addEventListener('change', (e) => {
+        fileInput.addEventListener('change', async (e) => {
             const file = e.target.files[0];
             if (file) {
-                const reader = new FileReader();
-                reader.onload = (ev) => {
-                    const dataUrl = ev.target.result;
-                    preview.src = dataUrl;
+                try {
+                    const compressedDataUrl = await compressAndResizeImage(file, 1280, 0.75);
+                    preview.src = compressedDataUrl;
                     preview.style.display = 'block';
                     clearBtn.style.display = 'block';
-                    saveOverride(checkType, savePath, dataUrl, plantIdx);
-                };
-                reader.readAsDataURL(file);
+                    saveOverride(checkType, savePath, compressedDataUrl, plantIdx);
+                } catch (err) {
+                    console.error('Image compression failed:', err);
+                    alert('Failed to process and compress image. Please try again.');
+                }
             }
         });
 
@@ -858,4 +859,51 @@ function renderTimelineEditor(parentDom) {
     body.appendChild(table);
     section.appendChild(header);
     section.appendChild(body);
+}
+
+/**
+ * Compresses and resizes an image file to a maximum dimension using HTML5 Canvas.
+ * Keeps aspect ratio intact. Returns a promise that resolves with compressed JPEG DataURL.
+ * @param {File} file - The uploaded image file.
+ * @param {number} maxDim - Maximum width or height of the compressed image.
+ * @param {number} quality - Image quality between 0.0 and 1.0.
+ * @returns {Promise<string>} Resolves with the compressed JPEG Base64 DataURL.
+ */
+function compressAndResizeImage(file, maxDim = 1280, quality = 0.75) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Scale down if larger than maxDim
+                if (width > maxDim || height > maxDim) {
+                    if (width > height) {
+                        height = Math.round((height * maxDim) / width);
+                        width = maxDim;
+                    } else {
+                        width = Math.round((width * maxDim) / height);
+                        height = maxDim;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                // Convert to compressed JPEG data URL
+                const compressedDataUrl = canvas.toDataURL('image/jpeg', quality);
+                resolve(compressedDataUrl);
+            };
+            img.onerror = (err) => reject(new Error('Failed to load image element: ' + err));
+            img.src = e.target.result;
+        };
+        reader.onerror = (err) => reject(new Error('Failed to read file: ' + err));
+        reader.readAsDataURL(file);
+    });
 }
